@@ -10,25 +10,34 @@ type Book = {
   condition: string | null
   listing_type: string
   status: string
+  genre: string | null
 }
 
 export default function BrowsePage() {
   const supabase = createClient()
   const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     fetchBooks()
   }, [])
 
-  const fetchBooks = async () => {
+  const fetchBooks = async (query: string = '') => {
     setLoading(true)
-    // Ask the database for all available books
-    const { data, error } = await supabase
+    
+    let dbQuery = supabase
       .from('books')
       .select('*')
       .eq('status', 'available')
       .order('created_at', { ascending: false })
+
+    // UPDATED: Search both title AND author!
+    if (query.trim() !== '') {
+      dbQuery = dbQuery.or(`title.ilike.%${query}%,author.ilike.%${query}%`)
+    }
+
+    const { data, error } = await dbQuery
 
     if (error) {
       console.error('Error fetching books:', error)
@@ -38,19 +47,46 @@ export default function BrowsePage() {
     setLoading(false)
   }
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    fetchBooks(searchQuery)
+  }
+
   return (
     <div>
       <h1 className="text-3xl font-bold mb-2">Browse Books</h1>
       <p className="text-slate-400 mb-8">Find your next read from someone nearby</p>
 
       {/* Search Bar */}
-      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 mb-8">
-        <input
-          type="text"
-          placeholder="Search by title, author, or ISBN... (coming soon!)"
-          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
-        />
-      </div>
+      <form onSubmit={handleSearch} className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 mb-8">
+        <div className="flex gap-4">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by title or author..."
+            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+          />
+          <button 
+            type="submit" 
+            className="bg-teal-500 hover:bg-teal-400 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
+          >
+            Search
+          </button>
+          {searchQuery && (
+            <button 
+              type="button" 
+              onClick={() => {
+                setSearchQuery('')
+                fetchBooks('')
+              }}
+              className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-4 py-3 rounded-lg transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </form>
 
       {/* Loading State */}
       {loading && (
@@ -61,9 +97,9 @@ export default function BrowsePage() {
       {!loading && books.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="text-6xl mb-4">📖</div>
-          <h2 className="text-xl font-semibold mb-2">No books just yet</h2>
+          <h2 className="text-xl font-semibold mb-2">No books found</h2>
           <p className="text-slate-400 max-w-md">
-            Be the first to add a book to the community! Once books are added, they will appear right here.
+            {searchQuery ? `No books match "${searchQuery}". Try another search!` : "Be the first to add a book to the community!"}
           </p>
         </div>
       )}
@@ -90,8 +126,15 @@ export default function BrowsePage() {
               </div>
               
               <h3 className="text-lg font-semibold mb-1 text-white">{book.title}</h3>
-              {book.author && <p className="text-slate-400 text-sm mb-4">by {book.author}</p>}
+              {book.author && <p className="text-slate-400 text-sm mb-2">by {book.author}</p>}
               
+              {/* NEW: Display Genre */}
+              {book.genre && (
+                <span className="inline-block bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-medium px-2.5 py-1 rounded-full mb-4">
+                  {book.genre}
+                </span>
+              )}
+
               <button className="w-full mt-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-2 rounded-lg text-sm transition-colors">
                 Request Book
               </button>
