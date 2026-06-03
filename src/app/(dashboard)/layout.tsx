@@ -25,6 +25,12 @@ export default function DashboardLayout({
           <Link href="/messages" className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-white/5 hover:text-white">
             💬 Messages
           </Link>
+          <Link href="/requests" className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-white/5 hover:text-white">
+            📩 Requests
+          </Link>
+          <Link href="/profile" className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-white/5 hover:text-white">
+            👤 My Profile
+          </Link>
         </nav>
 
         <div className="border-t border-white/5 pt-4">
