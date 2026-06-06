@@ -1,6 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Routes that require a logged-in user
+const PROTECTED_ROUTES = ['/my-books', '/messages', '/requests', '/profile']
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -27,8 +30,16 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // This refreshes the user's session on every page load
-  await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { pathname } = request.nextUrl
+  const isProtected = PROTECTED_ROUTES.some(route => pathname.startsWith(route))
+
+  if (!user && isProtected) {
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = '/login'
+    return NextResponse.redirect(loginUrl)
+  }
 
   return supabaseResponse
 }

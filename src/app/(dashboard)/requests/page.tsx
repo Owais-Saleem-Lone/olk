@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
 // FIXED: Removed the [] from books and profiles. 
 // Since a request belongs to ONE book and ONE user, Supabase returns them as single objects, not arrays.
@@ -16,6 +17,7 @@ type BookRequest = {
 
 export default function RequestsPage() {
   const supabase = createClient()
+  const router = useRouter()
   const [incomingRequests, setIncomingRequests] = useState<BookRequest[]>([])
   const [outgoingRequests, setOutgoingRequests] = useState<BookRequest[]>([])
   const [loading, setLoading] = useState(true)
@@ -83,6 +85,10 @@ export default function RequestsPage() {
     }
   }
 
+  const handleMessage = (requestId: string) => {
+    router.push(`/messages/${requestId}`)
+  }
+
   if (loading) return <p className="text-slate-400">Loading requests...</p>
 
   return (
@@ -132,7 +138,15 @@ export default function RequestsPage() {
                     </>
                   )}
                   {req.status === 'accepted' && (
-                    <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20">Accepted ✓</span>
+                    <>
+                      <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20">Accepted ✓</span>
+                      <button
+                        onClick={() => handleMessage(req.id)}
+                        className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+                      >
+                        💬 Message
+                      </button>
+                    </>
                   )}
                   {req.status === 'declined' && (
                     <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">Declined ✗</span>
@@ -161,7 +175,15 @@ export default function RequestsPage() {
                   <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">Pending...</span>
                 )}
                 {req.status === 'accepted' && (
-                  <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20">Accepted ✓</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20">Accepted ✓</span>
+                    <button
+                      onClick={() => handleMessage(req.id)}
+                      className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+                    >
+                      💬 Message
+                    </button>
+                  </div>
                 )}
                 {req.status === 'declined' && (
                   <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">Declined ✗</span>

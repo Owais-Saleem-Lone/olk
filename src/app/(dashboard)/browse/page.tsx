@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
 
 type Profile = {
   id: string
@@ -205,7 +206,14 @@ export default function BrowsePage() {
                 )}
 
                 {/* Request Button */}
-                {isOwnBook ? (
+                {!currentUserId ? (
+                  <Link
+                    href="/login"
+                    className="w-full block text-center bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-2 rounded-lg text-sm transition-colors"
+                  >
+                    Login to Request
+                  </Link>
+                ) : isOwnBook ? (
                   <button
                     disabled
                     className="w-full bg-white/5 text-slate-500 font-medium py-2 rounded-lg text-sm cursor-not-allowed"
