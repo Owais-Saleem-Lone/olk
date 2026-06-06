@@ -3,14 +3,15 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-// UPDATED: Added [] to books and profiles to match Supabase's return format
+// FIXED: Removed the [] from books and profiles. 
+// Since a request belongs to ONE book and ONE user, Supabase returns them as single objects, not arrays.
 type BookRequest = {
   id: string
   status: string
   created_at: string
   requester_id: string
-  books: { title: string; owner_id: string }[]
-  profiles: { display_name: string | null }[]
+  books: { title: string; owner_id: string }
+  profiles: { display_name: string | null; area_name: string | null }
 }
 
 export default function RequestsPage() {
@@ -25,21 +26,47 @@ export default function RequestsPage() {
 
   const fetchRequests = async () => {
     setLoading(true)
+    await supabase.auth.getSession()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { data, error } = await supabase
+    // 1. Fetch OUTGOING requests (requests I made to others)
+    const { data: outgoingData, error: outError } = await supabase
       .from('book_requests')
-      .select('id, status, created_at, requester_id, books(title, owner_id), profiles(display_name)')
+      .select('id, status, created_at, requester_id, books(title, owner_id), profiles(display_name, area_name)')
+      .eq('requester_id', user.id)
       .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error('Error fetching requests:', error)
-    } else if (data) {
-      // Separate them into incoming (for my books) and outgoing (I requested)
-      setIncomingRequests(data.filter((req) => req.books[0]?.owner_id === user.id))
-      setOutgoingRequests(data.filter((req) => req.requester_id === user.id))
+    if (outError) console.error('Outgoing error:', outError)
+    if (outgoingData) setOutgoingRequests(outgoingData as any)
+
+    // 2. Find the IDs of all books I own
+    const { data: myBooksData } = await supabase
+      .from('books')
+      .select('id')
+      .eq('owner_id', user.id)
+    
+    const myBookIds = myBooksData?.map(b => b.id) || []
+
+    // 3. Fetch INCOMING requests (requests for books I own)
+    let incomingData = null
+    if (myBookIds.length > 0) {
+      const { data, error: incError } = await supabase
+        .from('book_requests')
+        .select('id, status, created_at, requester_id, books(title, owner_id), profiles(display_name, area_name)')
+        .in('book_id', myBookIds)
+        .order('created_at', { ascending: false })
+
+      if (incError) console.error('Incoming error:', incError)
+      incomingData = data
+    } 
+
+    if (incomingData) {
+      setIncomingRequests(incomingData as any)
+    } else {
+      setIncomingRequests([])
     }
+
     setLoading(false)
   }
 
@@ -75,10 +102,15 @@ export default function RequestsPage() {
             {incomingRequests.map((req) => (
               <div key={req.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                  {/* Access the first item in the array [0] */}
-                  <p className="text-white font-semibold">{req.books[0]?.title}</p>
+                  {/* FIXED: Now accessing the object directly without [0] */}
+                  <p className="text-white font-semibold">
+                    {req.books?.title || "Unknown Book"}
+                  </p>
                   <p className="text-sm text-slate-400">
-                    Requested by <span className="text-teal-400">{req.profiles[0]?.display_name || 'A user'}</span>
+                    Requested by <span className="text-teal-400">{req.profiles?.display_name || "Unknown User"}</span>
+                    {req.profiles?.area_name && (
+                      <span className="text-slate-500"> from {req.profiles.area_name}</span>
+                    )}
                   </p>
                 </div>
                 
@@ -123,8 +155,8 @@ export default function RequestsPage() {
           <div className="space-y-4">
             {outgoingRequests.map((req) => (
               <div key={req.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 flex justify-between items-center">
-                {/* Access the first item in the array [0] */}
-                <p className="text-white font-semibold">{req.books[0]?.title}</p>
+                {/* FIXED: Now accessing the object directly without [0] */}
+                <p className="text-white font-semibold">{req.books?.title || "Unknown Book"}</p>
                 {req.status === 'pending' && (
                   <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">Pending...</span>
                 )}
