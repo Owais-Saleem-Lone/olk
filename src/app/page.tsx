@@ -3,6 +3,18 @@ import { createClient } from '@/lib/supabase/server'
 
 export default async function Home() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  let displayName: string | null = null
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', user.id)
+      .single()
+    displayName = profile?.display_name ?? null
+  }
+
   const { data: featuredBooks } = await supabase
     .from('books')
     .select('id, title, author, listing_type, cover_url')
@@ -30,18 +42,29 @@ export default async function Home() {
             <span className="font-semibold tracking-tight">Open Library Kashmir</span>
           </div>
           <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="text-sm text-slate-400 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-white/5"
-            >
-              Login
-            </Link>
-            <Link
-              href="/register"
-              className="text-sm font-semibold bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 rounded-lg transition-all shadow-lg shadow-teal-500/20 hover:shadow-teal-500/30"
-            >
-              Join Now
-            </Link>
+            {user ? (
+              <Link
+                href="/browse"
+                className="text-sm font-semibold bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 rounded-lg transition-all shadow-lg shadow-teal-500/20 hover:shadow-teal-500/30"
+              >
+                👤 {displayName || user.email}
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-sm text-slate-400 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-white/5"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  className="text-sm font-semibold bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 rounded-lg transition-all shadow-lg shadow-teal-500/20 hover:shadow-teal-500/30"
+                >
+                  Join Now
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>

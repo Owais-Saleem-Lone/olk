@@ -19,6 +19,7 @@ type Book = {
   status: string
   genre: string | null
   owner_id: string
+  cover_url: string | null
 }
 
 export default function BrowsePage() {
@@ -59,7 +60,7 @@ export default function BrowsePage() {
       console.error('Error fetching books:', error)
     } else if (data) {
       setBooks(data)
-      await fetchProfiles(data)
+      if (user) await fetchProfiles(data)
     }
     setLoading(false)
   }
@@ -160,7 +161,7 @@ export default function BrowsePage() {
 
       {/* Books Grid */}
       {!loading && books.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {books.map((book) => {
             const owner = profiles[book.owner_id]
             const isOwnBook = book.owner_id === currentUserId
@@ -169,25 +170,46 @@ export default function BrowsePage() {
             return (
               <div
                 key={book.id}
-                className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 hover:border-teal-500/30 transition-colors flex flex-col"
+                className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden hover:border-teal-500/30 transition-colors flex flex-col"
               >
-                <div className="flex justify-between items-start mb-4">
-                  <span
-                    className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                {/* Cover image */}
+                <div className="relative w-full aspect-[16/9] bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden">
+                  {book.cover_url ? (
+                    <img
+                      src={book.cover_url}
+                      alt={book.title}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-700">
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                      </svg>
+                    </div>
+                  )}
+                  {/* Listing type badge over image */}
+                  <div className="absolute top-2 left-2">
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm ${
                       book.listing_type === 'donate'
-                        ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
-                        : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                    }`}
-                  >
-                    {book.listing_type === 'donate' ? '🎁 Donate' : '🤝 Lend'}
-                  </span>
+                        ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                        : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                    }`}>
+                      {book.listing_type === 'donate' ? '🎁 Donate' : '🤝 Lend'}
+                    </span>
+                  </div>
                   {book.condition && (
-                    <span className="text-xs text-slate-500 capitalize">{book.condition}</span>
+                    <div className="absolute top-2 right-2">
+                      <span className="text-xs text-slate-300 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full capitalize">
+                        {book.condition}
+                      </span>
+                    </div>
                   )}
                 </div>
 
-                <h3 className="text-lg font-semibold mb-1 text-white">{book.title}</h3>
-                {book.author && <p className="text-slate-400 text-sm mb-2">by {book.author}</p>}
+                <div className="p-4 flex flex-col flex-1">
+                <h3 className="text-sm font-semibold mb-0.5 text-white leading-snug">{book.title}</h3>
+                {book.author && <p className="text-slate-400 text-xs mb-2">by {book.author}</p>}
 
                 {book.genre && (
                   <span className="inline-block bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-medium px-2.5 py-1 rounded-full mb-4">
@@ -195,8 +217,8 @@ export default function BrowsePage() {
                   </span>
                 )}
 
-                {/* NEW: Owner Info */}
-                {owner && (
+                {/* Owner info — only shown to logged-in users */}
+                {currentUserId && owner && (
                   <div className="mt-auto pt-4 border-t border-white/5 mb-4">
                     <p className="text-sm text-slate-300">
                       👤 {owner.display_name || 'Anonymous'}
@@ -237,6 +259,7 @@ export default function BrowsePage() {
                     Request Book
                   </button>
                 )}
+                </div>{/* end p-5 */}
               </div>
             )
           })}
