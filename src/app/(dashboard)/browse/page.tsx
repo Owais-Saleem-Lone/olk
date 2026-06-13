@@ -31,7 +31,9 @@ export default function BrowsePage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchBooks()
+    const q = new URLSearchParams(window.location.search).get('q') || ''
+    setSearchQuery(q)
+    fetchBooks(q)
   }, [])
 
   const fetchBooks = async (query: string = '') => {
