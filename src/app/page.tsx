@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import BookOfMonthCard from '@/components/book-of-month'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -21,6 +22,14 @@ export default async function Home() {
     .eq('status', 'available')
     .order('created_at', { ascending: false })
     .limit(4)
+
+  const { data: bookOfMonth } = await supabase
+    .from('book_of_month')
+    .select('title, author, description, cover_url, month_label')
+    .eq('active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
 
   return (
     <div className="min-h-screen bg-[#020817] text-white overflow-x-hidden">
@@ -119,7 +128,7 @@ export default async function Home() {
         </h1>
 
         <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-          OLK connects readers across Kashmir. Donate or lend your used books,
+          OLK connects readers across regions. Donate or lend your used books,
           find your next read from someone nearby — all with maximum privacy and zero cost.
         </p>
 
@@ -130,6 +139,13 @@ export default async function Home() {
           Start Sharing Books →
         </Link>
       </section>
+
+      {/* ── Book of the Month ── */}
+      {bookOfMonth && (
+        <section className="relative z-10 max-w-5xl mx-auto px-6 pb-16">
+          <BookOfMonthCard book={bookOfMonth} />
+        </section>
+      )}
 
       {/* ── How it works ── */}
       <section className="relative z-10 max-w-5xl mx-auto px-6 pb-28">
