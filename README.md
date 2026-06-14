@@ -1,6 +1,6 @@
 # OLK — Open Library Kashmir
 
-> A free, privacy-first book-sharing platform connecting readers across Kashmir.
+> A free, privacy-first book-sharing platform connecting readers across regions and places.
 > Donate or lend your used books, discover your next read from someone nearby — no shipping, no cost, no data harvesting.
 
 ---
