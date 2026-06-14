@@ -377,7 +377,7 @@ export default function MyBooksPage() {
                 {/* Inline edit panel */}
                 {editingBookId === book.id && (
                   <div className="mt-1 bg-white/[0.02] border border-teal-500/20 border-t-0 rounded-b-xl px-5 pb-5 pt-4 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-medium text-slate-400 mb-1">Title</label>
                         <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
@@ -390,7 +390,7 @@ export default function MyBooksPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-medium text-slate-400 mb-1">Status</label>
                         <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}

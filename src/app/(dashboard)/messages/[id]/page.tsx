@@ -12,6 +12,21 @@ type Message = {
   created_at: string
 }
 
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatDateLabel(iso: string) {
+  const date = new Date(iso)
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+
+  if (date.toDateString() === today.toDateString()) return 'Today'
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday'
+  return date.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })
+}
+
 export default function ChatPage() {
   const supabase = createClient()
   const params = useParams()
@@ -36,7 +51,6 @@ export default function ChatPage() {
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `request_id=eq.${requestId}` },
         (payload) => {
           const incoming = payload.new as Message
-          // Skip if we already added this message optimistically after our own send
           setMessages(prev =>
             prev.some(m => m.id === incoming.id) ? prev : [...prev, incoming]
           )
@@ -56,7 +70,6 @@ export default function ChatPage() {
     if (!user) return
     setCurrentUserId(user.id)
 
-    // Get the request to find the other participant and book title
     const { data: req } = await supabase
       .from('book_requests')
       .select('requester_id, books(title, owner_id)')
@@ -65,7 +78,6 @@ export default function ChatPage() {
 
     if (req) {
       setBookTitle((req.books as any)?.title ?? null)
-
       const otherId = req.requester_id === user.id
         ? (req.books as any)?.owner_id
         : req.requester_id
@@ -90,8 +102,7 @@ export default function ChatPage() {
     setLoading(false)
   }
 
-  const handleSend = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const handleSend = async () => {
     if (!content.trim() || !currentUserId || sending) return
     setSending(true)
 
@@ -105,9 +116,8 @@ export default function ChatPage() {
       .single()
 
     if (error) {
-      setContent(msgContent) // restore on failure
+      setContent(msgContent)
     } else if (inserted) {
-      // Add to state immediately — the realtime handler will skip it as a duplicate
       setMessages(prev =>
         prev.some(m => m.id === inserted.id) ? prev : [...prev, inserted]
       )
@@ -116,45 +126,74 @@ export default function ChatPage() {
     setSending(false)
   }
 
-  if (loading) return <p className="text-slate-400">Loading...</p>
+  if (loading) return <div className="flex items-center justify-center h-64"><p className="text-slate-400">Loading chat...</p></div>
+
+  // Build a list with date separators injected
+  let lastDateLabel = ''
+  const rendered: Array<{ type: 'separator'; label: string } | { type: 'message'; msg: Message }> = []
+  for (const msg of messages) {
+    const label = formatDateLabel(msg.created_at)
+    if (label !== lastDateLabel) {
+      rendered.push({ type: 'separator', label })
+      lastDateLabel = label
+    }
+    rendered.push({ type: 'message', msg })
+  }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
+    <div className="flex flex-col h-[calc(100dvh-7rem)] md:h-[calc(100vh-4rem)]">
       {/* Header */}
       <div className="flex items-center gap-3 pb-4 mb-4 border-b border-white/5">
         <Link href="/messages" className="text-slate-400 hover:text-white transition-colors text-xl leading-none">
           ←
         </Link>
+        <div className="w-10 h-10 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 font-bold flex-shrink-0">
+          {(otherUser?.display_name || '?')[0].toUpperCase()}
+        </div>
         <div>
-          <h1 className="text-lg font-semibold leading-tight">
+          <h1 className="text-base font-semibold leading-tight">
             {otherUser?.display_name || 'Anonymous'}
           </h1>
           <p className="text-xs text-slate-500">
             {otherUser?.area_name && <span>📍 {otherUser.area_name} · </span>}
-            {bookTitle && <span>📖 {bookTitle}</span>}
+            {bookTitle && <span>📚 {bookTitle}</span>}
           </p>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-3 pb-4 px-1">
+      <div className="flex-1 overflow-y-auto space-y-1 pb-4 px-1">
         {messages.length === 0 && (
-          <p className="text-center text-slate-500 text-sm py-12">
-            No messages yet — say hello!
-          </p>
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="text-4xl mb-3">👋</div>
+            <p className="text-slate-500 text-sm">No messages yet — say hello!</p>
+          </div>
         )}
-        {messages.map(msg => {
+
+        {rendered.map((item, i) => {
+          if (item.type === 'separator') {
+            return (
+              <div key={`sep-${i}`} className="flex items-center gap-3 py-4">
+                <div className="flex-1 h-px bg-white/[0.05]" />
+                <span className="text-xs text-slate-600 px-2">{item.label}</span>
+                <div className="flex-1 h-px bg-white/[0.05]" />
+              </div>
+            )
+          }
+
+          const { msg } = item
           const isMe = msg.sender_id === currentUserId
           return (
-            <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-xs lg:max-w-md px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                  isMe
-                    ? 'bg-teal-500 text-white rounded-br-sm'
-                    : 'bg-white/[0.06] text-white rounded-bl-sm'
-                }`}
-              >
-                {msg.content}
+            <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} mb-1`}>
+              <div className={`max-w-xs lg:max-w-md rounded-2xl px-4 py-2.5 ${
+                isMe
+                  ? 'bg-teal-500 text-white rounded-br-sm'
+                  : 'bg-white/[0.06] text-white rounded-bl-sm'
+              }`}>
+                <p className="text-sm leading-relaxed">{msg.content}</p>
+                <p className={`text-xs mt-1 ${isMe ? 'text-teal-100/60' : 'text-slate-600'}`}>
+                  {formatTime(msg.created_at)}
+                </p>
               </div>
             </div>
           )
@@ -163,21 +202,23 @@ export default function ChatPage() {
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSend} className="flex gap-3 pt-4 border-t border-white/5">
+      <form onSubmit={(e) => { e.preventDefault(); handleSend() }} className="flex gap-3 pt-4 border-t border-white/5">
         <input
           type="text"
           value={content}
           onChange={e => setContent(e.target.value)}
           placeholder="Type a message..."
-          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
-          autoFocus
+          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
         />
         <button
           type="submit"
           disabled={!content.trim() || sending}
-          className="bg-teal-500 hover:bg-teal-400 disabled:opacity-40 text-white font-semibold px-6 py-3 rounded-xl transition-colors"
+          className="bg-teal-500 hover:bg-teal-400 disabled:opacity-40 text-white font-semibold px-5 py-3 rounded-xl transition-colors flex items-center gap-2 text-sm"
         >
           Send
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
+          </svg>
         </button>
       </form>
     </div>

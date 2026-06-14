@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 type BookOfMonth = {
   title: string
@@ -82,8 +83,8 @@ export default function BookOfMonthCard({ book }: { book: BookOfMonth }) {
         </div>
       </div>
 
-      {/* ── Modal ── */}
-      {open && (
+      {/* ── Modal (portal so it escapes all z-index stacking contexts) ── */}
+      {open && createPortal(
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
           onClick={() => setOpen(false)}
@@ -149,7 +150,8 @@ export default function BookOfMonthCard({ book }: { book: BookOfMonth }) {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
