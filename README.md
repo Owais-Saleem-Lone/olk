@@ -1,13 +1,17 @@
 # OLK — Open Library Kashmir
 
-> A free, privacy-first book-sharing platform connecting readers across regions and places.
-> Donate or lend your used books, discover your next read from someone nearby — no shipping, no cost, no data harvesting.
+> Every book has already changed someone's life. Now it can change yours.
+
+OLK is a community-built platform where books don't collect dust on shelves — they travel.
+Readers across Kashmir donate and lend their books to strangers who become neighbours,
+and neighbours who become friends. No fees. No algorithms. No middlemen.
+Just people, and the stories that connect them.
 
 ---
 
-## What is OLK?
+## How?
 
-OLK (Open Library Kashmir) is a community-driven web application where people can:
+Its web application is a tool where people can:
 
 - **List books** they want to donate or lend
 - **Browse and search** the community's available books by title, author, or genre
@@ -45,7 +49,7 @@ You also need a free **Supabase** account at [supabase.com](https://supabase.com
 
 ---
 
-## Installation
+## Installation: for developers
 
 ### Step 1 — Install Node.js
 
