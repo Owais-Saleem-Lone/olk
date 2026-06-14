@@ -114,7 +114,7 @@ export default function BrowsePage() {
 
       {/* Search Bar */}
       <form onSubmit={handleSearch} className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 mb-8">
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
             value={searchQuery}
@@ -122,24 +122,26 @@ export default function BrowsePage() {
             placeholder="Search by title or author..."
             className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
           />
-          <button
-            type="submit"
-            className="bg-teal-500 hover:bg-teal-400 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
-          >
-            Search
-          </button>
-          {searchQuery && (
+          <div className="flex gap-3">
             <button
-              type="button"
-              onClick={() => {
-                setSearchQuery('')
-                fetchBooks('')
-              }}
-              className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-4 py-3 rounded-lg transition-colors"
+              type="submit"
+              className="flex-1 sm:flex-initial bg-teal-500 hover:bg-teal-400 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
             >
-              Clear
+              Search
             </button>
-          )}
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('')
+                  fetchBooks('')
+                }}
+                className="flex-1 sm:flex-initial bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-4 py-3 rounded-lg transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
       </form>
 

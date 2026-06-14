@@ -168,7 +168,7 @@ export default function RequestsPage() {
         ) : (
           <div className="space-y-4">
             {outgoingRequests.map((req) => (
-              <div key={req.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 flex justify-between items-center">
+              <div key={req.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 {/* FIXED: Now accessing the object directly without [0] */}
                 <p className="text-white font-semibold">{req.books?.title || "Unknown Book"}</p>
                 {req.status === 'pending' && (
