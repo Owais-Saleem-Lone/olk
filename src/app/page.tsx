@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import BookOfMonthCard from '@/components/book-of-month'
+import AboutModal from '@/components/about-modal'
 
 export default async function Home() {
   const supabase = await createClient()
@@ -44,11 +45,14 @@ export default async function Home() {
       {/* ── Navbar ── */}
       <header className="sticky top-0 z-50 border-b border-white/[0.06] backdrop-blur-md bg-[#020817]/80">
         <div className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center font-bold text-xs shadow-lg shadow-teal-500/30">
-              OLK
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center font-bold text-xs shadow-lg shadow-teal-500/30">
+                OLK
+              </div>
+              <span className="font-semibold tracking-tight">Open Library Kashmir</span>
             </div>
-            <span className="font-semibold tracking-tight">Open Library Kashmir</span>
+            <AboutModal />
           </div>
           <div className="flex items-center gap-2">
             {user ? (

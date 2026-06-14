@@ -3,7 +3,7 @@
 > Every book has already changed someone's life. Now it can change yours.
 
 OLK is a community-built platform where books don't collect dust on shelves — they travel.
-Readers across Kashmir donate and lend their books to strangers who become neighbours,
+Readers across regions donate and lend their books to strangers who become neighbours,
 and neighbours who become friends. No fees. No algorithms. No middlemen.
 Just people, and the stories that connect them.
 
