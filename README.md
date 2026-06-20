@@ -79,8 +79,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 ### 5. Set Up the Database Schema
 
-### 5. Set Up the Database Schema
-
 The repository includes a complete SQL schema file at `supabase/schema.sql`. This file contains all the table definitions, relationships, and Row Level Security (RLS) policies needed for the application.
 
 You can apply it in one of two ways:
@@ -146,37 +144,13 @@ The codebase is structured for scalability, leveraging Next.js App Router and Se
 
 ## 🔒 Security & Routing
 
-Route protection is handled elegantly via `src/middleware.ts`. It checks for an active Supabase session before allowing access to any routes inside the `(dashboard)` group. Unauthenticated users are seamlessly redirected to `/login`.
+To keep your data safe, **OLK** uses a dedicated middleware layer that intercepts every request before it reaches a page.  
 
-```typescript
-// src/middleware.ts
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+- All routes inside the `(dashboard)` folder are **protected** – they require a valid Supabase session.  
+- If a user tries to access these pages without being logged in, they are automatically redirected to the `/login` page.  
+- The middleware also preserves the originally requested URL, so after a successful login, the user is sent right back where they wanted to go.  
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
-  const { data: { session } } = await supabase.auth.getSession()
-
-  const protectedRoutes = ['/my-books', '/messages', '/requests', '/profile', '/notifications', '/admin']
-  const isProtected = protectedRoutes.some(route => req.nextUrl.pathname.startsWith(route))
-
-  if (isProtected && !session) {
-    const redirectUrl = new URL('/login', req.url)
-    redirectUrl.searchParams.set('redirectTo', req.nextUrl.pathname)
-    return NextResponse.redirect(redirectUrl)
-  }
-
-  return res
-}
-
-export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|login|register).*)'],
-}
-```
-
----
+The logic lives in `src/middleware.ts` and is fully integrated with Supabase’s authentication helpers. This approach gives you a clean, server‑side security layer without cluttering your components with auth checks.
 
 ## 📜 Available Scripts
 
@@ -227,11 +201,13 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## 🙏 Acknowledgements
 
-- [Next.js](https://nextjs.org/)
-- [Supabase](https://supabase.com/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Vercel](https://vercel.com/)
+This project wouldn't have been possible without the incredible open‑source tools and communities that power it. Special thanks to:
 
----
+- **[Next.js](https://nextjs.org/)** – for the React framework that makes full‑stack development a joy.
+- **[Supabase](https://supabase.com/)** – for providing a rock‑solid backend with authentication and realtime features.
+- **[Tailwind CSS](https://tailwindcss.com/)** – for the utility‑first CSS framework that kept the UI clean and fast.
+- **[Vercel](https://vercel.com/)** – for seamless hosting and a smooth deployment experience.
+
+And to the entire open‑source community for continuously pushing the boundaries of web development.
 
 **Happy reading & sharing!** 📖✨
