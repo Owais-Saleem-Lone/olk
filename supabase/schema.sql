@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS "public"."books" (
     "cover_url" "text",
     CONSTRAINT "books_condition_check" CHECK ((("condition")::"text" = ANY ((ARRAY['excellent'::character varying, 'good'::character varying, 'fair'::character varying, 'poor'::character varying])::"text"[]))),
     CONSTRAINT "books_listing_type_check" CHECK ((("listing_type")::"text" = ANY ((ARRAY['donate'::character varying, 'lend'::character varying])::"text"[]))),
-    CONSTRAINT "books_status_check" CHECK ((("status")::"text" = ANY ((ARRAY['available'::character varying, 'given'::character varying])::"text"[])))
+    CONSTRAINT "books_status_check" CHECK ((("status")::"text" = ANY ((ARRAY['available'::character varying, 'unavailable'::character varying, 'given'::character varying])::"text"[])))
 );
 
 
