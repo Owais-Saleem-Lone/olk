@@ -45,13 +45,13 @@ export default async function DashboardLayout({
   let displayName: string | null = null
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name')
+    .select('display_name, is_admin')
     .eq('id', user.id)
     .single()
   displayName = profile?.display_name ?? null
 
   return (
-    <DashboardShell displayName={displayName} email={user.email ?? null}>
+    <DashboardShell displayName={displayName} email={user.email ?? null} isAdmin={profile?.is_admin ?? false}>
       {children}
     </DashboardShell>
   )

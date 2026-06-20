@@ -9,15 +9,18 @@ const NAV_ITEMS = [
   { href: '/my-books', label: '➕ My Books' },
   { href: '/messages', label: '💬 Messages' },
   { href: '/requests', label: '📩 Requests' },
+  { href: '/notifications', label: '🔔 Notifications' },
   { href: '/profile', label: '👤 My Profile' },
 ]
 
 export default function DashboardSidebar({
   displayName,
   email,
+  isAdmin,
 }: {
   displayName: string | null
   email: string | null
+  isAdmin: boolean
 }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -52,6 +55,18 @@ export default function DashboardSidebar({
             </Link>
           )
         })}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors mt-4 border-t border-white/5 pt-4 ${
+              pathname === '/admin' || pathname.startsWith('/admin/')
+                ? 'bg-white/5 text-white'
+                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            ⚙️ Admin
+          </Link>
+        )}
       </nav>
 
       <div className="border-t border-white/5 pt-4 space-y-3">
