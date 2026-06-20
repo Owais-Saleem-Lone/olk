@@ -79,167 +79,18 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 ### 5. Set Up the Database Schema
 
-Run the **entire SQL script below** in the Supabase SQL Editor. It creates all necessary tables, relationships, and Row Level Security (RLS) policies.
+### 5. Set Up the Database Schema
 
-#### 📄 Complete Database Setup Script
+The repository includes a complete SQL schema file at `supabase/schema.sql`. This file contains all the table definitions, relationships, and Row Level Security (RLS) policies needed for the application.
 
-```sql
--- ============================================================
--- 1. Enable UUID extension if not already enabled
--- ============================================================
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+You can apply it in one of two ways:
 
--- ============================================================
--- 2. Books table (books that users own and are willing to lend)
--- ============================================================
-CREATE TABLE books (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  author TEXT NOT NULL,
-  description TEXT,
-  cover_url TEXT,
-  is_available BOOLEAN DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+- **Using the Supabase SQL Editor** – Open your project’s SQL Editor, copy the entire content of `supabase/schema.sql`, and run it.
+- **Using the Supabase CLI** (if you have it installed) – run the following command from the root of your project:
 
--- ============================================================
--- 3. Requests table (borrow requests between users)
--- ============================================================
-CREATE TABLE requests (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  book_id UUID NOT NULL REFERENCES books(id) ON DELETE CASCADE,
-  requester_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'completed')),
-  message TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- ============================================================
--- 4. Messages table (1-on-1 chat for coordination)
--- ============================================================
-CREATE TABLE messages (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  request_id UUID NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
-  sender_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  receiver_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  content TEXT NOT NULL,
-  read BOOLEAN DEFAULT false,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- ============================================================
--- 5. Notifications table (real-time alerts)
--- ============================================================
-CREATE TABLE notifications (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  type TEXT NOT NULL CHECK (type IN ('request', 'message', 'status_update', 'system')),
-  title TEXT NOT NULL,
-  body TEXT NOT NULL,
-  link TEXT,
-  read BOOLEAN DEFAULT false,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- ============================================================
--- 6. Book of the Month (curated featured book)
--- ============================================================
-CREATE TABLE book_of_the_month (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  title TEXT NOT NULL,
-  author TEXT NOT NULL,
-  description TEXT NOT NULL,
-  cover_url TEXT NOT NULL,
-  active BOOLEAN DEFAULT false,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- ============================================================
--- 7. Reports table (moderation)
--- ============================================================
-CREATE TABLE reports (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  reporter_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  target_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  target_book_id UUID REFERENCES books(id) ON DELETE CASCADE,
-  reason TEXT NOT NULL,
-  description TEXT,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'reviewed', 'dismissed')),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  CONSTRAINT report_target_check CHECK (
-    (target_user_id IS NOT NULL AND target_book_id IS NULL) OR
-    (target_user_id IS NULL AND target_book_id IS NOT NULL)
-  )
-);
-
--- ============================================================
--- 8. Row Level Security (RLS) Policies
--- ============================================================
-
--- Enable RLS on all tables
-ALTER TABLE books ENABLE ROW LEVEL SECURITY;
-ALTER TABLE requests ENABLE ROW LEVEL SECURITY;
-ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE book_of_the_month ENABLE ROW LEVEL SECURITY;
-ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
-
--- Books: anyone can view, only owners can insert/update/delete
-CREATE POLICY "Books are viewable by everyone"
-  ON books FOR SELECT USING (true);
-CREATE POLICY "Users can insert their own books"
-  ON books FOR INSERT WITH CHECK (auth.uid() = owner_id);
-CREATE POLICY "Users can update their own books"
-  ON books FOR UPDATE USING (auth.uid() = owner_id);
-CREATE POLICY "Users can delete their own books"
-  ON books FOR DELETE USING (auth.uid() = owner_id);
-
--- Requests: involved users and admins can view, users can create
-CREATE POLICY "Users can view requests they are part of"
-  ON requests FOR SELECT USING (
-    auth.uid() = requester_id OR auth.uid() = owner_id
-  );
-CREATE POLICY "Users can create requests"
-  ON requests FOR INSERT WITH CHECK (auth.uid() = requester_id);
-CREATE POLICY "Users can update requests they are part of"
-  ON requests FOR UPDATE USING (
-    auth.uid() = requester_id OR auth.uid() = owner_id
-  );
-
--- Messages: only participants can view and send
-CREATE POLICY "Users can view messages for their requests"
-  ON messages FOR SELECT USING (
-    auth.uid() = sender_id OR auth.uid() = receiver_id
-  );
-CREATE POLICY "Users can send messages"
-  ON messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
-
--- Notifications: users can only see their own
-CREATE POLICY "Users can view their own notifications"
-  ON notifications FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can update their own notifications"
-  ON notifications FOR UPDATE USING (auth.uid() = user_id);
-
--- Book of the Month: everyone can view, only admins can modify (handled via admin role)
-CREATE POLICY "Anyone can view Book of the Month"
-  ON book_of_the_month FOR SELECT USING (true);
--- Admin modifications require a custom role; you can add a policy with (auth.jwt() ->> 'role' = 'admin')
-
--- Reports: users can insert, only admins can view/update
-CREATE POLICY "Users can create reports"
-  ON reports FOR INSERT WITH CHECK (auth.uid() = reporter_id);
-CREATE POLICY "Admins can view all reports"
-  ON reports FOR SELECT USING (auth.jwt() ->> 'role' = 'admin');
-CREATE POLICY "Admins can update reports"
-  ON reports FOR UPDATE USING (auth.jwt() ->> 'role' = 'admin');
+```bash
+npx supabase db push
 ```
-
 ### 6. Run the Development Server
 
 ```bash
