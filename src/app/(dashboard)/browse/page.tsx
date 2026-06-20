@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { createNotification } from '@/lib/notifications'
 import Link from 'next/link'
 import ReportModal from '@/components/report-modal'
 
@@ -70,7 +71,7 @@ export default function BrowsePage() {
     let dbQuery = supabase
       .from('books')
       .select('*')
-      .eq('status', 'available')
+      .in('status', ['available', 'given'])
       .order('created_at', { ascending: false })
 
     if (query.trim() !== '') {
@@ -143,8 +144,8 @@ export default function BrowsePage() {
           .eq('id', user.id)
           .single()
 
-        await supabase.from('notifications').insert({
-          user_id: book.owner_id,
+        await createNotification({
+          userId: book.owner_id,
           type: 'book_requested',
           title: `${profile?.display_name || 'Someone'} requested your book "${book.title}"`,
           link: '/requests',
@@ -356,6 +357,13 @@ export default function BrowsePage() {
                       </span>
                     </div>
                   )}
+                  {book.status === 'given' && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
+                        Donated
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-4 flex flex-col flex-1">
@@ -371,9 +379,9 @@ export default function BrowsePage() {
                 {/* Owner info — only shown to logged-in users */}
                 {currentUserId && owner && (
                   <div className="mt-auto pt-4 border-t border-white/5 mb-4">
-                    <p className="text-sm text-slate-300">
+                    <Link href={`/user/${book.owner_id}`} className="text-sm text-slate-300 hover:text-teal-400 transition-colors">
                       👤 {owner.display_name || 'Anonymous'}
-                    </p>
+                    </Link>
                     {owner.area_name && (
                       <p className="text-xs text-slate-500">📍 {owner.area_name}</p>
                     )}
@@ -381,7 +389,14 @@ export default function BrowsePage() {
                 )}
 
                 {/* Request Button */}
-                {!currentUserId ? (
+                {book.status === 'given' ? (
+                  <button
+                    disabled
+                    className="w-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium py-2 rounded-lg text-sm cursor-not-allowed"
+                  >
+                    Donated
+                  </button>
+                ) : !currentUserId ? (
                   <Link
                     href="/login"
                     className="w-full block text-center bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-2 rounded-lg text-sm transition-colors"

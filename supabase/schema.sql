@@ -308,7 +308,7 @@ CREATE POLICY "Profiles are viewable by authenticated users" ON "public"."profil
 
 
 
-CREATE POLICY "Public can view available books" ON "public"."books" FOR SELECT TO "authenticated", "anon" USING ((("status")::"text" = 'available'::"text"));
+CREATE POLICY "Public can view available and given books" ON "public"."books" FOR SELECT TO "authenticated", "anon" USING ((("status")::"text" = ANY (ARRAY['available'::"text", 'given'::"text"])));
 
 
 
