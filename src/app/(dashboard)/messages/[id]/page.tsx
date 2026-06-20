@@ -38,6 +38,7 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [otherUser, setOtherUser] = useState<{ display_name: string | null; area_name: string | null } | null>(null)
+  const [otherUserId, setOtherUserId] = useState<string | null>(null)
   const [bookTitle, setBookTitle] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -83,6 +84,7 @@ export default function ChatPage() {
         : req.requester_id
 
       if (otherId) {
+        setOtherUserId(otherId)
         const { data: profile } = await supabase
           .from('profiles')
           .select('display_name, area_name')
@@ -121,6 +123,21 @@ export default function ChatPage() {
       setMessages(prev =>
         prev.some(m => m.id === inserted.id) ? prev : [...prev, inserted]
       )
+
+      if (otherUserId) {
+        const { data: myProfile } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('id', currentUserId)
+          .single()
+
+        await supabase.from('notifications').insert({
+          user_id: otherUserId,
+          type: 'new_message',
+          title: `${myProfile?.display_name || 'Someone'} sent a message about "${bookTitle}"`,
+          link: `/messages/${requestId}`,
+        })
+      }
     }
 
     setSending(false)

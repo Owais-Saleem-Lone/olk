@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import ReportModal from '@/components/report-modal'
 
 type Profile = {
   id: string
@@ -28,8 +29,16 @@ export default function BrowsePage() {
   const [profiles, setProfiles] = useState<Record<string, Profile>>({})
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [filterGenre, setFilterGenre] = useState('')
+  const [filterType, setFilterType] = useState('')
+  const [filterCondition, setFilterCondition] = useState('')
+  const [filterArea, setFilterArea] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
   const [requestedBooks, setRequestedBooks] = useState<Set<string>>(new Set())
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [reportTarget, setReportTarget] = useState<{ bookId: string; ownerId: string; title: string } | null>(null)
+
+  const mounted = useRef(false)
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search).get('q') || ''
@@ -37,12 +46,26 @@ export default function BrowsePage() {
     fetchBooks(q)
   }, [])
 
+  useEffect(() => {
+    if (!mounted.current) { mounted.current = true; return }
+    fetchBooks(searchQuery)
+  }, [filterGenre, filterType, filterCondition])
+
   const fetchBooks = async (query: string = '') => {
     setLoading(true)
 
-    // Get current user so we don't show "Request" on our own books
     const { data: { user } } = await supabase.auth.getUser()
-    if (user) setCurrentUserId(user.id)
+    if (user) {
+      setCurrentUserId(user.id)
+      const { data: existingReqs } = await supabase
+        .from('book_requests')
+        .select('book_id')
+        .eq('requester_id', user.id)
+        .in('status', ['pending', 'accepted', 'handed_over'])
+      if (existingReqs) {
+        setRequestedBooks(new Set(existingReqs.map((r: any) => r.book_id)))
+      }
+    }
 
     let dbQuery = supabase
       .from('books')
@@ -53,6 +76,9 @@ export default function BrowsePage() {
     if (query.trim() !== '') {
       dbQuery = dbQuery.or(`title.ilike.%${query}%,author.ilike.%${query}%`)
     }
+    if (filterGenre) dbQuery = dbQuery.eq('genre', filterGenre)
+    if (filterType) dbQuery = dbQuery.eq('listing_type', filterType)
+    if (filterCondition) dbQuery = dbQuery.eq('condition', filterCondition)
 
     const { data, error } = await dbQuery
 
@@ -100,12 +126,39 @@ export default function BrowsePage() {
     })
 
     if (error) {
-      console.error('Error requesting book:', error)
-      alert('Could not request book: ' + error.message)
+      if (error.code === '23505') {
+        alert('You already have an active request for this book.')
+      } else {
+        console.error('Error requesting book:', error)
+        alert('Could not request book: ' + error.message)
+      }
     } else {
       setRequestedBooks((prev) => new Set(prev).add(bookId))
+
+      const book = books.find(b => b.id === bookId)
+      if (book) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('id', user.id)
+          .single()
+
+        await supabase.from('notifications').insert({
+          user_id: book.owner_id,
+          type: 'book_requested',
+          title: `${profile?.display_name || 'Someone'} requested your book "${book.title}"`,
+          link: '/requests',
+        })
+      }
     }
   }
+
+  const displayBooks = filterArea
+    ? books.filter(b => {
+        const area = profiles[b.owner_id]?.area_name
+        return area && area.toLowerCase().includes(filterArea.toLowerCase())
+      })
+    : books
 
   return (
     <div>
@@ -143,6 +196,100 @@ export default function BrowsePage() {
             )}
           </div>
         </div>
+
+        {/* Filter toggle */}
+        <button
+          type="button"
+          onClick={() => setShowFilters(!showFilters)}
+          className="mt-4 text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          Filters
+          {(filterGenre || filterType || filterCondition || filterArea) && (
+            <span className="bg-teal-500/20 text-teal-400 text-xs font-bold px-1.5 py-0.5 rounded-full">
+              {[filterGenre, filterType, filterCondition, filterArea].filter(Boolean).length}
+            </span>
+          )}
+        </button>
+
+        {showFilters && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+            <select
+              value={filterGenre}
+              onChange={(e) => setFilterGenre(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+            >
+              <option value="" className="bg-slate-900">All Genres</option>
+              <optgroup label="Natural Sciences" className="bg-slate-900">
+                <option value="Physics" className="bg-slate-900">Physics</option>
+                <option value="Chemistry" className="bg-slate-900">Chemistry</option>
+                <option value="Biology" className="bg-slate-900">Biology</option>
+                <option value="Mathematics" className="bg-slate-900">Mathematics</option>
+              </optgroup>
+              <optgroup label="Engineering" className="bg-slate-900">
+                <option value="Civil Engineering" className="bg-slate-900">Civil Engineering</option>
+                <option value="Mechanical Engineering" className="bg-slate-900">Mechanical Engineering</option>
+                <option value="Electrical Engineering" className="bg-slate-900">Electrical Engineering</option>
+                <option value="IT/Computer Science" className="bg-slate-900">IT/Computer Science</option>
+              </optgroup>
+              <optgroup label="Medicine" className="bg-slate-900">
+                <option value="Anatomy" className="bg-slate-900">Anatomy</option>
+                <option value="Physiology" className="bg-slate-900">Physiology</option>
+                <option value="Clinical Medicine" className="bg-slate-900">Clinical Medicine</option>
+              </optgroup>
+              <optgroup label="Social Sciences" className="bg-slate-900">
+                <option value="History" className="bg-slate-900">History</option>
+                <option value="Civics" className="bg-slate-900">Civics</option>
+                <option value="Geography" className="bg-slate-900">Geography</option>
+                <option value="Psychology" className="bg-slate-900">Psychology</option>
+                <option value="Philosophy" className="bg-slate-900">Philosophy</option>
+              </optgroup>
+              <optgroup label="Literature" className="bg-slate-900">
+                <option value="English Literature" className="bg-slate-900">English Literature</option>
+                <option value="Urdu Literature" className="bg-slate-900">Urdu Literature</option>
+                <option value="Hindi Literature" className="bg-slate-900">Hindi Literature</option>
+                <option value="Persian Literature" className="bg-slate-900">Persian Literature</option>
+                <option value="Arabic Literature" className="bg-slate-900">Arabic Literature</option>
+                <option value="Kashmiri Literature" className="bg-slate-900">Kashmiri Literature</option>
+              </optgroup>
+              <optgroup label="Other" className="bg-slate-900">
+                <option value="General" className="bg-slate-900">General / Other</option>
+              </optgroup>
+            </select>
+
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+            >
+              <option value="" className="bg-slate-900">All Types</option>
+              <option value="donate" className="bg-slate-900">Donate</option>
+              <option value="lend" className="bg-slate-900">Lend</option>
+            </select>
+
+            <select
+              value={filterCondition}
+              onChange={(e) => setFilterCondition(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+            >
+              <option value="" className="bg-slate-900">Any Condition</option>
+              <option value="excellent" className="bg-slate-900">Excellent</option>
+              <option value="good" className="bg-slate-900">Good</option>
+              <option value="fair" className="bg-slate-900">Fair</option>
+              <option value="poor" className="bg-slate-900">Poor</option>
+            </select>
+
+            <input
+              type="text"
+              value={filterArea}
+              onChange={(e) => setFilterArea(e.target.value)}
+              placeholder="Filter by area..."
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+        )}
       </form>
 
       {/* Loading State */}
@@ -151,20 +298,22 @@ export default function BrowsePage() {
       )}
 
       {/* Empty State */}
-      {!loading && books.length === 0 && (
+      {!loading && displayBooks.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="text-6xl mb-4">📖</div>
           <h2 className="text-xl font-semibold mb-2">No books found</h2>
           <p className="text-slate-400 max-w-md">
-            {searchQuery ? `No books match "${searchQuery}". Try another search!` : "Be the first to add a book to the community!"}
+            {(searchQuery || filterGenre || filterType || filterCondition || filterArea)
+              ? 'No books match your filters. Try adjusting your search!'
+              : 'Be the first to add a book to the community!'}
           </p>
         </div>
       )}
 
       {/* Books Grid */}
-      {!loading && books.length > 0 && (
+      {!loading && displayBooks.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {books.map((book) => {
+          {displayBooks.map((book) => {
             const owner = profiles[book.owner_id]
             const isOwnBook = book.owner_id === currentUserId
             const isRequested = requestedBooks.has(book.id)
@@ -261,11 +410,28 @@ export default function BrowsePage() {
                     Request Book
                   </button>
                 )}
+                {currentUserId && !isOwnBook && (
+                  <button
+                    onClick={() => setReportTarget({ bookId: book.id, ownerId: book.owner_id, title: book.title })}
+                    className="w-full mt-2 text-xs text-slate-600 hover:text-red-400 transition-colors py-1"
+                  >
+                    Report
+                  </button>
+                )}
                 </div>{/* end p-5 */}
               </div>
             )
           })}
         </div>
+      )}
+
+      {reportTarget && (
+        <ReportModal
+          reportedBookId={reportTarget.bookId}
+          reportedUserId={reportTarget.ownerId}
+          bookTitle={reportTarget.title}
+          onClose={() => setReportTarget(null)}
+        />
       )}
     </div>
   )
