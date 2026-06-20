@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { createNotification } from '@/lib/notifications'
 import { useRouter } from 'next/navigation'
 
 // FIXED: Removed the [] from books and profiles. 
@@ -84,8 +85,8 @@ export default function RequestsPage() {
     } else {
       const req = incomingRequests.find(r => r.id === requestId)
       if (req) {
-        await supabase.from('notifications').insert({
-          user_id: req.requester_id,
+        await createNotification({
+          userId: req.requester_id,
           type: newStatus === 'accepted' ? 'request_accepted' : 'request_declined',
           title: newStatus === 'accepted'
             ? `Your request for "${req.books?.title}" was accepted!`
@@ -123,8 +124,8 @@ export default function RequestsPage() {
     const { data: { user } } = await supabase.auth.getUser()
     const otherId = user?.id === req.requester_id ? req.books?.owner_id : req.requester_id
     if (otherId) {
-      await supabase.from('notifications').insert({
-        user_id: otherId,
+      await createNotification({
+        userId: otherId,
         type: 'handover_confirmed',
         title: `Handover confirmed for "${req.books?.title}"`,
         link: '/requests',
@@ -147,8 +148,8 @@ export default function RequestsPage() {
     const { data: { user } } = await supabase.auth.getUser()
     const otherId = user?.id === req.requester_id ? req.books?.owner_id : req.requester_id
     if (otherId) {
-      await supabase.from('notifications').insert({
-        user_id: otherId,
+      await createNotification({
+        userId: otherId,
         type: 'book_returned',
         title: `"${req.books?.title}" has been marked as returned`,
         link: '/requests',

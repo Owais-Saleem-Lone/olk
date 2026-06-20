@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { createNotification } from '@/lib/notifications'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -125,18 +126,30 @@ export default function ChatPage() {
       )
 
       if (otherUserId) {
-        const { data: myProfile } = await supabase
-          .from('profiles')
-          .select('display_name')
-          .eq('id', currentUserId)
-          .single()
+        const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+        const { data: recentNotif } = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('user_id', otherUserId)
+          .eq('type', 'new_message')
+          .eq('link', `/messages/${requestId}`)
+          .gte('created_at', fifteenMinAgo)
+          .limit(1)
 
-        await supabase.from('notifications').insert({
-          user_id: otherUserId,
-          type: 'new_message',
-          title: `${myProfile?.display_name || 'Someone'} sent a message about "${bookTitle}"`,
-          link: `/messages/${requestId}`,
-        })
+        if (!recentNotif || recentNotif.length === 0) {
+          const { data: myProfile } = await supabase
+            .from('profiles')
+            .select('display_name')
+            .eq('id', currentUserId)
+            .single()
+
+          await createNotification({
+            userId: otherUserId,
+            type: 'new_message',
+            title: `${myProfile?.display_name || 'Someone'} sent a message about "${bookTitle}"`,
+            link: `/messages/${requestId}`,
+          })
+        }
       }
     }
 

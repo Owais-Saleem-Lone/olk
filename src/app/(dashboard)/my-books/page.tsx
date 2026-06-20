@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { compressImage, validateImageUrl } from '@/lib/image-utils'
 
 type Book = {
   id: string
@@ -78,9 +79,10 @@ export default function MyBooksPage() {
   }
 
   const uploadCover = async (file: File, userId: string) => {
-    const ext = file.name.split('.').pop()
+    const compressed = await compressImage(file)
+    const ext = compressed.name.split('.').pop()
     const path = `${userId}/${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('book-covers').upload(path, file)
+    const { error } = await supabase.storage.from('book-covers').upload(path, compressed)
     if (error) return { url: null, error: error.message }
     const { data } = supabase.storage.from('book-covers').getPublicUrl(path)
     return { url: data.publicUrl, error: null }
@@ -491,6 +493,22 @@ function CoverInput({
   urlValue: string
   onClear: () => void
 }) {
+  const [validating, setValidating] = useState(false)
+  const [urlError, setUrlError] = useState('')
+
+  const handleUrlBlur = async () => {
+    const url = urlValue.trim()
+    if (!url) { setUrlError(''); return }
+    setValidating(true)
+    setUrlError('')
+    const valid = await validateImageUrl(url)
+    setValidating(false)
+    if (!valid) {
+      setUrlError('Image could not be loaded. Check the URL.')
+      onClear()
+    }
+  }
+
   return preview ? (
     <div className="relative inline-block">
       <img src={preview} alt="Cover preview"
@@ -510,16 +528,20 @@ function CoverInput({
           <polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>
         </svg>
         <span className="text-sm text-slate-400 group-hover:text-slate-300 transition-colors">Upload a photo</span>
-        <span className="text-xs text-slate-600">JPG, PNG, WebP — max 5MB</span>
+        <span className="text-xs text-slate-600">JPG, PNG, WebP — auto-compressed under 500KB</span>
       </label>
       <div className="flex items-center gap-3 my-3">
         <div className="flex-1 h-px bg-white/[0.06]" />
         <span className="text-xs text-slate-600">or paste a URL</span>
         <div className="flex-1 h-px bg-white/[0.06]" />
       </div>
-      <input type="url" value={urlValue} onChange={(e) => onUrlChange(e.target.value)}
-        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+      <input type="url" value={urlValue}
+        onChange={(e) => { onUrlChange(e.target.value); setUrlError('') }}
+        onBlur={handleUrlBlur}
+        className={`w-full bg-white/5 border rounded-lg px-4 py-2.5 text-white placeholder-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 ${urlError ? 'border-red-500/50' : 'border-white/10'}`}
         placeholder="https://..." />
+      {validating && <p className="text-xs text-slate-500 mt-1">Validating image...</p>}
+      {urlError && <p className="text-xs text-red-400 mt-1">{urlError}</p>}
     </>
   )
 }

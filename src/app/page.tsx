@@ -2,6 +2,18 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import BookOfMonthCard from '@/components/book-of-month'
 import AboutModal from '@/components/about-modal'
+import AnimatedCounter from '@/components/animated-counter'
+
+function getTimeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  return `${days}d ago`
+}
 
 export default async function Home() {
   const supabase = await createClient()
@@ -31,6 +43,22 @@ export default async function Home() {
     .order('created_at', { ascending: false })
     .limit(1)
     .single()
+
+  const [
+    { count: totalBooks },
+    { count: totalUsers },
+    { count: completedExchanges },
+  ] = await Promise.all([
+    supabase.from('books').select('*', { count: 'exact', head: true }),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }),
+    supabase.from('book_requests').select('*', { count: 'exact', head: true }).in('status', ['handed_over', 'returned']),
+  ])
+
+  const { data: recentActivity } = await supabase
+    .from('books')
+    .select('title, listing_type, owner_id, created_at, profiles!books_owner_id_fkey(display_name, area_name)')
+    .order('created_at', { ascending: false })
+    .limit(5)
 
   return (
     <div className="min-h-screen bg-[#020817] text-white overflow-x-hidden">
@@ -142,6 +170,22 @@ export default async function Home() {
         >
           Start Sharing Books →
         </Link>
+
+        {/* ── Community Stats ── */}
+        {(totalBooks || totalUsers || completedExchanges) ? (
+          <div className="grid grid-cols-3 gap-5 mt-16 max-w-xl mx-auto">
+            {[
+              { value: totalBooks ?? 0, label: 'Books Shared', color: 'text-teal-400' },
+              { value: totalUsers ?? 0, label: 'Readers Joined', color: 'text-cyan-400' },
+              { value: completedExchanges ?? 0, label: 'Exchanges Made', color: 'text-emerald-400' },
+            ].map((stat) => (
+              <div key={stat.label} className="text-center">
+                <AnimatedCounter value={stat.value} className={`text-4xl md:text-5xl font-bold ${stat.color}`} />
+                <p className="text-xs text-slate-500 mt-1.5">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       {/* ── Book of the Month ── */}
@@ -193,6 +237,42 @@ export default async function Home() {
           ))}
         </div>
       </section>
+
+      {/* ── Recent Activity Feed ── */}
+      {recentActivity && recentActivity.length > 0 && (
+        <section className="relative z-10 max-w-5xl mx-auto px-6 pb-28">
+          <div className="text-center mb-10">
+            <p className="text-teal-400 text-sm font-semibold uppercase tracking-widest mb-3">Live Activity</p>
+            <h2 className="text-3xl md:text-4xl font-bold">Happening right now</h2>
+          </div>
+          <div className="space-y-3 max-w-2xl mx-auto">
+            {recentActivity.map((item: any, i: number) => {
+              const profile = item.profiles as { display_name: string | null; area_name: string | null } | null
+              const name = profile?.display_name?.split('@')[0] || 'Someone'
+              const area = profile?.area_name
+              const ago = getTimeAgo(item.created_at)
+              return (
+                <div key={i} className="flex items-center gap-4 bg-white/[0.02] border border-white/[0.06] rounded-xl px-5 py-3.5">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    item.listing_type === 'donate'
+                      ? 'bg-teal-500/10 text-teal-400'
+                      : 'bg-blue-500/10 text-blue-400'
+                  }`}>
+                    {item.listing_type === 'donate' ? '🎁' : '🤝'}
+                  </div>
+                  <p className="text-sm text-slate-300 flex-1">
+                    <span className="text-white font-medium">{name}</span>
+                    {' '}{item.listing_type === 'donate' ? 'donated' : 'listed'}{' '}
+                    <span className="text-teal-400 font-medium">{item.title}</span>
+                    {area && <span className="text-slate-500"> in {area}</span>}
+                  </p>
+                  <span className="text-xs text-slate-600 flex-shrink-0">{ago}</span>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ── Books from the community ── */}
       <section className="relative z-10 max-w-5xl mx-auto px-6 pb-28">
