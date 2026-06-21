@@ -74,6 +74,34 @@ $$;
 ALTER FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "user_lng" double precision) RETURNS TABLE("id" "uuid", "name" character varying, "description" "text", "interest" character varying, "area_name" character varying, "cover_url" "text", "creator_id" "uuid", "member_count" integer, "created_at" timestamp with time zone, "distance_km" double precision, "creator_name" character varying)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    AS $$
+  SELECT
+    c.id, c.name, c.description, c.interest, c.area_name,
+    c.cover_url, c.creator_id, c.member_count, c.created_at,
+    CASE
+      WHEN c.latitude IS NOT NULL AND c.longitude IS NOT NULL THEN
+        6371 * acos(
+          LEAST(1.0, GREATEST(-1.0,
+            cos(radians(user_lat)) * cos(radians(c.latitude)) *
+            cos(radians(c.longitude) - radians(user_lng)) +
+            sin(radians(user_lat)) * sin(radians(c.latitude))
+          ))
+        )
+      ELSE NULL
+    END AS distance_km,
+    p.display_name AS creator_name
+  FROM clubs c
+  JOIN profiles p ON p.id = c.creator_id
+  WHERE c.active = true
+  ORDER BY distance_km ASC NULLS LAST, c.member_count DESC;
+$$;
+
+
+ALTER FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "user_lng" double precision) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$ BEGIN
@@ -150,6 +178,48 @@ CREATE TABLE IF NOT EXISTS "public"."books" (
 
 
 ALTER TABLE "public"."books" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."club_members" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "club_id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "joined_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."club_members" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."club_posts" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "club_id" "uuid" NOT NULL,
+    "author_id" "uuid" NOT NULL,
+    "content" "text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."club_posts" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."clubs" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "name" character varying(200) NOT NULL,
+    "description" "text",
+    "interest" character varying(100),
+    "area_name" character varying(200),
+    "latitude" double precision,
+    "longitude" double precision,
+    "cover_url" "text",
+    "creator_id" "uuid" NOT NULL,
+    "member_count" integer DEFAULT 1,
+    "active" boolean DEFAULT true,
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."clubs" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."messages" (
@@ -265,6 +335,26 @@ ALTER TABLE ONLY "public"."books"
 
 
 
+ALTER TABLE ONLY "public"."club_members"
+    ADD CONSTRAINT "club_members_club_id_user_id_key" UNIQUE ("club_id", "user_id");
+
+
+
+ALTER TABLE ONLY "public"."club_members"
+    ADD CONSTRAINT "club_members_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."club_posts"
+    ADD CONSTRAINT "club_posts_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."clubs"
+    ADD CONSTRAINT "clubs_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."messages"
     ADD CONSTRAINT "messages_pkey" PRIMARY KEY ("id");
 
@@ -330,6 +420,31 @@ ALTER TABLE ONLY "public"."bookmarks"
 
 ALTER TABLE ONLY "public"."books"
     ADD CONSTRAINT "books_owner_id_fkey" FOREIGN KEY ("owner_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."club_members"
+    ADD CONSTRAINT "club_members_club_id_fkey" FOREIGN KEY ("club_id") REFERENCES "public"."clubs"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."club_members"
+    ADD CONSTRAINT "club_members_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."club_posts"
+    ADD CONSTRAINT "club_posts_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."club_posts"
+    ADD CONSTRAINT "club_posts_club_id_fkey" FOREIGN KEY ("club_id") REFERENCES "public"."clubs"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."clubs"
+    ADD CONSTRAINT "clubs_creator_id_fkey" FOREIGN KEY ("creator_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -423,7 +538,27 @@ CREATE POLICY "Admins view all reports" ON "public"."reports" FOR SELECT USING (
 
 
 
+CREATE POLICY "Anyone can view active clubs" ON "public"."clubs" FOR SELECT TO "authenticated", "anon" USING (("active" = true));
+
+
+
+CREATE POLICY "Anyone can view club posts" ON "public"."club_posts" FOR SELECT TO "authenticated", "anon" USING (true);
+
+
+
+CREATE POLICY "Authenticated users can create clubs" ON "public"."clubs" FOR INSERT TO "authenticated" WITH CHECK (("auth"."uid"() = "creator_id"));
+
+
+
+CREATE POLICY "Authenticated users can view club members" ON "public"."club_members" FOR SELECT TO "authenticated" USING (true);
+
+
+
 CREATE POLICY "Authenticated users insert notifications" ON "public"."notifications" FOR INSERT WITH CHECK (("auth"."uid"() IS NOT NULL));
+
+
+
+CREATE POLICY "Author can delete own posts" ON "public"."club_posts" FOR DELETE TO "authenticated" USING (("auth"."uid"() = "author_id"));
 
 
 
@@ -434,6 +569,20 @@ CREATE POLICY "Book owners can update requests" ON "public"."book_requests" FOR 
 
 
 CREATE POLICY "Books are viewable by authenticated users" ON "public"."books" FOR SELECT TO "authenticated" USING (true);
+
+
+
+CREATE POLICY "Club creator can post" ON "public"."club_posts" FOR INSERT TO "authenticated" WITH CHECK ((("auth"."uid"() = "author_id") AND (EXISTS ( SELECT 1
+   FROM "public"."clubs"
+  WHERE (("clubs"."id" = "club_posts"."club_id") AND ("clubs"."creator_id" = "auth"."uid"()))))));
+
+
+
+CREATE POLICY "Creator can delete own club" ON "public"."clubs" FOR DELETE TO "authenticated" USING (("auth"."uid"() = "creator_id"));
+
+
+
+CREATE POLICY "Creator can update own club" ON "public"."clubs" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "creator_id"));
 
 
 
@@ -482,6 +631,16 @@ CREATE POLICY "Users can insert own ratings" ON "public"."ratings" FOR INSERT WI
 
 
 CREATE POLICY "Users can insert own wishlists" ON "public"."wishlists" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can join clubs" ON "public"."club_members" FOR INSERT TO "authenticated" WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can leave clubs" ON "public"."club_members" FOR DELETE TO "authenticated" USING ((("auth"."uid"() = "user_id") OR (EXISTS ( SELECT 1
+   FROM "public"."clubs"
+  WHERE (("clubs"."id" = "club_members"."club_id") AND ("clubs"."creator_id" = "auth"."uid"()))))));
 
 
 
@@ -555,6 +714,15 @@ ALTER TABLE "public"."bookmarks" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."books" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."club_members" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."club_posts" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."clubs" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."messages" ENABLE ROW LEVEL SECURITY;
@@ -748,6 +916,12 @@ GRANT ALL ON FUNCTION "public"."get_books_nearby"("user_lat" double precision, "
 
 
 
+GRANT ALL ON FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "user_lng" double precision) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "user_lng" double precision) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "user_lng" double precision) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "anon";
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
@@ -790,6 +964,24 @@ GRANT ALL ON TABLE "public"."bookmarks" TO "service_role";
 GRANT ALL ON TABLE "public"."books" TO "anon";
 GRANT ALL ON TABLE "public"."books" TO "authenticated";
 GRANT ALL ON TABLE "public"."books" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."club_members" TO "anon";
+GRANT ALL ON TABLE "public"."club_members" TO "authenticated";
+GRANT ALL ON TABLE "public"."club_members" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."club_posts" TO "anon";
+GRANT ALL ON TABLE "public"."club_posts" TO "authenticated";
+GRANT ALL ON TABLE "public"."club_posts" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."clubs" TO "anon";
+GRANT ALL ON TABLE "public"."clubs" TO "authenticated";
+GRANT ALL ON TABLE "public"."clubs" TO "service_role";
 
 
 
