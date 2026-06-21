@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: '/my-books', label: '➕ My Books' },
   { href: '/saved', label: '🔖 Saved Books' },
   { href: '/wishlist', label: '✨ Wishlist' },
+  { href: '/clubs', label: '🏘️ Clubs' },
   { href: '/messages', label: '💬 Messages' },
   { href: '/requests', label: '📩 Requests' },
   { href: '/notifications', label: '🔔 Notifications' },

@@ -21,6 +21,8 @@ const ICONS: Record<string, string> = {
   new_message: '💬',
   handover_confirmed: '🤝',
   book_returned: '📗',
+  club_joined: '🏘️',
+  club_announcement: '📢',
 }
 
 function timeAgo(iso: string) {
