@@ -31,8 +31,8 @@ export default async function Home() {
 
   const { data: featuredBooks } = await supabase
     .from('books')
-    .select('id, title, author, listing_type, cover_url')
-    .eq('status', 'available')
+    .select('id, title, author, listing_type, status, cover_url')
+    .in('status', ['available', 'given'])
     .order('created_at', { ascending: false })
     .limit(4)
 
@@ -323,6 +323,13 @@ export default async function Home() {
                       {book.listing_type === 'donate' ? 'Free' : 'Lend'}
                     </span>
                   </div>
+                  {book.status === 'given' && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
+                        Donated
+                      </span>
+                    </div>
+                  )}
                 </div>
                 {/* Info */}
                 <h3 className="font-semibold text-sm leading-snug mb-0.5 group-hover:text-teal-400 transition-colors line-clamp-2">

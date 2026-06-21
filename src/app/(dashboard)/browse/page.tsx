@@ -325,7 +325,7 @@ export default function BrowsePage() {
                 className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden hover:border-teal-500/30 transition-colors flex flex-col"
               >
                 {/* Cover image */}
-                <div className="relative w-full aspect-[16/9] bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden">
+                <div className="relative w-full aspect-[2/3] bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden">
                   {book.cover_url ? (
                     <img
                       src={book.cover_url}
