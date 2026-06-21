@@ -45,6 +45,35 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 
 
+CREATE OR REPLACE FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) RETURNS TABLE("id" "uuid", "title" character varying, "author" character varying, "condition" character varying, "listing_type" character varying, "status" character varying, "genre" character varying, "cover_url" "text", "owner_id" "uuid", "created_at" timestamp with time zone, "distance_km" double precision, "owner_name" character varying, "owner_area" character varying)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    AS $$
+  SELECT
+    b.id, b.title, b.author, b.condition, b.listing_type, b.status,
+    b.genre, b.cover_url, b.owner_id, b.created_at,
+    CASE
+      WHEN p.latitude IS NOT NULL AND p.longitude IS NOT NULL THEN
+        6371 * acos(
+          LEAST(1.0, GREATEST(-1.0,
+            cos(radians(user_lat)) * cos(radians(p.latitude)) *
+            cos(radians(p.longitude) - radians(user_lng)) +
+            sin(radians(user_lat)) * sin(radians(p.latitude))
+          ))
+        )
+      ELSE NULL
+    END AS distance_km,
+    p.display_name AS owner_name,
+    p.area_name AS owner_area
+  FROM books b
+  JOIN profiles p ON p.id = b.owner_id
+  WHERE b.status IN ('available', 'given')
+  ORDER BY distance_km ASC NULLS LAST, b.created_at DESC;
+$$;
+
+
+ALTER FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$ BEGIN
@@ -145,7 +174,9 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "area_name" character varying(100),
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),
-    "is_admin" boolean DEFAULT false
+    "is_admin" boolean DEFAULT false,
+    "latitude" double precision,
+    "longitude" double precision
 );
 
 
@@ -561,6 +592,12 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
+
+
+
+GRANT ALL ON FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) TO "service_role";
 
 
 
