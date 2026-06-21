@@ -36,6 +36,7 @@ export default function UserProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [books, setBooks] = useState<Book[]>([])
   const [stats, setStats] = useState<Stats>({ totalBooks: 0, availableBooks: 0, completedExchanges: 0 })
+  const [rating, setRating] = useState<{ avg: number; count: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -73,6 +74,16 @@ export default function UserProfilePage() {
         availableBooks: booksData.filter(b => b.status === 'available').length,
         completedExchanges: booksData.filter(b => b.status === 'given').length,
       })
+    }
+
+    const { data: ratingsData } = await supabase
+      .from('ratings')
+      .select('score')
+      .eq('rated_user_id', userId)
+
+    if (ratingsData && ratingsData.length > 0) {
+      const avg = ratingsData.reduce((sum, r) => sum + r.score, 0) / ratingsData.length
+      setRating({ avg: Math.round(avg * 10) / 10, count: ratingsData.length })
     }
 
     setLoading(false)
@@ -124,7 +135,19 @@ export default function UserProfilePage() {
                   Joined {joinDate}
                 </span>
               )}
+              {rating && (
+                <span className="flex items-center gap-1 text-amber-400">
+                  ★ {rating.avg} <span className="text-slate-500">({rating.count} {rating.count === 1 ? 'rating' : 'ratings'})</span>
+                </span>
+              )}
             </div>
+            {stats.completedExchanges >= 3 && (
+              <div className="mt-2">
+                <span className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold px-2.5 py-1 rounded-full">
+                  ✓ Trusted Sharer
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

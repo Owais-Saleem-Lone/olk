@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/client'
 const NAV_ITEMS = [
   { href: '/browse', label: '📚 Browse Books' },
   { href: '/my-books', label: '➕ My Books' },
+  { href: '/saved', label: '🔖 Saved Books' },
+  { href: '/wishlist', label: '✨ Wishlist' },
   { href: '/messages', label: '💬 Messages' },
   { href: '/requests', label: '📩 Requests' },
   { href: '/notifications', label: '🔔 Notifications' },

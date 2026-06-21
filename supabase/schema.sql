@@ -121,6 +121,17 @@ CREATE TABLE IF NOT EXISTS "public"."book_requests" (
 ALTER TABLE "public"."book_requests" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."bookmarks" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "book_id" "uuid" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."bookmarks" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."books" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "owner_id" "uuid" NOT NULL,
@@ -176,11 +187,27 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "updated_at" timestamp with time zone DEFAULT "now"(),
     "is_admin" boolean DEFAULT false,
     "latitude" double precision,
-    "longitude" double precision
+    "longitude" double precision,
+    "email_digest" boolean DEFAULT true
 );
 
 
 ALTER TABLE "public"."profiles" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."ratings" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "request_id" "uuid" NOT NULL,
+    "rater_id" "uuid" NOT NULL,
+    "rated_user_id" "uuid" NOT NULL,
+    "score" smallint NOT NULL,
+    "comment" "text",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "ratings_score_check" CHECK ((("score" >= 1) AND ("score" <= 5)))
+);
+
+
+ALTER TABLE "public"."ratings" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."reports" (
@@ -198,6 +225,21 @@ CREATE TABLE IF NOT EXISTS "public"."reports" (
 ALTER TABLE "public"."reports" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."wishlists" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "title" "text" NOT NULL,
+    "author" "text",
+    "genre" character varying(100),
+    "active" boolean DEFAULT true,
+    "matched_book_id" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."wishlists" OWNER TO "postgres";
+
+
 ALTER TABLE ONLY "public"."book_of_month"
     ADD CONSTRAINT "book_of_month_pkey" PRIMARY KEY ("id");
 
@@ -205,6 +247,16 @@ ALTER TABLE ONLY "public"."book_of_month"
 
 ALTER TABLE ONLY "public"."book_requests"
     ADD CONSTRAINT "book_requests_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."bookmarks"
+    ADD CONSTRAINT "bookmarks_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."bookmarks"
+    ADD CONSTRAINT "bookmarks_user_id_book_id_key" UNIQUE ("user_id", "book_id");
 
 
 
@@ -228,8 +280,23 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+ALTER TABLE ONLY "public"."ratings"
+    ADD CONSTRAINT "ratings_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."ratings"
+    ADD CONSTRAINT "ratings_request_id_rater_id_key" UNIQUE ("request_id", "rater_id");
+
+
+
 ALTER TABLE ONLY "public"."reports"
     ADD CONSTRAINT "reports_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."wishlists"
+    ADD CONSTRAINT "wishlists_pkey" PRIMARY KEY ("id");
 
 
 
@@ -248,6 +315,16 @@ ALTER TABLE ONLY "public"."book_requests"
 
 ALTER TABLE ONLY "public"."book_requests"
     ADD CONSTRAINT "book_requests_requester_id_fkey" FOREIGN KEY ("requester_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."bookmarks"
+    ADD CONSTRAINT "bookmarks_book_id_fkey" FOREIGN KEY ("book_id") REFERENCES "public"."books"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."bookmarks"
+    ADD CONSTRAINT "bookmarks_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -276,6 +353,21 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+ALTER TABLE ONLY "public"."ratings"
+    ADD CONSTRAINT "ratings_rated_user_id_fkey" FOREIGN KEY ("rated_user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."ratings"
+    ADD CONSTRAINT "ratings_rater_id_fkey" FOREIGN KEY ("rater_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."ratings"
+    ADD CONSTRAINT "ratings_request_id_fkey" FOREIGN KEY ("request_id") REFERENCES "public"."book_requests"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."reports"
     ADD CONSTRAINT "reports_reported_book_id_fkey" FOREIGN KEY ("reported_book_id") REFERENCES "public"."books"("id") ON DELETE SET NULL;
 
@@ -288,6 +380,16 @@ ALTER TABLE ONLY "public"."reports"
 
 ALTER TABLE ONLY "public"."reports"
     ADD CONSTRAINT "reports_reporter_id_fkey" FOREIGN KEY ("reporter_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."wishlists"
+    ADD CONSTRAINT "wishlists_matched_book_id_fkey" FOREIGN KEY ("matched_book_id") REFERENCES "public"."books"("id") ON DELETE SET NULL;
+
+
+
+ALTER TABLE ONLY "public"."wishlists"
+    ADD CONSTRAINT "wishlists_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -351,7 +453,19 @@ CREATE POLICY "Users can create requests" ON "public"."book_requests" FOR INSERT
 
 
 
+CREATE POLICY "Users can delete own bookmarks" ON "public"."bookmarks" FOR DELETE USING (("auth"."uid"() = "user_id"));
+
+
+
 CREATE POLICY "Users can delete own books" ON "public"."books" FOR DELETE TO "authenticated" USING (("auth"."uid"() = "owner_id"));
+
+
+
+CREATE POLICY "Users can delete own wishlists" ON "public"."wishlists" FOR DELETE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can insert own bookmarks" ON "public"."bookmarks" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
 
 
 
@@ -360,6 +474,14 @@ CREATE POLICY "Users can insert own books" ON "public"."books" FOR INSERT TO "au
 
 
 CREATE POLICY "Users can insert own profile" ON "public"."profiles" FOR INSERT TO "authenticated" WITH CHECK (("auth"."uid"() = "id"));
+
+
+
+CREATE POLICY "Users can insert own ratings" ON "public"."ratings" FOR INSERT WITH CHECK (("auth"."uid"() = "rater_id"));
+
+
+
+CREATE POLICY "Users can insert own wishlists" ON "public"."wishlists" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
 
 
 
@@ -378,10 +500,26 @@ CREATE POLICY "Users can update own profile" ON "public"."profiles" FOR UPDATE T
 
 
 
+CREATE POLICY "Users can update own wishlists" ON "public"."wishlists" FOR UPDATE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can view all ratings" ON "public"."ratings" FOR SELECT TO "authenticated" USING (true);
+
+
+
 CREATE POLICY "Users can view messages for their requests" ON "public"."messages" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM ("public"."book_requests" "br"
      JOIN "public"."books" "b" ON (("b"."id" = "br"."book_id")))
   WHERE (("br"."id" = "messages"."request_id") AND (("br"."requester_id" = "auth"."uid"()) OR ("b"."owner_id" = "auth"."uid"()))))));
+
+
+
+CREATE POLICY "Users can view own bookmarks" ON "public"."bookmarks" FOR SELECT USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can view own wishlists" ON "public"."wishlists" FOR SELECT USING (("auth"."uid"() = "user_id"));
 
 
 
@@ -413,6 +551,9 @@ ALTER TABLE "public"."book_of_month" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."book_requests" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."bookmarks" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."books" ENABLE ROW LEVEL SECURITY;
 
 
@@ -425,7 +566,13 @@ ALTER TABLE "public"."notifications" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."ratings" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."reports" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."wishlists" ENABLE ROW LEVEL SECURITY;
 
 
 
@@ -634,6 +781,12 @@ GRANT ALL ON TABLE "public"."book_requests" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."bookmarks" TO "anon";
+GRANT ALL ON TABLE "public"."bookmarks" TO "authenticated";
+GRANT ALL ON TABLE "public"."bookmarks" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."books" TO "anon";
 GRANT ALL ON TABLE "public"."books" TO "authenticated";
 GRANT ALL ON TABLE "public"."books" TO "service_role";
@@ -658,9 +811,21 @@ GRANT ALL ON TABLE "public"."profiles" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."ratings" TO "anon";
+GRANT ALL ON TABLE "public"."ratings" TO "authenticated";
+GRANT ALL ON TABLE "public"."ratings" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."reports" TO "anon";
 GRANT ALL ON TABLE "public"."reports" TO "authenticated";
 GRANT ALL ON TABLE "public"."reports" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."wishlists" TO "anon";
+GRANT ALL ON TABLE "public"."wishlists" TO "authenticated";
+GRANT ALL ON TABLE "public"."wishlists" TO "service_role";
 
 
 

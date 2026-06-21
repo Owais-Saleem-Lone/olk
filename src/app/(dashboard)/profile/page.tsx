@@ -12,6 +12,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [emailDigest, setEmailDigest] = useState(true)
   const [locating, setLocating] = useState(false)
   const [locationError, setLocationError] = useState('')
 
@@ -35,6 +36,7 @@ export default function ProfilePage() {
         setAreaName(data.area_name || '')
         setLatitude(data.latitude ?? null)
         setLongitude(data.longitude ?? null)
+        setEmailDigest(data.email_digest ?? true)
       }
     }
     setLoading(false)
@@ -88,6 +90,7 @@ export default function ProfilePage() {
       area_name: areaName,
       latitude,
       longitude,
+      email_digest: emailDigest,
       updated_at: new Date().toISOString(),
     })
 
@@ -173,6 +176,22 @@ export default function ProfilePage() {
             )}
             {locationError && <p className="text-xs text-red-400 mt-1.5">{locationError}</p>}
             <p className="text-xs text-slate-500 mt-1.5">Helps show books nearby. Your exact coordinates are never shown to others.</p>
+          </div>
+
+          {/* Email Digest */}
+          <div>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={emailDigest}
+                onChange={e => setEmailDigest(e.target.checked)}
+                className="w-4 h-4 accent-teal-500 rounded"
+              />
+              <div>
+                <p className="text-sm font-medium text-slate-300">Weekly digest email</p>
+                <p className="text-xs text-slate-500">Get notified about new books near you every week</p>
+              </div>
+            </label>
           </div>
 
           <button
