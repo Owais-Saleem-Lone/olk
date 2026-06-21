@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { createNotification } from '@/lib/notifications'
+import { formatDistance } from '@/lib/geo'
 import Link from 'next/link'
 import ReportModal from '@/components/report-modal'
 
@@ -22,6 +23,9 @@ type Book = {
   genre: string | null
   owner_id: string
   cover_url: string | null
+  distance_km?: number | null
+  owner_name?: string | null
+  owner_area?: string | null
 }
 
 export default function BrowsePage() {
@@ -56,6 +60,9 @@ export default function BrowsePage() {
     setLoading(true)
 
     const { data: { user } } = await supabase.auth.getUser()
+    let userLat: number | null = null
+    let userLng: number | null = null
+
     if (user) {
       setCurrentUserId(user.id)
       const { data: existingReqs } = await supabase
@@ -66,29 +73,71 @@ export default function BrowsePage() {
       if (existingReqs) {
         setRequestedBooks(new Set(existingReqs.map((r: any) => r.book_id)))
       }
+
+      const { data: myProfile } = await supabase
+        .from('profiles')
+        .select('latitude, longitude')
+        .eq('id', user.id)
+        .single()
+
+      if (myProfile?.latitude && myProfile?.longitude) {
+        userLat = myProfile.latitude
+        userLng = myProfile.longitude
+      }
     }
 
-    let dbQuery = supabase
-      .from('books')
-      .select('*')
-      .in('status', ['available', 'given'])
-      .order('created_at', { ascending: false })
+    if (userLat && userLng) {
+      const { data, error } = await supabase.rpc('get_books_nearby', {
+        user_lat: userLat,
+        user_lng: userLng,
+      })
 
-    if (query.trim() !== '') {
-      dbQuery = dbQuery.or(`title.ilike.%${query}%,author.ilike.%${query}%`)
+      if (error) {
+        console.error('Error fetching nearby books:', error)
+      } else if (data) {
+        let filtered = data as Book[]
+        if (query.trim() !== '') {
+          const q = query.toLowerCase()
+          filtered = filtered.filter(b =>
+            b.title.toLowerCase().includes(q) || (b.author && b.author.toLowerCase().includes(q))
+          )
+        }
+        if (filterGenre) filtered = filtered.filter(b => b.genre === filterGenre)
+        if (filterType) filtered = filtered.filter(b => b.listing_type === filterType)
+        if (filterCondition) filtered = filtered.filter(b => b.condition === filterCondition)
+        setBooks(filtered)
+        const profileMap: Record<string, Profile> = {}
+        filtered.forEach((b: any) => {
+          if (!profileMap[b.owner_id]) {
+            profileMap[b.owner_id] = { id: b.owner_id, display_name: b.owner_name, area_name: b.owner_area }
+          }
+        })
+        setProfiles(profileMap)
+      }
+    } else {
+      let dbQuery = supabase
+        .from('books')
+        .select('*')
+        .in('status', ['available', 'given'])
+        .order('created_at', { ascending: false })
+
+      if (query.trim() !== '') {
+        dbQuery = dbQuery.or(`title.ilike.%${query}%,author.ilike.%${query}%`)
+      }
+      if (filterGenre) dbQuery = dbQuery.eq('genre', filterGenre)
+      if (filterType) dbQuery = dbQuery.eq('listing_type', filterType)
+      if (filterCondition) dbQuery = dbQuery.eq('condition', filterCondition)
+
+      const { data, error } = await dbQuery
+
+      if (error) {
+        console.error('Error fetching books:', error)
+      } else if (data) {
+        setBooks(data)
+        if (user) await fetchProfiles(data)
+      }
     }
-    if (filterGenre) dbQuery = dbQuery.eq('genre', filterGenre)
-    if (filterType) dbQuery = dbQuery.eq('listing_type', filterType)
-    if (filterCondition) dbQuery = dbQuery.eq('condition', filterCondition)
 
-    const { data, error } = await dbQuery
-
-    if (error) {
-      console.error('Error fetching books:', error)
-    } else if (data) {
-      setBooks(data)
-      if (user) await fetchProfiles(data)
-    }
     setLoading(false)
   }
 
@@ -382,9 +431,13 @@ export default function BrowsePage() {
                     <Link href={`/user/${book.owner_id}`} className="text-sm text-slate-300 hover:text-teal-400 transition-colors">
                       👤 {owner.display_name || 'Anonymous'}
                     </Link>
-                    {owner.area_name && (
-                      <p className="text-xs text-slate-500">📍 {owner.area_name}</p>
-                    )}
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {book.distance_km != null && (
+                        <span className="text-teal-400 font-medium">{formatDistance(book.distance_km)}</span>
+                      )}
+                      {book.distance_km != null && owner.area_name && ' · '}
+                      {owner.area_name && <span>📍 {owner.area_name}</span>}
+                    </p>
                   </div>
                 )}
 
