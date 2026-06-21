@@ -60,6 +60,13 @@ export default async function Home() {
     .order('created_at', { ascending: false })
     .limit(5)
 
+  const { data: activeClubs } = await supabase
+    .from('clubs')
+    .select('id, name, interest, member_count')
+    .eq('active', true)
+    .order('member_count', { ascending: false })
+    .limit(6)
+
   return (
     <div className="min-h-screen bg-[#020817] text-white overflow-x-hidden">
 
@@ -81,6 +88,12 @@ export default async function Home() {
               <span className="font-semibold tracking-tight">Open Library Kashmir</span>
             </div>
             <AboutModal />
+            <Link
+              href={user ? "/clubs" : "/login"}
+              className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-1.5"
+            >
+              🏘️ Clubs
+            </Link>
           </div>
           <div className="flex items-center gap-2">
             {user ? (
@@ -350,6 +363,54 @@ export default async function Home() {
           </div>
         )}
       </section>
+
+      {/* ── Local Clubs ── */}
+      {activeClubs && activeClubs.length > 0 && (
+        <section className="relative z-10 max-w-5xl mx-auto px-6 pb-28">
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <p className="text-teal-400 text-sm font-semibold uppercase tracking-widest mb-1">Community</p>
+              <h2 className="text-2xl md:text-3xl font-bold">Local Clubs</h2>
+            </div>
+            <Link
+              href={user ? "/clubs" : "/login"}
+              className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-teal-400 transition-colors group"
+            >
+              {user ? 'Browse all clubs' : 'Join to explore'}
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-0.5 transition-transform">
+                <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+              </svg>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {activeClubs.map((club: any) => (
+              <Link
+                key={club.id}
+                href={user ? `/clubs/${club.id}` : "/login"}
+                className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5 hover:border-teal-500/20 transition-colors group"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-lg flex-shrink-0">
+                    🏘️
+                  </div>
+                  <h3 className="font-semibold text-sm text-white group-hover:text-teal-400 transition-colors leading-snug">
+                    {club.name}
+                  </h3>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-slate-500">
+                  {club.interest && (
+                    <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full">
+                      {club.interest}
+                    </span>
+                  )}
+                  <span>{club.member_count} {club.member_count === 1 ? 'member' : 'members'}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── Final CTA ── */}
       <section className="relative z-10 max-w-5xl mx-auto px-6 pb-28">
