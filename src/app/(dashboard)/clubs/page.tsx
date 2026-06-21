@@ -136,7 +136,7 @@ export default function ClubsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <h1 className="text-3xl font-bold">Local Clubs</h1>
+        <h1 className="text-3xl font-bold">Clubs</h1>
         {currentUserId && (
           <Link
             href="/clubs/create"
