@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { createNotification } from '@/lib/notifications'
 import { useRouter } from 'next/navigation'
+import RatingModal from '@/components/rating-modal'
 
 // FIXED: Removed the [] from books and profiles. 
 // Since a request belongs to ONE book and ONE user, Supabase returns them as single objects, not arrays.
@@ -23,6 +24,11 @@ export default function RequestsPage() {
   const [incomingRequests, setIncomingRequests] = useState<BookRequest[]>([])
   const [outgoingRequests, setOutgoingRequests] = useState<BookRequest[]>([])
   const [loading, setLoading] = useState(true)
+  const [ratedRequests, setRatedRequests] = useState<Set<string>>(new Set())
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [ratingTarget, setRatingTarget] = useState<{
+    requestId: string; raterId: string; ratedUserId: string; ratedUserName: string; bookTitle: string
+  } | null>(null)
 
   useEffect(() => {
     fetchRequests()
@@ -33,6 +39,15 @@ export default function RequestsPage() {
     await supabase.auth.getSession()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
+    setCurrentUserId(user.id)
+
+    const { data: myRatings } = await supabase
+      .from('ratings')
+      .select('request_id')
+      .eq('rater_id', user.id)
+    if (myRatings) {
+      setRatedRequests(new Set(myRatings.map(r => r.request_id)))
+    }
 
     // 1. Fetch OUTGOING requests (requests I made to others)
     const { data: outgoingData, error: outError } = await supabase
@@ -224,7 +239,13 @@ export default function RequestsPage() {
                     </>
                   )}
                   {req.status === 'handed_over' && req.books?.listing_type === 'donate' && (
-                    <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20">Donated ✓</span>
+                    <>
+                      <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20">Donated ✓</span>
+                      {currentUserId && !ratedRequests.has(req.id) && (
+                        <button onClick={() => setRatingTarget({ requestId: req.id, raterId: currentUserId, ratedUserId: req.requester_id, ratedUserName: req.profiles?.display_name || 'User', bookTitle: req.books?.title || '' })}
+                          className="bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors">⭐ Rate</button>
+                      )}
+                    </>
                   )}
                   {req.status === 'handed_over' && req.books?.listing_type === 'lend' && (
                     <>
@@ -243,7 +264,13 @@ export default function RequestsPage() {
                     </>
                   )}
                   {req.status === 'returned' && (
-                    <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Returned ✓</span>
+                    <>
+                      <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Returned ✓</span>
+                      {currentUserId && !ratedRequests.has(req.id) && (
+                        <button onClick={() => setRatingTarget({ requestId: req.id, raterId: currentUserId, ratedUserId: req.requester_id, ratedUserName: req.profiles?.display_name || 'User', bookTitle: req.books?.title || '' })}
+                          className="bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors">⭐ Rate</button>
+                      )}
+                    </>
                   )}
                   {req.status === 'declined' && (
                     <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">Declined ✗</span>
@@ -289,7 +316,13 @@ export default function RequestsPage() {
                     </>
                   )}
                   {req.status === 'handed_over' && req.books?.listing_type === 'donate' && (
-                    <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20">Received ✓</span>
+                    <>
+                      <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20">Received ✓</span>
+                      {currentUserId && !ratedRequests.has(req.id) && (
+                        <button onClick={() => setRatingTarget({ requestId: req.id, raterId: currentUserId, ratedUserId: req.books?.owner_id, ratedUserName: 'the owner', bookTitle: req.books?.title || '' })}
+                          className="bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors">⭐ Rate</button>
+                      )}
+                    </>
                   )}
                   {req.status === 'handed_over' && req.books?.listing_type === 'lend' && (
                     <>
@@ -309,7 +342,13 @@ export default function RequestsPage() {
                     </>
                   )}
                   {req.status === 'returned' && (
-                    <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Returned ✓</span>
+                    <>
+                      <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Returned ✓</span>
+                      {currentUserId && !ratedRequests.has(req.id) && (
+                        <button onClick={() => setRatingTarget({ requestId: req.id, raterId: currentUserId, ratedUserId: req.books?.owner_id, ratedUserName: 'the owner', bookTitle: req.books?.title || '' })}
+                          className="bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors">⭐ Rate</button>
+                      )}
+                    </>
                   )}
                   {req.status === 'declined' && (
                     <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">Declined ✗</span>
@@ -320,6 +359,17 @@ export default function RequestsPage() {
           </div>
         )}
       </div>
+
+      {ratingTarget && (
+        <RatingModal
+          {...ratingTarget}
+          onClose={() => setRatingTarget(null)}
+          onSubmitted={() => {
+            setRatedRequests(prev => new Set(prev).add(ratingTarget.requestId))
+            setRatingTarget(null)
+          }}
+        />
+      )}
     </div>
   )
 }

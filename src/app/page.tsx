@@ -165,7 +165,7 @@ export default async function Home() {
         </p>
 
         <Link
-          href="/register"
+          href={user ? "/my-books" : "/register"}
           className="inline-flex items-center gap-2 bg-teal-500 hover:bg-teal-400 text-white font-semibold px-8 py-3.5 rounded-xl text-base transition-all shadow-xl shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-px"
         >
           Start Sharing Books →
@@ -364,10 +364,10 @@ export default async function Home() {
               Join readers across Kashmir already sharing knowledge, one book at a time.
             </p>
             <Link
-              href="/register"
+              href={user ? "/my-books" : "/register"}
               className="inline-flex items-center gap-2 bg-teal-500 hover:bg-teal-400 text-white font-semibold px-8 py-3.5 rounded-xl transition-all shadow-xl shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-px"
             >
-              Get Started — It's Free →
+              {user ? 'Start Sharing Books →' : 'Get Started — It\'s Free →'}
             </Link>
           </div>
         </div>

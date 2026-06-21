@@ -40,6 +40,7 @@ export default function BrowsePage() {
   const [filterArea, setFilterArea] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [requestedBooks, setRequestedBooks] = useState<Set<string>>(new Set())
+  const [bookmarkedBooks, setBookmarkedBooks] = useState<Set<string>>(new Set())
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [reportTarget, setReportTarget] = useState<{ bookId: string; ownerId: string; title: string } | null>(null)
 
@@ -72,6 +73,14 @@ export default function BrowsePage() {
         .in('status', ['pending', 'accepted', 'handed_over'])
       if (existingReqs) {
         setRequestedBooks(new Set(existingReqs.map((r: any) => r.book_id)))
+      }
+
+      const { data: existingBookmarks } = await supabase
+        .from('bookmarks')
+        .select('book_id')
+        .eq('user_id', user.id)
+      if (existingBookmarks) {
+        setBookmarkedBooks(new Set(existingBookmarks.map((b: any) => b.book_id)))
       }
 
       const { data: myProfile } = await supabase
@@ -157,6 +166,19 @@ export default function BrowsePage() {
         profileMap[p.id] = p
       })
       setProfiles(profileMap)
+    }
+  }
+
+  const toggleBookmark = async (bookId: string) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    if (bookmarkedBooks.has(bookId)) {
+      await supabase.from('bookmarks').delete().eq('user_id', user.id).eq('book_id', bookId)
+      setBookmarkedBooks(prev => { const s = new Set(prev); s.delete(bookId); return s })
+    } else {
+      await supabase.from('bookmarks').insert({ user_id: user.id, book_id: bookId })
+      setBookmarkedBooks(prev => new Set(prev).add(bookId))
     }
   }
 
@@ -479,12 +501,24 @@ export default function BrowsePage() {
                   </button>
                 )}
                 {currentUserId && !isOwnBook && (
-                  <button
-                    onClick={() => setReportTarget({ bookId: book.id, ownerId: book.owner_id, title: book.title })}
-                    className="w-full mt-2 text-xs text-slate-600 hover:text-red-400 transition-colors py-1"
-                  >
-                    Report
-                  </button>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => toggleBookmark(book.id)}
+                      className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${
+                        bookmarkedBooks.has(book.id)
+                          ? 'text-teal-400 bg-teal-500/10 border border-teal-500/20'
+                          : 'text-slate-500 hover:text-teal-400 hover:bg-white/5'
+                      }`}
+                    >
+                      {bookmarkedBooks.has(book.id) ? '🔖 Saved' : '🔖 Save'}
+                    </button>
+                    <button
+                      onClick={() => setReportTarget({ bookId: book.id, ownerId: book.owner_id, title: book.title })}
+                      className="text-xs text-slate-600 hover:text-red-400 transition-colors px-2 py-1.5"
+                    >
+                      Report
+                    </button>
+                  </div>
                 )}
                 </div>{/* end p-5 */}
               </div>

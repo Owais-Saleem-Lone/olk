@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { compressImage, validateImageUrl } from '@/lib/image-utils'
+import { createNotification } from '@/lib/notifications'
+import ISBNScanner from '@/components/isbn-scanner'
 
 type Book = {
   id: string
@@ -28,6 +30,7 @@ export default function MyBooksPage() {
   const [coverPreview, setCoverPreview] = useState('')
   const [coverUrl, setCoverUrl] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
   const [message, setMessage] = useState('')
 
   // ── Book list state ──
@@ -113,6 +116,38 @@ export default function MyBooksPage() {
       setMessage('Error adding book: ' + error.message)
     } else {
       setMessage('Book added successfully!')
+
+      const { data: matches } = await supabase
+        .from('wishlists')
+        .select('id, user_id, title')
+        .eq('active', true)
+        .is('matched_book_id', null)
+        .ilike('title', `%${title}%`)
+        .neq('user_id', user.id)
+
+      if (matches && matches.length > 0) {
+        const { data: newBook } = await supabase
+          .from('books')
+          .select('id')
+          .eq('owner_id', user.id)
+          .eq('title', title)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        for (const match of matches) {
+          if (newBook) {
+            await supabase.from('wishlists').update({ matched_book_id: newBook.id }).eq('id', match.id)
+          }
+          await createNotification({
+            userId: match.user_id,
+            type: 'book_requested',
+            title: `A book on your wishlist is now available: "${title}"`,
+            link: `/browse?q=${encodeURIComponent(title)}`,
+          })
+        }
+      }
+
       setTitle(''); setAuthor(''); setGenre('General')
       setCoverFile(null); setCoverUrl(''); setCoverPreview('')
       fetchMyBooks()
@@ -192,7 +227,17 @@ export default function MyBooksPage() {
 
         {/* ── LEFT: Add Book Form ── */}
         <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8">
-          <h2 className="text-xl font-semibold mb-6">Add a New Book</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold">Add a New Book</h2>
+            <button
+              type="button"
+              onClick={() => setShowScanner(true)}
+              className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white font-medium px-3 py-1.5 rounded-lg text-xs transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" x2="17" y1="12" y2="12"/></svg>
+              Scan ISBN
+            </button>
+          </div>
           <form onSubmit={handleAddBook} className="space-y-5">
 
             <div>
@@ -475,6 +520,22 @@ export default function MyBooksPage() {
           </div>
         </div>
       </div>
+
+      {showScanner && (
+        <ISBNScanner
+          onResult={(data) => {
+            setTitle(data.title)
+            setAuthor(data.author)
+            if (data.coverUrl) {
+              setCoverUrl(data.coverUrl)
+              setCoverPreview(data.coverUrl)
+              setCoverFile(null)
+            }
+            setShowScanner(false)
+          }}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </div>
   )
 }
