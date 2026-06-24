@@ -12,10 +12,39 @@ type BookRequest = {
   id: string
   status: string
   created_at: string
+  handed_over_at: string | null
   requester_id: string
   book_id: string
-  books: { title: string; owner_id: string; listing_type: string }
+  books: { title: string; owner_id: string; listing_type: string; lending_duration_months: number | null }
   profiles: { display_name: string | null; area_name: string | null }
+}
+
+function dueDaysLeft(handedOverAt: string | null, months: number | null): number | null {
+  if (!handedOverAt || !months) return null
+  const due = new Date(handedOverAt)
+  due.setMonth(due.getMonth() + months)
+  return Math.floor((due.getTime() - Date.now()) / 86_400_000)
+}
+
+function DueBadge({ daysLeft }: { daysLeft: number | null }) {
+  if (daysLeft === null) return null
+  if (daysLeft < 0)
+    return (
+      <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+        ⚠️ Overdue by {Math.abs(daysLeft)} day{Math.abs(daysLeft) !== 1 ? 's' : ''}
+      </span>
+    )
+  if (daysLeft === 0)
+    return (
+      <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+        📅 Due today
+      </span>
+    )
+  return (
+    <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20">
+      📅 {daysLeft}d left
+    </span>
+  )
 }
 
 export default function RequestsPage() {
@@ -28,6 +57,8 @@ export default function RequestsPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [progressInputs, setProgressInputs] = useState<Record<string, number>>({})
   const [progressSaving, setProgressSaving] = useState<string | null>(null)
+  const [confirmComplete, setConfirmComplete] = useState<string | null>(null)
+  const [completingRequest, setCompletingRequest] = useState<string | null>(null)
   const [ratingTarget, setRatingTarget] = useState<{
     requestId: string; raterId: string; ratedUserId: string; ratedUserName: string; bookTitle: string
   } | null>(null)
@@ -54,7 +85,7 @@ export default function RequestsPage() {
     // 1. Fetch OUTGOING requests (requests I made to others)
     const { data: outgoingData, error: outError } = await supabase
       .from('book_requests')
-      .select('id, status, created_at, requester_id, book_id, books(title, owner_id, listing_type), profiles(display_name, area_name)')
+      .select('id, status, created_at, handed_over_at, requester_id, book_id, books(title, owner_id, listing_type, lending_duration_months), profiles(display_name, area_name)')
       .eq('requester_id', user.id)
       .order('created_at', { ascending: false })
 
@@ -92,7 +123,7 @@ export default function RequestsPage() {
     if (myBookIds.length > 0) {
       const { data, error: incError } = await supabase
         .from('book_requests')
-        .select('id, status, created_at, requester_id, book_id, books(title, owner_id, listing_type), profiles(display_name, area_name)')
+        .select('id, status, created_at, handed_over_at, requester_id, book_id, books(title, owner_id, listing_type, lending_duration_months), profiles(display_name, area_name)')
         .in('book_id', myBookIds)
         .order('created_at', { ascending: false })
 
@@ -194,6 +225,14 @@ export default function RequestsPage() {
     fetchRequests()
   }
 
+  const handleCompleteReading = async (requestId: string) => {
+    setCompletingRequest(requestId)
+    const { error } = await supabase.rpc('complete_donated_book_reading', { p_request_id: requestId })
+    if (error) alert('Error: ' + error.message)
+    else { setConfirmComplete(null); fetchRequests() }
+    setCompletingRequest(null)
+  }
+
   const handleUpdateProgress = async (requestId: string, bookId: string) => {
     if (!currentUserId) return
     const pct = progressInputs[requestId] ?? 0
@@ -284,6 +323,7 @@ export default function RequestsPage() {
                   )}
                   {req.status === 'handed_over' && req.books?.listing_type === 'lend' && (
                     <>
+                      <DueBadge daysLeft={dueDaysLeft(req.handed_over_at, req.books?.lending_duration_months ?? null)} />
                       <button
                         onClick={() => handleReturn(req)}
                         className="bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 font-medium px-4 py-2 rounded-lg text-sm transition-colors"
@@ -362,6 +402,7 @@ export default function RequestsPage() {
                     {req.status === 'handed_over' && req.books?.listing_type === 'lend' && (
                       <>
                         <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20">In your possession</span>
+                        <DueBadge daysLeft={dueDaysLeft(req.handed_over_at, req.books?.lending_duration_months ?? null)} />
                         <button
                           onClick={() => handleReturn(req)}
                           className="bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 font-medium px-4 py-2 rounded-lg text-sm transition-colors"
@@ -393,35 +434,81 @@ export default function RequestsPage() {
 
                 {/* Reading progress — only when the book is physically in the reader's hands */}
                 {req.status === 'handed_over' && (
-                  <div className="border-t border-white/[0.05] pt-3">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs text-slate-400">📖 Reading progress</span>
-                      <span className="text-xs text-teal-400 font-semibold tabular-nums">
-                        {progressInputs[req.id] ?? 0}%
-                      </span>
+                  <div className="border-t border-white/[0.05] pt-3 space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs text-slate-400">📖 Reading progress</span>
+                        <span className="text-xs text-teal-400 font-semibold tabular-nums">
+                          {progressInputs[req.id] ?? 0}%
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={progressInputs[req.id] ?? 0}
+                          onChange={e =>
+                            setProgressInputs(prev => ({ ...prev, [req.id]: parseInt(e.target.value) }))
+                          }
+                          className="flex-1 accent-teal-500 cursor-pointer"
+                        />
+                        <button
+                          onClick={() => handleUpdateProgress(req.id, req.book_id)}
+                          disabled={progressSaving === req.id}
+                          className="text-xs bg-teal-500/10 text-teal-400 border border-teal-500/20 hover:bg-teal-500/20 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                        >
+                          {progressSaving === req.id ? 'Saving...' : 'Save'}
+                        </button>
+                      </div>
+                      <p className="text-xs text-slate-600 mt-1">
+                        Visible to the community in Browse Books
+                      </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={progressInputs[req.id] ?? 0}
-                        onChange={e =>
-                          setProgressInputs(prev => ({ ...prev, [req.id]: parseInt(e.target.value) }))
-                        }
-                        className="flex-1 accent-teal-500 cursor-pointer"
-                      />
-                      <button
-                        onClick={() => handleUpdateProgress(req.id, req.book_id)}
-                        disabled={progressSaving === req.id}
-                        className="text-xs bg-teal-500/10 text-teal-400 border border-teal-500/20 hover:bg-teal-500/20 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
-                      >
-                        {progressSaving === req.id ? 'Saving...' : 'Save'}
-                      </button>
-                    </div>
-                    <p className="text-xs text-slate-600 mt-1">
-                      Visible to the community in Browse Books
-                    </p>
+
+                    {/* Completion actions — appear only at 100% */}
+                    {progressInputs[req.id] === 100 && req.books?.listing_type === 'donate' && (
+                      <div className="bg-teal-500/[0.05] border border-teal-500/20 rounded-xl px-4 py-3">
+                        {confirmComplete === req.id ? (
+                          <div className="flex flex-wrap items-center gap-3">
+                            <p className="text-xs text-slate-300 flex-1">
+                              The book will move to <span className="text-white font-medium">your My Books</span> as available — ready to pass on to the next reader.
+                            </p>
+                            <button
+                              onClick={() => handleCompleteReading(req.id)}
+                              disabled={completingRequest === req.id}
+                              className="text-xs bg-teal-500 hover:bg-teal-400 disabled:opacity-50 text-white font-semibold px-4 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                            >
+                              {completingRequest === req.id ? 'Processing...' : 'Yes, pass it on'}
+                            </button>
+                            <button
+                              onClick={() => setConfirmComplete(null)}
+                              className="text-xs text-slate-500 hover:text-white transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-xs text-teal-300">
+                              🎉 You've finished the book! Ready to pass it on to the next reader?
+                            </p>
+                            <button
+                              onClick={() => setConfirmComplete(req.id)}
+                              className="text-xs bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/30 font-semibold px-4 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                            >
+                              Complete Reading
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {progressInputs[req.id] === 100 && req.books?.listing_type === 'lend' && (
+                      <p className="text-xs text-blue-400 bg-blue-500/[0.05] border border-blue-500/20 rounded-xl px-4 py-3">
+                        📚 Reading complete! Please return the book to its owner when ready.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

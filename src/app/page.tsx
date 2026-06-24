@@ -44,15 +44,11 @@ export default async function Home() {
     .limit(1)
     .single()
 
-  const [
-    { count: totalBooks },
-    { count: totalUsers },
-    { count: completedExchanges },
-  ] = await Promise.all([
-    supabase.from('books').select('*', { count: 'exact', head: true }),
-    supabase.from('profiles').select('*', { count: 'exact', head: true }),
-    supabase.from('book_requests').select('*', { count: 'exact', head: true }).in('status', ['handed_over', 'returned']),
-  ])
+  const { data: statsRow } = await supabase.rpc('get_community_stats')
+  const stats = statsRow?.[0]
+  const totalBooks = stats?.total_books ?? 0
+  const totalUsers = stats?.total_users ?? 0
+  const completedExchanges = stats?.completed_exchanges ?? 0
 
   const { data: recentActivity } = await supabase
     .from('books')
@@ -185,7 +181,7 @@ export default async function Home() {
         </Link>
 
         {/* ── Community Stats ── */}
-        {(totalBooks || totalUsers || completedExchanges) ? (
+        {(totalBooks > 0 || totalUsers > 0 || completedExchanges > 0) ? (
           <div className="grid grid-cols-3 gap-5 mt-16 max-w-xl mx-auto">
             {[
               { value: totalBooks ?? 0, label: 'Books Shared', color: 'text-teal-400' },
