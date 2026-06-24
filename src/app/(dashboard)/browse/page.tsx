@@ -450,31 +450,41 @@ export default function BrowsePage() {
                     </div>
                   )}
                   {book.status === 'given' && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/55 flex flex-col items-center justify-center gap-2.5 px-4">
                       <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
                         Donated
                       </span>
-                    </div>
-                  )}
-                  {book.status === 'unavailable' && (
-                    <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-1.5">
-                      <span className="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
-                        Being Read
-                      </span>
                       {bookProgress[book.id] != null && (
-                        <span className="text-blue-300 text-xs font-semibold">
-                          {bookProgress[book.id]}% complete
-                        </span>
+                        <div className="w-4/5">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-slate-400">📖 Being read</span>
+                            <span className="text-teal-400 font-semibold">{bookProgress[book.id]}%</span>
+                          </div>
+                          <div className="h-1 bg-white/20 rounded-full overflow-hidden">
+                            <div className="h-full bg-teal-400 rounded-full transition-all" style={{ width: `${bookProgress[book.id]}%` }} />
+                          </div>
+                        </div>
                       )}
                     </div>
                   )}
-                  {/* Reading progress bar (for given/available books with a reader) */}
-                  {book.status !== 'unavailable' && bookProgress[book.id] != null && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
-                      <div
-                        className="h-full bg-teal-500 transition-all"
-                        style={{ width: `${bookProgress[book.id]}%` }}
-                      />
+                  {book.status === 'unavailable' && (
+                    <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2.5 px-4">
+                      <span className="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
+                        Being Read
+                      </span>
+                      {bookProgress[book.id] != null ? (
+                        <div className="w-4/5">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-slate-400">Progress</span>
+                            <span className="text-blue-300 font-semibold">{bookProgress[book.id]}%</span>
+                          </div>
+                          <div className="h-1 bg-white/20 rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-400 rounded-full transition-all" style={{ width: `${bookProgress[book.id]}%` }} />
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-blue-400/60 text-xs">No progress yet</span>
+                      )}
                     </div>
                   )}
                 </div>

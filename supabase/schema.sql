@@ -45,6 +45,49 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 
 
+CREATE OR REPLACE FUNCTION "public"."complete_donated_book_reading"("p_request_id" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+DECLARE
+  v_book_id    uuid;
+  v_reader_id  uuid;
+BEGIN
+  -- Validate: caller must be the requester of a handed-over donation
+  SELECT br.book_id, br.requester_id
+    INTO v_book_id, v_reader_id
+    FROM public.book_requests br
+    JOIN public.books b ON b.id = br.book_id
+   WHERE br.id            = p_request_id
+     AND br.status        = 'handed_over'
+     AND b.listing_type   = 'donate'
+     AND br.requester_id  = auth.uid();
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Request not found or not authorised';
+  END IF;
+
+  -- Transfer ownership; book re-enters the pool under the reader
+  UPDATE public.books
+     SET owner_id = v_reader_id,
+         status   = 'available'
+   WHERE id = v_book_id;
+
+  -- Close out the original request
+  UPDATE public.book_requests
+     SET status       = 'returned',
+         completed_at = now()
+   WHERE id = p_request_id;
+
+  -- Remove the progress record (fresh start for the next reader)
+  DELETE FROM public.book_progress
+   WHERE request_id = p_request_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."complete_donated_book_reading"("p_request_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) RETURNS TABLE("id" "uuid", "title" character varying, "author" character varying, "condition" character varying, "listing_type" character varying, "status" character varying, "genre" character varying, "cover_url" "text", "owner_id" "uuid", "created_at" timestamp with time zone, "distance_km" double precision, "owner_name" character varying, "owner_area" character varying)
     LANGUAGE "sql" STABLE SECURITY DEFINER
     AS $$
@@ -100,6 +143,20 @@ $$;
 
 
 ALTER FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "user_lng" double precision) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_community_stats"() RETURNS TABLE("total_books" bigint, "total_users" bigint, "completed_exchanges" bigint)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    AS $$
+  SELECT
+    (SELECT COUNT(*) FROM public.books)::bigint,
+    (SELECT COUNT(*) FROM public.profiles)::bigint,
+    (SELECT COUNT(*) FROM public.book_requests
+       WHERE status IN ('handed_over', 'returned'))::bigint;
+$$;
+
+
+ALTER FUNCTION "public"."get_community_stats"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
@@ -197,7 +254,9 @@ CREATE TABLE IF NOT EXISTS "public"."books" (
     "created_at" timestamp with time zone DEFAULT "now"(),
     "genre" character varying(100),
     "cover_url" "text",
+    "lending_duration_months" smallint,
     CONSTRAINT "books_condition_check" CHECK ((("condition")::"text" = ANY ((ARRAY['excellent'::character varying, 'good'::character varying, 'fair'::character varying, 'poor'::character varying])::"text"[]))),
+    CONSTRAINT "books_lending_duration_months_check" CHECK (("lending_duration_months" = ANY (ARRAY[1, 2, 3]))),
     CONSTRAINT "books_listing_type_check" CHECK ((("listing_type")::"text" = ANY ((ARRAY['donate'::character varying, 'lend'::character varying])::"text"[]))),
     CONSTRAINT "books_status_check" CHECK ((("status")::"text" = ANY ((ARRAY['available'::character varying, 'unavailable'::character varying, 'given'::character varying])::"text"[])))
 );
@@ -1019,6 +1078,12 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."complete_donated_book_reading"("p_request_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."complete_donated_book_reading"("p_request_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."complete_donated_book_reading"("p_request_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) TO "service_role";
@@ -1028,6 +1093,12 @@ GRANT ALL ON FUNCTION "public"."get_books_nearby"("user_lat" double precision, "
 GRANT ALL ON FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "user_lng" double precision) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "user_lng" double precision) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "user_lng" double precision) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_community_stats"() TO "anon";
+GRANT ALL ON FUNCTION "public"."get_community_stats"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_community_stats"() TO "service_role";
 
 
 

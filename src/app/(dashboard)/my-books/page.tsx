@@ -15,6 +15,22 @@ type Book = {
   status: string
   genre: string | null
   cover_url: string | null
+  lending_duration_months: 1 | 2 | 3 | null
+}
+
+type ReceivedBook = {
+  id: string
+  handed_over_at: string | null
+  book_id: string
+  books: {
+    id: string
+    title: string
+    author: string | null
+    cover_url: string | null
+    genre: string | null
+    listing_type: string
+    lending_duration_months: number | null
+  }
 }
 
 export default function MyBooksPage() {
@@ -29,12 +45,17 @@ export default function MyBooksPage() {
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState('')
   const [coverUrl, setCoverUrl] = useState('')
+  const [lendingDuration, setLendingDuration] = useState<1|2|3>(1)
   const [loading, setLoading] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
   const [message, setMessage] = useState('')
 
   // ── Book list state ──
   const [myBooks, setMyBooks] = useState<Book[]>([])
+
+  // ── Received books state ──
+  const [receivedBooks, setReceivedBooks] = useState<ReceivedBook[]>([])
+  const [receivedProgress, setReceivedProgress] = useState<Record<string, number>>({})
 
   // ── Edit state ──
   const [editingBookId, setEditingBookId] = useState<string | null>(null)
@@ -45,13 +66,14 @@ export default function MyBooksPage() {
   const [editCoverFile, setEditCoverFile] = useState<File | null>(null)
   const [editCoverPreview, setEditCoverPreview] = useState('')
   const [editCoverUrl, setEditCoverUrl] = useState('')
+  const [editLendingDuration, setEditLendingDuration] = useState<1|2|3>(1)
   const [editLoading, setEditLoading] = useState(false)
   const [editMessage, setEditMessage] = useState('')
 
   // ── Delete state ──
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
-  useEffect(() => { fetchMyBooks() }, [])
+  useEffect(() => { fetchMyBooks(); fetchReceivedBooks() }, [])
 
   const fetchMyBooks = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -60,6 +82,31 @@ export default function MyBooksPage() {
       .from('books').select('*').eq('owner_id', user.id)
       .order('created_at', { ascending: false })
     if (!error && data) setMyBooks(data)
+  }
+
+  const fetchReceivedBooks = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data, error } = await supabase
+      .from('book_requests')
+      .select('id, handed_over_at, book_id, books(id, title, author, cover_url, genre, listing_type, lending_duration_months)')
+      .eq('requester_id', user.id)
+      .eq('status', 'handed_over')
+      .order('handed_over_at', { ascending: false })
+    if (error || !data) return
+    setReceivedBooks(data as unknown as ReceivedBook[])
+    const bookIds = data.map((r: any) => r.book_id)
+    if (bookIds.length === 0) return
+    const { data: prog } = await supabase
+      .from('book_progress')
+      .select('book_id, progress_pct')
+      .in('book_id', bookIds)
+      .eq('reader_id', user.id)
+    if (prog) {
+      const pm: Record<string, number> = {}
+      prog.forEach((p: any) => { pm[p.book_id] = p.progress_pct })
+      setReceivedProgress(pm)
+    }
   }
 
   // ── Cover helpers (shared logic) ──
@@ -110,6 +157,7 @@ export default function MyBooksPage() {
     const { error } = await supabase.from('books').insert({
       title, author, condition, listing_type: listingType,
       genre, cover_url: finalCoverUrl, owner_id: user.id,
+      lending_duration_months: listingType === 'lend' ? lendingDuration : null,
     })
 
     if (error) {
@@ -162,6 +210,7 @@ export default function MyBooksPage() {
     setEditAuthor(book.author || '')
     setEditStatus(book.status)
     setEditGenre(book.genre || 'General')
+    setEditLendingDuration(book.lending_duration_months ?? 1)
     setEditCoverPreview(book.cover_url || '')
     setEditCoverUrl(book.cover_url || '')
     setEditCoverFile(null)
@@ -191,12 +240,14 @@ export default function MyBooksPage() {
       finalCoverUrl = url
     }
 
+    const bookBeingEdited = myBooks.find(b => b.id === bookId)
     const { error } = await supabase.from('books').update({
       title: editTitle,
       author: editAuthor,
       status: editStatus,
       genre: editGenre,
       cover_url: finalCoverUrl,
+      lending_duration_months: bookBeingEdited?.listing_type === 'lend' ? editLendingDuration : null,
     }).eq('id', bookId)
 
     if (error) {
@@ -329,6 +380,26 @@ export default function MyBooksPage() {
                 </label>
               </div>
             </div>
+
+            {listingType === 'lend' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">Lending Period</label>
+                <div className="flex gap-5">
+                  {([1, 2, 3] as const).map(m => (
+                    <label key={m} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        value={m}
+                        checked={lendingDuration === m}
+                        onChange={() => setLendingDuration(m)}
+                        className="accent-teal-500"
+                      />
+                      <span className="text-white text-sm">{m} {m === 1 ? 'month' : 'months'}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <button type="submit" disabled={loading}
               className="w-full bg-teal-500 hover:bg-teal-400 disabled:opacity-50 text-white font-semibold py-3 rounded-lg transition-colors">
@@ -490,6 +561,26 @@ export default function MyBooksPage() {
                       </div>
                     </div>
 
+                    {book.listing_type === 'lend' && (
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-2">Lending Period</label>
+                        <div className="flex gap-5">
+                          {([1, 2, 3] as const).map(m => (
+                            <label key={m} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                value={m}
+                                checked={editLendingDuration === m}
+                                onChange={() => setEditLendingDuration(m)}
+                                className="accent-teal-500"
+                              />
+                              <span className="text-white text-sm">{m} {m === 1 ? 'month' : 'months'}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div>
                       <label className="block text-xs font-medium text-slate-400 mb-2">Cover Photo</label>
                       <CoverInput
@@ -520,6 +611,97 @@ export default function MyBooksPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Books in Your Possession ── */}
+      {receivedBooks.length > 0 && (
+        <div className="mt-12">
+          <div className="flex items-center gap-3 mb-2">
+            <h2 className="text-xl font-semibold">Books in Your Possession</h2>
+            <span className="text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded-full">
+              {receivedBooks.length}
+            </span>
+          </div>
+          <p className="text-sm text-slate-500 mb-6">Books donated or lent to you that you currently have</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {receivedBooks.map(req => {
+              const book = req.books
+              const isDonated = book.listing_type === 'donate'
+              const progress = receivedProgress[book.id]
+
+              let daysLeft: number | null = null
+              if (!isDonated && req.handed_over_at && book.lending_duration_months) {
+                const due = new Date(req.handed_over_at)
+                due.setMonth(due.getMonth() + book.lending_duration_months)
+                daysLeft = Math.floor((due.getTime() - Date.now()) / 86_400_000)
+              }
+
+              return (
+                <div key={req.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 flex gap-4 hover:border-white/[0.10] transition-colors">
+                  <div className="w-12 h-16 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 border border-white/5">
+                    {book.cover_url ? (
+                      <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-600 text-lg font-bold">
+                        {book.title[0]?.toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-white truncate">{book.title}</h3>
+                    {book.author && <p className="text-sm text-slate-400 truncate">by {book.author}</p>}
+                    {book.genre && <p className="text-xs text-teal-400/70 mt-0.5">{book.genre}</p>}
+
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        isDonated
+                          ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
+                          : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                      }`}>
+                        {isDonated ? 'Donated to you' : 'On Loan'}
+                      </span>
+
+                      {daysLeft !== null && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          daysLeft < 0
+                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            : daysLeft === 0
+                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+                        }`}>
+                          {daysLeft < 0
+                            ? `Overdue by ${Math.abs(daysLeft)}d`
+                            : daysLeft === 0
+                              ? 'Due today'
+                              : `${daysLeft}d left`}
+                        </span>
+                      )}
+                    </div>
+
+                    {progress != null && (
+                      <div className="mt-3">
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-slate-500">Reading progress</span>
+                          <span className={`font-semibold ${isDonated ? 'text-teal-400' : 'text-blue-400'}`}>
+                            {progress}%
+                          </span>
+                        </div>
+                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${isDonated ? 'bg-teal-400' : 'bg-blue-400'}`}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {showScanner && (
         <ISBNScanner
