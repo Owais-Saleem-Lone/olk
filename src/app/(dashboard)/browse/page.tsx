@@ -27,6 +27,7 @@ type Book = {
   distance_km?: number | null
   owner_name?: string | null
   owner_area?: string | null
+  read_count?: number
 }
 
 export default function BrowsePage() {
@@ -494,9 +495,12 @@ export default function BrowsePage() {
                 {book.author && <p className="text-slate-400 text-xs mb-2">by {book.author}</p>}
 
                 {book.genre && (
-                  <span className="inline-block bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-medium px-2.5 py-1 rounded-full mb-4">
+                  <span className="inline-block bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-medium px-2.5 py-1 rounded-full mb-2">
                     {book.genre}
                   </span>
+                )}
+                {(book.read_count ?? 0) > 0 && (
+                  <p className="text-xs text-slate-500 mb-3">📖 Read {book.read_count}×</p>
                 )}
 
                 {/* Owner info — only shown to logged-in users */}
