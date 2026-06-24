@@ -20,7 +20,6 @@ export default function RatingModal({
   onClose: () => void
   onSubmitted: () => void
 }) {
-  const supabase = createClient()
   const [score, setScore] = useState(0)
   const [hoveredScore, setHoveredScore] = useState(0)
   const [comment, setComment] = useState('')
@@ -30,6 +29,7 @@ export default function RatingModal({
     if (score === 0) return
     setSubmitting(true)
 
+    const supabase = createClient()
     const { error } = await supabase.from('ratings').insert({
       request_id: requestId,
       rater_id: raterId,
