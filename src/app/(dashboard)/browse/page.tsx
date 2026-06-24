@@ -6,6 +6,7 @@ import { createNotification } from '@/lib/notifications'
 import { formatDistance } from '@/lib/geo'
 import Link from 'next/link'
 import ReportModal from '@/components/report-modal'
+import BookNotesModal from '@/components/book-notes-modal'
 
 type Profile = {
   id: string
@@ -43,6 +44,8 @@ export default function BrowsePage() {
   const [bookmarkedBooks, setBookmarkedBooks] = useState<Set<string>>(new Set())
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [reportTarget, setReportTarget] = useState<{ bookId: string; ownerId: string; title: string } | null>(null)
+  const [bookProgress, setBookProgress] = useState<Record<string, number>>({})
+  const [notesBook, setNotesBook] = useState<{ id: string; title: string } | null>(null)
 
   const mounted = useRef(false)
 
@@ -115,6 +118,7 @@ export default function BrowsePage() {
         if (filterType) filtered = filtered.filter(b => b.listing_type === filterType)
         if (filterCondition) filtered = filtered.filter(b => b.condition === filterCondition)
         setBooks(filtered)
+        fetchProgress(filtered)
         const profileMap: Record<string, Profile> = {}
         filtered.forEach((b: any) => {
           if (!profileMap[b.owner_id]) {
@@ -127,7 +131,7 @@ export default function BrowsePage() {
       let dbQuery = supabase
         .from('books')
         .select('*')
-        .in('status', ['available', 'given'])
+        .in('status', ['available', 'given', 'unavailable'])
         .order('created_at', { ascending: false })
 
       if (query.trim() !== '') {
@@ -143,11 +147,28 @@ export default function BrowsePage() {
         console.error('Error fetching books:', error)
       } else if (data) {
         setBooks(data)
-        if (user) await fetchProfiles(data)
+        if (user) {
+          await fetchProfiles(data)
+          fetchProgress(data)
+        }
       }
     }
 
     setLoading(false)
+  }
+
+  const fetchProgress = async (booksData: Book[]) => {
+    if (!booksData.length) return
+    const bookIds = booksData.map(b => b.id)
+    const { data } = await supabase
+      .from('book_progress')
+      .select('book_id, progress_pct')
+      .in('book_id', bookIds)
+    if (data) {
+      const pm: Record<string, number> = {}
+      data.forEach((p: any) => { pm[p.book_id] = p.progress_pct })
+      setBookProgress(pm)
+    }
   }
 
   const fetchProfiles = async (booksData: Book[]) => {
@@ -435,6 +456,27 @@ export default function BrowsePage() {
                       </span>
                     </div>
                   )}
+                  {book.status === 'unavailable' && (
+                    <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-1.5">
+                      <span className="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
+                        Being Read
+                      </span>
+                      {bookProgress[book.id] != null && (
+                        <span className="text-blue-300 text-xs font-semibold">
+                          {bookProgress[book.id]}% complete
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {/* Reading progress bar (for given/available books with a reader) */}
+                  {book.status !== 'unavailable' && bookProgress[book.id] != null && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
+                      <div
+                        className="h-full bg-teal-500 transition-all"
+                        style={{ width: `${bookProgress[book.id]}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-4 flex flex-col flex-1">
@@ -471,6 +513,13 @@ export default function BrowsePage() {
                   >
                     Donated
                   </button>
+                ) : book.status === 'unavailable' ? (
+                  <button
+                    disabled
+                    className="w-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium py-2 rounded-lg text-sm cursor-not-allowed"
+                  >
+                    Currently Being Read
+                  </button>
                 ) : !currentUserId ? (
                   <Link
                     href="/login"
@@ -500,24 +549,34 @@ export default function BrowsePage() {
                     Request Book
                   </button>
                 )}
-                {currentUserId && !isOwnBook && (
+                {currentUserId && (
                   <div className="flex gap-2 mt-2">
+                    {!isOwnBook && book.status === 'available' && (
+                      <button
+                        onClick={() => toggleBookmark(book.id)}
+                        className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${
+                          bookmarkedBooks.has(book.id)
+                            ? 'text-teal-400 bg-teal-500/10 border border-teal-500/20'
+                            : 'text-slate-500 hover:text-teal-400 hover:bg-white/5'
+                        }`}
+                      >
+                        {bookmarkedBooks.has(book.id) ? '🔖 Saved' : '🔖 Save'}
+                      </button>
+                    )}
                     <button
-                      onClick={() => toggleBookmark(book.id)}
-                      className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${
-                        bookmarkedBooks.has(book.id)
-                          ? 'text-teal-400 bg-teal-500/10 border border-teal-500/20'
-                          : 'text-slate-500 hover:text-teal-400 hover:bg-white/5'
-                      }`}
+                      onClick={() => setNotesBook({ id: book.id, title: book.title })}
+                      className="flex-1 text-xs py-1.5 rounded-lg text-slate-500 hover:text-teal-400 hover:bg-white/5 transition-colors"
                     >
-                      {bookmarkedBooks.has(book.id) ? '🔖 Saved' : '🔖 Save'}
+                      💬 Notes
                     </button>
-                    <button
-                      onClick={() => setReportTarget({ bookId: book.id, ownerId: book.owner_id, title: book.title })}
-                      className="text-xs text-slate-600 hover:text-red-400 transition-colors px-2 py-1.5"
-                    >
-                      Report
-                    </button>
+                    {!isOwnBook && (
+                      <button
+                        onClick={() => setReportTarget({ bookId: book.id, ownerId: book.owner_id, title: book.title })}
+                        className="text-xs text-slate-600 hover:text-red-400 transition-colors px-2 py-1.5"
+                      >
+                        Report
+                      </button>
+                    )}
                   </div>
                 )}
                 </div>{/* end p-5 */}
@@ -533,6 +592,15 @@ export default function BrowsePage() {
           reportedUserId={reportTarget.ownerId}
           bookTitle={reportTarget.title}
           onClose={() => setReportTarget(null)}
+        />
+      )}
+
+      {notesBook && currentUserId && (
+        <BookNotesModal
+          bookId={notesBook.id}
+          bookTitle={notesBook.title}
+          currentUserId={currentUserId}
+          onClose={() => setNotesBook(null)}
         />
       )}
     </div>

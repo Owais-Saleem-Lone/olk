@@ -66,7 +66,7 @@ CREATE OR REPLACE FUNCTION "public"."get_books_nearby"("user_lat" double precisi
     p.area_name AS owner_area
   FROM books b
   JOIN profiles p ON p.id = b.owner_id
-  WHERE b.status IN ('available', 'given')
+  WHERE b.status IN ('available', 'given', 'unavailable')
   ORDER BY distance_km ASC NULLS LAST, b.created_at DESC;
 $$;
 
@@ -119,6 +119,18 @@ SET default_tablespace = '';
 SET default_table_access_method = "heap";
 
 
+CREATE TABLE IF NOT EXISTS "public"."book_notes" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "book_id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "note" "text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."book_notes" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."book_of_month" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "title" "text" NOT NULL,
@@ -132,6 +144,20 @@ CREATE TABLE IF NOT EXISTS "public"."book_of_month" (
 
 
 ALTER TABLE "public"."book_of_month" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."book_progress" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "book_id" "uuid" NOT NULL,
+    "request_id" "uuid" NOT NULL,
+    "reader_id" "uuid" NOT NULL,
+    "progress_pct" smallint DEFAULT 0 NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "book_progress_progress_pct_check" CHECK ((("progress_pct" >= 0) AND ("progress_pct" <= 100)))
+);
+
+
+ALTER TABLE "public"."book_progress" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."book_requests" (
@@ -310,8 +336,28 @@ CREATE TABLE IF NOT EXISTS "public"."wishlists" (
 ALTER TABLE "public"."wishlists" OWNER TO "postgres";
 
 
+ALTER TABLE ONLY "public"."book_notes"
+    ADD CONSTRAINT "book_notes_book_user_unique" UNIQUE ("book_id", "user_id");
+
+
+
+ALTER TABLE ONLY "public"."book_notes"
+    ADD CONSTRAINT "book_notes_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."book_of_month"
     ADD CONSTRAINT "book_of_month_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."book_progress"
+    ADD CONSTRAINT "book_progress_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."book_progress"
+    ADD CONSTRAINT "book_progress_request_unique" UNIQUE ("request_id");
 
 
 
@@ -395,6 +441,31 @@ CREATE INDEX "idx_notifications_user" ON "public"."notifications" USING "btree" 
 
 
 CREATE UNIQUE INDEX "idx_unique_active_request" ON "public"."book_requests" USING "btree" ("book_id", "requester_id") WHERE (("status")::"text" = ANY ((ARRAY['pending'::character varying, 'accepted'::character varying, 'handed_over'::character varying])::"text"[]));
+
+
+
+ALTER TABLE ONLY "public"."book_notes"
+    ADD CONSTRAINT "book_notes_book_id_fkey" FOREIGN KEY ("book_id") REFERENCES "public"."books"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."book_notes"
+    ADD CONSTRAINT "book_notes_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."book_progress"
+    ADD CONSTRAINT "book_progress_book_id_fkey" FOREIGN KEY ("book_id") REFERENCES "public"."books"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."book_progress"
+    ADD CONSTRAINT "book_progress_reader_id_fkey" FOREIGN KEY ("reader_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."book_progress"
+    ADD CONSTRAINT "book_progress_request_id_fkey" FOREIGN KEY ("request_id") REFERENCES "public"."book_requests"("id") ON DELETE CASCADE;
 
 
 
@@ -550,7 +621,15 @@ CREATE POLICY "Authenticated users can create clubs" ON "public"."clubs" FOR INS
 
 
 
+CREATE POLICY "Authenticated users can view book notes" ON "public"."book_notes" FOR SELECT TO "authenticated" USING (true);
+
+
+
 CREATE POLICY "Authenticated users can view club members" ON "public"."club_members" FOR SELECT TO "authenticated" USING (true);
+
+
+
+CREATE POLICY "Authenticated users can view reading progress" ON "public"."book_progress" FOR SELECT TO "authenticated" USING (true);
 
 
 
@@ -598,7 +677,23 @@ CREATE POLICY "Public can view book of month" ON "public"."book_of_month" FOR SE
 
 
 
+CREATE POLICY "Reader can delete own progress" ON "public"."book_progress" FOR DELETE TO "authenticated" USING (("auth"."uid"() = "reader_id"));
+
+
+
+CREATE POLICY "Reader can insert own progress" ON "public"."book_progress" FOR INSERT TO "authenticated" WITH CHECK (("auth"."uid"() = "reader_id"));
+
+
+
+CREATE POLICY "Reader can update own progress" ON "public"."book_progress" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "reader_id")) WITH CHECK (("auth"."uid"() = "reader_id"));
+
+
+
 CREATE POLICY "Users can create requests" ON "public"."book_requests" FOR INSERT TO "authenticated" WITH CHECK (("requester_id" = "auth"."uid"()));
+
+
+
+CREATE POLICY "Users can delete own book notes" ON "public"."book_notes" FOR DELETE TO "authenticated" USING (("auth"."uid"() = "user_id"));
 
 
 
@@ -611,6 +706,10 @@ CREATE POLICY "Users can delete own books" ON "public"."books" FOR DELETE TO "au
 
 
 CREATE POLICY "Users can delete own wishlists" ON "public"."wishlists" FOR DELETE USING (("auth"."uid"() = "user_id"));
+
+
+
+CREATE POLICY "Users can insert own book notes" ON "public"."book_notes" FOR INSERT TO "authenticated" WITH CHECK (("auth"."uid"() = "user_id"));
 
 
 
@@ -648,6 +747,10 @@ CREATE POLICY "Users can send messages for their requests" ON "public"."messages
    FROM ("public"."book_requests" "br"
      JOIN "public"."books" "b" ON (("b"."id" = "br"."book_id")))
   WHERE (("br"."id" = "messages"."request_id") AND (("br"."requester_id" = "auth"."uid"()) OR ("b"."owner_id" = "auth"."uid"()))))) AND ("sender_id" = "auth"."uid"())));
+
+
+
+CREATE POLICY "Users can update own book notes" ON "public"."book_notes" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "user_id")) WITH CHECK (("auth"."uid"() = "user_id"));
 
 
 
@@ -704,7 +807,13 @@ CREATE POLICY "Users view own reports" ON "public"."reports" FOR SELECT USING ((
 
 
 
+ALTER TABLE "public"."book_notes" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."book_of_month" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."book_progress" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."book_requests" ENABLE ROW LEVEL SECURITY;
@@ -943,9 +1052,21 @@ GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."book_notes" TO "anon";
+GRANT ALL ON TABLE "public"."book_notes" TO "authenticated";
+GRANT ALL ON TABLE "public"."book_notes" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."book_of_month" TO "anon";
 GRANT ALL ON TABLE "public"."book_of_month" TO "authenticated";
 GRANT ALL ON TABLE "public"."book_of_month" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."book_progress" TO "anon";
+GRANT ALL ON TABLE "public"."book_progress" TO "authenticated";
+GRANT ALL ON TABLE "public"."book_progress" TO "service_role";
 
 
 
