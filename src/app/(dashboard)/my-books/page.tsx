@@ -16,6 +16,8 @@ type Book = {
   genre: string | null
   cover_url: string | null
   lending_duration_months: 1 | 2 | 3 | null
+  acquired_via_donation: boolean
+  read_count: number
 }
 
 type ReceivedBook = {
@@ -56,6 +58,10 @@ export default function MyBooksPage() {
   // ── Received books state ──
   const [receivedBooks, setReceivedBooks] = useState<ReceivedBook[]>([])
   const [receivedProgress, setReceivedProgress] = useState<Record<string, number>>({})
+  const [updatingProgressId, setUpdatingProgressId] = useState<string | null>(null)
+  const [progressDraft, setProgressDraft] = useState(0)
+  const [confirmPassOnId, setConfirmPassOnId] = useState<string | null>(null)
+  const [passingOnId, setPassingOnId] = useState<string | null>(null)
 
   // ── Edit state ──
   const [editingBookId, setEditingBookId] = useState<string | null>(null)
@@ -109,7 +115,7 @@ export default function MyBooksPage() {
     }
   }
 
-  // ── Cover helpers (shared logic) ──
+  // ── Cover helpers ──
   const makeFileHandler = (
     setFile: (f: File | null) => void,
     setPreview: (s: string) => void,
@@ -269,6 +275,29 @@ export default function MyBooksPage() {
     }
   }
 
+  // ── Reading progress update (received books) ──
+  const handleSaveProgress = async (requestId: string, bookId: string) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase.from('book_progress').upsert({
+      request_id: requestId,
+      book_id: bookId,
+      reader_id: user.id,
+      progress_pct: progressDraft,
+    }, { onConflict: 'request_id' })
+    setUpdatingProgressId(null)
+    setReceivedProgress(prev => ({ ...prev, [bookId]: progressDraft }))
+  }
+
+  // ── Pass It On: transfer donated book back to community ──
+  const handlePassItOn = async (requestId: string) => {
+    setPassingOnId(requestId)
+    const { error } = await supabase.rpc('complete_donated_book_reading', { p_request_id: requestId })
+    if (error) { alert('Error: ' + error.message) }
+    else { setConfirmPassOnId(null); fetchMyBooks(); fetchReceivedBooks() }
+    setPassingOnId(null)
+  }
+
   return (
     <div>
       <h1 className="text-3xl font-bold mb-2">My Books</h1>
@@ -305,7 +334,6 @@ export default function MyBooksPage() {
                 placeholder="e.g., Paulo Coelho" />
             </div>
 
-            {/* Cover */}
             <CoverInput
               preview={coverPreview}
               onFileChange={makeFileHandler(setCoverFile, setCoverPreview, setCoverUrl, setMessage)}
@@ -387,13 +415,7 @@ export default function MyBooksPage() {
                 <div className="flex gap-5">
                   {([1, 2, 3] as const).map(m => (
                     <label key={m} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        value={m}
-                        checked={lendingDuration === m}
-                        onChange={() => setLendingDuration(m)}
-                        className="accent-teal-500"
-                      />
+                      <input type="radio" value={m} checked={lendingDuration === m} onChange={() => setLendingDuration(m)} className="accent-teal-500" />
                       <span className="text-white text-sm">{m} {m === 1 ? 'month' : 'months'}</span>
                     </label>
                   ))}
@@ -414,294 +436,366 @@ export default function MyBooksPage() {
           </form>
         </div>
 
-        {/* ── RIGHT: My Books List ── */}
-        <div>
-          <h2 className="text-xl font-semibold mb-6">Your Listed Books</h2>
+        {/* ── RIGHT: Your Listed Books + Books in Your Possession ── */}
+        <div className="flex flex-col gap-8">
 
-          {myBooks.length === 0 && (
-            <div className="text-center py-10 bg-white/[0.02] border border-white/[0.06] rounded-2xl">
-              <p className="text-slate-500">You haven't added any books yet.</p>
-            </div>
-          )}
+          {/* ── Your Listed Books ── */}
+          <div>
+            <h2 className="text-xl font-semibold mb-6">Your Listed Books</h2>
 
-          <div className="space-y-3">
-            {myBooks.map((book) => (
-              <div key={book.id}>
-                {/* Book row */}
-                <div className={`bg-white/[0.03] border rounded-xl p-4 flex gap-4 items-center transition-colors ${
-                  editingBookId === book.id ? 'border-teal-500/30' : 'border-white/[0.06]'
-                }`}>
-                  {/* Thumbnail */}
-                  <div className="w-12 h-16 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 border border-white/5">
-                    {book.cover_url ? (
-                      <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-600 text-lg font-bold">
-                        {book.title[0]?.toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-white truncate">{book.title}</h3>
-                    {book.author && <p className="text-sm text-slate-400 truncate">by {book.author}</p>}
-                    {book.genre && <p className="text-xs text-teal-400 mt-0.5">{book.genre}</p>}
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                      book.status === 'available'
-                        ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                        : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                    }`}>
-                      {book.status}
-                    </span>
-
-                    {/* Edit / Delete buttons */}
-                    {editingBookId === book.id ? (
-                      <button onClick={cancelEdit}
-                        className="text-xs text-slate-500 hover:text-white px-2 py-1 rounded transition-colors">
-                        Cancel
-                      </button>
-                    ) : (
-                      <>
-                        <button onClick={() => startEdit(book)}
-                          className="text-xs text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors">
-                          Edit
-                        </button>
-                        {confirmDeleteId === book.id ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-slate-400">Sure?</span>
-                            <button onClick={() => handleDelete(book.id)}
-                              className="text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 px-2.5 py-1.5 rounded-lg transition-colors">
-                              Yes, delete
-                            </button>
-                            <button onClick={() => setConfirmDeleteId(null)}
-                              className="text-xs text-slate-500 hover:text-white px-2 py-1.5 rounded-lg transition-colors">
-                              No
-                            </button>
-                          </div>
-                        ) : (
-                          <button onClick={() => setConfirmDeleteId(book.id)}
-                            className="text-xs text-red-400/70 hover:text-red-400 bg-red-500/5 hover:bg-red-500/10 px-3 py-1.5 rounded-lg transition-colors">
-                            Delete
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Inline edit panel */}
-                {editingBookId === book.id && (
-                  <div className="mt-1 bg-white/[0.02] border border-teal-500/20 border-t-0 rounded-b-xl px-5 pb-5 pt-4 space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-400 mb-1">Title</label>
-                        <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-400 mb-1">Author</label>
-                        <input type="text" value={editAuthor} onChange={(e) => setEditAuthor(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-400 mb-1">Status</label>
-                        <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
-                          <option value="available" className="bg-slate-900">Available</option>
-                          <option value="unavailable" className="bg-slate-900">Unavailable</option>
-                          <option value="given" className="bg-slate-900">Given Away</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-400 mb-1">Category</label>
-                        <select value={editGenre} onChange={(e) => setEditGenre(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
-                          <optgroup label="Natural Sciences" className="bg-slate-900">
-                            <option value="Physics" className="bg-slate-900">Physics</option>
-                            <option value="Chemistry" className="bg-slate-900">Chemistry</option>
-                            <option value="Biology" className="bg-slate-900">Biology</option>
-                            <option value="Mathematics" className="bg-slate-900">Mathematics</option>
-                          </optgroup>
-                          <optgroup label="Engineering" className="bg-slate-900">
-                            <option value="Civil Engineering" className="bg-slate-900">Civil Engineering</option>
-                            <option value="Mechanical Engineering" className="bg-slate-900">Mechanical Engineering</option>
-                            <option value="Electrical Engineering" className="bg-slate-900">Electrical Engineering</option>
-                            <option value="IT/Computer Science" className="bg-slate-900">IT/Computer Science</option>
-                          </optgroup>
-                          <optgroup label="Medicine" className="bg-slate-900">
-                            <option value="Anatomy" className="bg-slate-900">Anatomy</option>
-                            <option value="Physiology" className="bg-slate-900">Physiology</option>
-                            <option value="Clinical Medicine" className="bg-slate-900">Clinical Medicine</option>
-                          </optgroup>
-                          <optgroup label="Social Sciences" className="bg-slate-900">
-                            <option value="History" className="bg-slate-900">History</option>
-                            <option value="Civics" className="bg-slate-900">Civics</option>
-                            <option value="Geography" className="bg-slate-900">Geography</option>
-                            <option value="Psychology" className="bg-slate-900">Psychology</option>
-                            <option value="Philosophy" className="bg-slate-900">Philosophy</option>
-                          </optgroup>
-                          <optgroup label="Literature" className="bg-slate-900">
-                            <option value="English Literature" className="bg-slate-900">English Literature</option>
-                            <option value="Urdu Literature" className="bg-slate-900">Urdu Literature</option>
-                            <option value="Hindi Literature" className="bg-slate-900">Hindi Literature</option>
-                            <option value="Persian Literature" className="bg-slate-900">Persian Literature</option>
-                            <option value="Arabic Literature" className="bg-slate-900">Arabic Literature</option>
-                            <option value="Kashmiri Literature" className="bg-slate-900">Kashmiri Literature</option>
-                          </optgroup>
-                          <optgroup label="Other" className="bg-slate-900">
-                            <option value="General" className="bg-slate-900">General / Other</option>
-                          </optgroup>
-                        </select>
-                      </div>
-                    </div>
-
-                    {book.listing_type === 'lend' && (
-                      <div>
-                        <label className="block text-xs font-medium text-slate-400 mb-2">Lending Period</label>
-                        <div className="flex gap-5">
-                          {([1, 2, 3] as const).map(m => (
-                            <label key={m} className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="radio"
-                                value={m}
-                                checked={editLendingDuration === m}
-                                onChange={() => setEditLendingDuration(m)}
-                                className="accent-teal-500"
-                              />
-                              <span className="text-white text-sm">{m} {m === 1 ? 'month' : 'months'}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-2">Cover Photo</label>
-                      <CoverInput
-                        preview={editCoverPreview}
-                        onFileChange={makeFileHandler(setEditCoverFile, setEditCoverPreview, setEditCoverUrl, setEditMessage)}
-                        onUrlChange={(v) => { setEditCoverUrl(v); setEditCoverFile(null); setEditCoverPreview(v) }}
-                        urlValue={editCoverUrl}
-                        onClear={() => { setEditCoverFile(null); setEditCoverUrl(''); setEditCoverPreview('') }}
-                      />
-                    </div>
-
-                    {editMessage && <p className="text-xs text-red-400">{editMessage}</p>}
-
-                    <div className="flex gap-3 pt-1">
-                      <button onClick={() => handleSaveEdit(book.id)} disabled={editLoading}
-                        className="bg-teal-500 hover:bg-teal-400 disabled:opacity-50 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors">
-                        {editLoading ? 'Saving...' : 'Save Changes'}
-                      </button>
-                      <button onClick={cancelEdit}
-                        className="text-sm text-slate-400 hover:text-white px-4 py-2 rounded-lg hover:bg-white/5 transition-colors">
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
+            {myBooks.length === 0 && (
+              <div className="text-center py-10 bg-white/[0.02] border border-white/[0.06] rounded-2xl">
+                <p className="text-slate-500">You haven't added any books yet.</p>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+            )}
 
-      {/* ── Books in Your Possession ── */}
-      {receivedBooks.length > 0 && (
-        <div className="mt-12">
-          <div className="flex items-center gap-3 mb-2">
-            <h2 className="text-xl font-semibold">Books in Your Possession</h2>
-            <span className="text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded-full">
-              {receivedBooks.length}
-            </span>
-          </div>
-          <p className="text-sm text-slate-500 mb-6">Books donated or lent to you that you currently have</p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {receivedBooks.map(req => {
-              const book = req.books
-              const isDonated = book.listing_type === 'donate'
-              const progress = receivedProgress[book.id]
-
-              let daysLeft: number | null = null
-              if (!isDonated && req.handed_over_at && book.lending_duration_months) {
-                const due = new Date(req.handed_over_at)
-                due.setMonth(due.getMonth() + book.lending_duration_months)
-                daysLeft = Math.floor((due.getTime() - Date.now()) / 86_400_000)
-              }
-
-              return (
-                <div key={req.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 flex gap-4 hover:border-white/[0.10] transition-colors">
-                  <div className="w-12 h-16 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 border border-white/5">
-                    {book.cover_url ? (
-                      <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-600 text-lg font-bold">
-                        {book.title[0]?.toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-white truncate">{book.title}</h3>
-                    {book.author && <p className="text-sm text-slate-400 truncate">by {book.author}</p>}
-                    {book.genre && <p className="text-xs text-teal-400/70 mt-0.5">{book.genre}</p>}
-
-                    <div className="flex flex-wrap items-center gap-2 mt-2">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        isDonated
-                          ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
-                          : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                      }`}>
-                        {isDonated ? 'Donated to you' : 'On Loan'}
-                      </span>
-
-                      {daysLeft !== null && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          daysLeft < 0
-                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                            : daysLeft === 0
-                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
-                        }`}>
-                          {daysLeft < 0
-                            ? `Overdue by ${Math.abs(daysLeft)}d`
-                            : daysLeft === 0
-                              ? 'Due today'
-                              : `${daysLeft}d left`}
-                        </span>
+            <div className="space-y-3">
+              {myBooks.map((book) => (
+                <div key={book.id}>
+                  {/* Book row */}
+                  <div className={`bg-white/[0.03] border rounded-xl p-4 flex gap-4 items-center transition-colors ${
+                    editingBookId === book.id ? 'border-teal-500/30' : 'border-white/[0.06]'
+                  }`}>
+                    <div className="w-12 h-16 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 border border-white/5">
+                      {book.cover_url ? (
+                        <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-600 text-lg font-bold">
+                          {book.title[0]?.toUpperCase()}
+                        </div>
                       )}
                     </div>
 
-                    {progress != null && (
-                      <div className="mt-3">
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="text-slate-500">Reading progress</span>
-                          <span className={`font-semibold ${isDonated ? 'text-teal-400' : 'text-blue-400'}`}>
-                            {progress}%
-                          </span>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-white truncate">{book.title}</h3>
+                      {book.author && <p className="text-sm text-slate-400 truncate">by {book.author}</p>}
+                      <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                        {book.genre && <span className="text-xs text-teal-400">{book.genre}</span>}
+                        {book.acquired_via_donation && (
+                          <span className="text-xs text-amber-400/80">· 🔄 In Circulation</span>
+                        )}
+                        {book.read_count > 0 && (
+                          <span className="text-xs text-slate-500">· Read {book.read_count}×</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                        book.status === 'available'
+                          ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                          : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+                      }`}>
+                        {book.status}
+                      </span>
+
+                      {editingBookId === book.id ? (
+                        <button onClick={cancelEdit}
+                          className="text-xs text-slate-500 hover:text-white px-2 py-1 rounded transition-colors">
+                          Cancel
+                        </button>
+                      ) : (
+                        <>
+                          <button onClick={() => startEdit(book)}
+                            className="text-xs text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors">
+                            Edit
+                          </button>
+                          {!book.acquired_via_donation && (
+                            confirmDeleteId === book.id ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs text-slate-400">Sure?</span>
+                                <button onClick={() => handleDelete(book.id)}
+                                  className="text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 px-2.5 py-1.5 rounded-lg transition-colors">
+                                  Yes, delete
+                                </button>
+                                <button onClick={() => setConfirmDeleteId(null)}
+                                  className="text-xs text-slate-500 hover:text-white px-2 py-1.5 rounded-lg transition-colors">
+                                  No
+                                </button>
+                              </div>
+                            ) : (
+                              <button onClick={() => setConfirmDeleteId(book.id)}
+                                className="text-xs text-red-400/70 hover:text-red-400 bg-red-500/5 hover:bg-red-500/10 px-3 py-1.5 rounded-lg transition-colors">
+                                Delete
+                              </button>
+                            )
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Inline edit panel */}
+                  {editingBookId === book.id && (
+                    <div className="mt-1 bg-white/[0.02] border border-teal-500/20 border-t-0 rounded-b-xl px-5 pb-5 pt-4 space-y-4">
+                      {book.acquired_via_donation && (
+                        <p className="text-xs text-amber-400/80 bg-amber-500/5 border border-amber-500/15 rounded-lg px-3 py-2">
+                          🔄 This book is in permanent circulation — it can only be donated forward, not deleted.
+                        </p>
+                      )}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-400 mb-1">Title</label>
+                          <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
                         </div>
-                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${isDonated ? 'bg-teal-400' : 'bg-blue-400'}`}
-                            style={{ width: `${progress}%` }}
-                          />
+                        <div>
+                          <label className="block text-xs font-medium text-slate-400 mb-1">Author</label>
+                          <input type="text" value={editAuthor} onChange={(e) => setEditAuthor(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
                         </div>
                       </div>
-                    )}
-                  </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-400 mb-1">Status</label>
+                          <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                            <option value="available" className="bg-slate-900">Available</option>
+                            <option value="unavailable" className="bg-slate-900">Unavailable</option>
+                            <option value="given" className="bg-slate-900">Given Away</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-400 mb-1">Category</label>
+                          <select value={editGenre} onChange={(e) => setEditGenre(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                            <optgroup label="Natural Sciences" className="bg-slate-900">
+                              <option value="Physics" className="bg-slate-900">Physics</option>
+                              <option value="Chemistry" className="bg-slate-900">Chemistry</option>
+                              <option value="Biology" className="bg-slate-900">Biology</option>
+                              <option value="Mathematics" className="bg-slate-900">Mathematics</option>
+                            </optgroup>
+                            <optgroup label="Engineering" className="bg-slate-900">
+                              <option value="Civil Engineering" className="bg-slate-900">Civil Engineering</option>
+                              <option value="Mechanical Engineering" className="bg-slate-900">Mechanical Engineering</option>
+                              <option value="Electrical Engineering" className="bg-slate-900">Electrical Engineering</option>
+                              <option value="IT/Computer Science" className="bg-slate-900">IT/Computer Science</option>
+                            </optgroup>
+                            <optgroup label="Medicine" className="bg-slate-900">
+                              <option value="Anatomy" className="bg-slate-900">Anatomy</option>
+                              <option value="Physiology" className="bg-slate-900">Physiology</option>
+                              <option value="Clinical Medicine" className="bg-slate-900">Clinical Medicine</option>
+                            </optgroup>
+                            <optgroup label="Social Sciences" className="bg-slate-900">
+                              <option value="History" className="bg-slate-900">History</option>
+                              <option value="Civics" className="bg-slate-900">Civics</option>
+                              <option value="Geography" className="bg-slate-900">Geography</option>
+                              <option value="Psychology" className="bg-slate-900">Psychology</option>
+                              <option value="Philosophy" className="bg-slate-900">Philosophy</option>
+                            </optgroup>
+                            <optgroup label="Literature" className="bg-slate-900">
+                              <option value="English Literature" className="bg-slate-900">English Literature</option>
+                              <option value="Urdu Literature" className="bg-slate-900">Urdu Literature</option>
+                              <option value="Hindi Literature" className="bg-slate-900">Hindi Literature</option>
+                              <option value="Persian Literature" className="bg-slate-900">Persian Literature</option>
+                              <option value="Arabic Literature" className="bg-slate-900">Arabic Literature</option>
+                              <option value="Kashmiri Literature" className="bg-slate-900">Kashmiri Literature</option>
+                            </optgroup>
+                            <optgroup label="Other" className="bg-slate-900">
+                              <option value="General" className="bg-slate-900">General / Other</option>
+                            </optgroup>
+                          </select>
+                        </div>
+                      </div>
+
+                      {book.listing_type === 'lend' && (
+                        <div>
+                          <label className="block text-xs font-medium text-slate-400 mb-2">Lending Period</label>
+                          <div className="flex gap-5">
+                            {([1, 2, 3] as const).map(m => (
+                              <label key={m} className="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" value={m} checked={editLendingDuration === m} onChange={() => setEditLendingDuration(m)} className="accent-teal-500" />
+                                <span className="text-white text-sm">{m} {m === 1 ? 'month' : 'months'}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-xs font-medium text-slate-400 mb-2">Cover Photo</label>
+                        <CoverInput
+                          preview={editCoverPreview}
+                          onFileChange={makeFileHandler(setEditCoverFile, setEditCoverPreview, setEditCoverUrl, setEditMessage)}
+                          onUrlChange={(v) => { setEditCoverUrl(v); setEditCoverFile(null); setEditCoverPreview(v) }}
+                          urlValue={editCoverUrl}
+                          onClear={() => { setEditCoverFile(null); setEditCoverUrl(''); setEditCoverPreview('') }}
+                        />
+                      </div>
+
+                      {editMessage && <p className="text-xs text-red-400">{editMessage}</p>}
+
+                      <div className="flex gap-3 pt-1">
+                        <button onClick={() => handleSaveEdit(book.id)} disabled={editLoading}
+                          className="bg-teal-500 hover:bg-teal-400 disabled:opacity-50 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors">
+                          {editLoading ? 'Saving...' : 'Save Changes'}
+                        </button>
+                        <button onClick={cancelEdit}
+                          className="text-sm text-slate-400 hover:text-white px-4 py-2 rounded-lg hover:bg-white/5 transition-colors">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )
-            })}
+              ))}
+            </div>
           </div>
+
+          {/* ── Books in Your Possession ── */}
+          {receivedBooks.length > 0 && (
+            <div className="border-t border-white/[0.06] pt-6">
+              <div className="flex items-center gap-3 mb-1">
+                <h2 className="text-xl font-semibold">Books in Your Possession</h2>
+                <span className="text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded-full">
+                  {receivedBooks.length}
+                </span>
+              </div>
+              <p className="text-sm text-slate-500 mb-4">Books donated or lent to you that you currently have</p>
+
+              <div className="space-y-3">
+                {receivedBooks.map(req => {
+                  const book = req.books
+                  const isDonated = book.listing_type === 'donate'
+                  const progress = receivedProgress[book.id]
+
+                  let daysLeft: number | null = null
+                  if (!isDonated && req.handed_over_at && book.lending_duration_months) {
+                    const due = new Date(req.handed_over_at)
+                    due.setMonth(due.getMonth() + book.lending_duration_months)
+                    daysLeft = Math.floor((due.getTime() - Date.now()) / 86_400_000)
+                  }
+
+                  return (
+                    <div key={req.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 hover:border-white/[0.10] transition-colors">
+                      <div className="flex gap-4">
+                        <div className="w-12 h-16 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 border border-white/5">
+                          {book.cover_url ? (
+                            <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-600 text-lg font-bold">
+                              {book.title[0]?.toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-white truncate">{book.title}</h3>
+                          {book.author && <p className="text-sm text-slate-400 truncate">by {book.author}</p>}
+
+                          <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                              isDonated
+                                ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
+                                : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                            }`}>
+                              {isDonated ? 'Donated to you' : 'On Loan'}
+                            </span>
+                            {daysLeft !== null && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                daysLeft < 0
+                                  ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                  : daysLeft === 0
+                                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                    : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+                              }`}>
+                                {daysLeft < 0 ? `Overdue by ${Math.abs(daysLeft)}d` : daysLeft === 0 ? 'Due today' : `${daysLeft}d left`}
+                              </span>
+                            )}
+                          </div>
+
+                          {updatingProgressId === req.id ? (
+                            <div className="mt-3 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="range" min={0} max={100} value={progressDraft}
+                                  onChange={e => setProgressDraft(Number(e.target.value))}
+                                  className="flex-1 accent-teal-500"
+                                />
+                                <span className={`text-xs font-semibold w-9 text-right ${isDonated ? 'text-teal-400' : 'text-blue-400'}`}>
+                                  {progressDraft}%
+                                </span>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleSaveProgress(req.id, req.book_id)}
+                                  className="text-xs bg-teal-500 hover:bg-teal-400 text-white font-medium px-3 py-1.5 rounded-lg transition-colors"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setUpdatingProgressId(null)}
+                                  className="text-xs text-slate-500 hover:text-white px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mt-2">
+                              {progress != null && (
+                                <div className="mb-2">
+                                  <div className="flex justify-between text-xs mb-1">
+                                    <span className="text-slate-500">Reading progress</span>
+                                    <span className={`font-semibold ${isDonated ? 'text-teal-400' : 'text-blue-400'}`}>{progress}%</span>
+                                  </div>
+                                  <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full transition-all ${isDonated ? 'bg-teal-400' : 'bg-blue-400'}`}
+                                      style={{ width: `${progress}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                <button
+                                  onClick={() => { setUpdatingProgressId(req.id); setProgressDraft(progress ?? 0) }}
+                                  className="text-xs text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors"
+                                >
+                                  Update Progress
+                                </button>
+                                {isDonated && (
+                                  confirmPassOnId === req.id ? (
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-xs text-slate-400">Release to community?</span>
+                                      <button
+                                        onClick={() => handlePassItOn(req.id)}
+                                        disabled={passingOnId === req.id}
+                                        className="text-xs bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 border border-teal-500/30 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                                      >
+                                        {passingOnId === req.id ? '...' : 'Yes, pass it on'}
+                                      </button>
+                                      <button
+                                        onClick={() => setConfirmPassOnId(null)}
+                                        className="text-xs text-slate-500 hover:text-white px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => setConfirmPassOnId(req.id)}
+                                      className="text-xs text-teal-400 hover:text-teal-300 bg-teal-500/10 hover:bg-teal-500/15 border border-teal-500/20 px-3 py-1.5 rounded-lg transition-colors"
+                                    >
+                                      Pass It On 🔄
+                                    </button>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
         </div>
-      )}
+      </div>
 
       {showScanner && (
         <ISBNScanner
