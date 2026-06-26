@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { createClient } from '@supabase/supabase-js'
+import { escapeHtml } from '@/lib/html-escape'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
           <div style="display: inline-block; background: linear-gradient(135deg, #2dd4bf, #0d9488); padding: 8px 14px; border-radius: 8px; font-weight: bold; font-size: 14px; color: white;">OLK</div>
         </div>
         <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-          <p style="font-size: 16px; line-height: 1.6; margin: 0; color: #f1f5f9;">${title}</p>
+          <p style="font-size: 16px; line-height: 1.6; margin: 0; color: #f1f5f9;">${escapeHtml(title)}</p>
         </div>
         <div style="text-align: center;">
           <a href="${siteUrl}/notifications" style="display: inline-block; background: #14b8a6; color: white; font-weight: 600; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-size: 14px;">View on OLK</a>

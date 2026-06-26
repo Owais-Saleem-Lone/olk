@@ -52,7 +52,6 @@ DECLARE
   v_book_id    uuid;
   v_reader_id  uuid;
 BEGIN
-  -- Validate: caller must be the requester of a handed-over donation
   SELECT br.book_id, br.requester_id
     INTO v_book_id, v_reader_id
     FROM public.book_requests br
@@ -66,19 +65,20 @@ BEGIN
     RAISE EXCEPTION 'Request not found or not authorised';
   END IF;
 
-  -- Transfer ownership; book re-enters the pool under the reader
+  -- Transfer ownership; lock into donate-only, mark as in-circulation
   UPDATE public.books
-     SET owner_id = v_reader_id,
-         status   = 'available'
+     SET owner_id              = v_reader_id,
+         status                = 'available',
+         listing_type          = 'donate',
+         acquired_via_donation = true
    WHERE id = v_book_id;
 
-  -- Close out the original request
+  -- Mark request returned — fires trg_increment_read_count automatically
   UPDATE public.book_requests
      SET status       = 'returned',
          completed_at = now()
    WHERE id = p_request_id;
 
-  -- Remove the progress record (fresh start for the next reader)
   DELETE FROM public.book_progress
    WHERE request_id = p_request_id;
 END;
@@ -88,7 +88,7 @@ $$;
 ALTER FUNCTION "public"."complete_donated_book_reading"("p_request_id" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) RETURNS TABLE("id" "uuid", "title" character varying, "author" character varying, "condition" character varying, "listing_type" character varying, "status" character varying, "genre" character varying, "cover_url" "text", "owner_id" "uuid", "created_at" timestamp with time zone, "distance_km" double precision, "owner_name" character varying, "owner_area" character varying)
+CREATE OR REPLACE FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) RETURNS TABLE("id" "uuid", "title" character varying, "author" character varying, "condition" character varying, "listing_type" character varying, "status" character varying, "genre" character varying, "cover_url" "text", "owner_id" "uuid", "created_at" timestamp with time zone, "distance_km" double precision, "owner_name" character varying, "owner_area" character varying, "read_count" integer, "acquired_via_donation" boolean)
     LANGUAGE "sql" STABLE SECURITY DEFINER
     AS $$
   SELECT
@@ -106,7 +106,9 @@ CREATE OR REPLACE FUNCTION "public"."get_books_nearby"("user_lat" double precisi
       ELSE NULL
     END AS distance_km,
     p.display_name AS owner_name,
-    p.area_name AS owner_area
+    p.area_name AS owner_area,
+    b.read_count,
+    b.acquired_via_donation
   FROM books b
   JOIN profiles p ON p.id = b.owner_id
   WHERE b.status IN ('available', 'given', 'unavailable')
@@ -170,6 +172,40 @@ END;
 
 
 ALTER FUNCTION "public"."handle_new_user"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."increment_read_count_on_return"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+BEGIN
+  IF NEW.status = 'returned' AND OLD.status IS DISTINCT FROM 'returned' THEN
+    UPDATE public.books SET read_count = read_count + 1 WHERE id = NEW.book_id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."increment_read_count_on_return"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."update_club_member_count"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE clubs SET member_count = member_count + 1 WHERE id = NEW.club_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE clubs SET member_count = GREATEST(0, member_count - 1) WHERE id = OLD.club_id;
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_club_member_count"() OWNER TO "postgres";
 
 SET default_tablespace = '';
 
@@ -255,6 +291,8 @@ CREATE TABLE IF NOT EXISTS "public"."books" (
     "genre" character varying(100),
     "cover_url" "text",
     "lending_duration_months" smallint,
+    "acquired_via_donation" boolean DEFAULT false NOT NULL,
+    "read_count" integer DEFAULT 0 NOT NULL,
     CONSTRAINT "books_condition_check" CHECK ((("condition")::"text" = ANY ((ARRAY['excellent'::character varying, 'good'::character varying, 'fair'::character varying, 'poor'::character varying])::"text"[]))),
     CONSTRAINT "books_lending_duration_months_check" CHECK (("lending_duration_months" = ANY (ARRAY[1, 2, 3]))),
     CONSTRAINT "books_listing_type_check" CHECK ((("listing_type")::"text" = ANY ((ARRAY['donate'::character varying, 'lend'::character varying])::"text"[]))),
@@ -500,6 +538,14 @@ CREATE INDEX "idx_notifications_user" ON "public"."notifications" USING "btree" 
 
 
 CREATE UNIQUE INDEX "idx_unique_active_request" ON "public"."book_requests" USING "btree" ("book_id", "requester_id") WHERE (("status")::"text" = ANY ((ARRAY['pending'::character varying, 'accepted'::character varying, 'handed_over'::character varying])::"text"[]));
+
+
+
+CREATE OR REPLACE TRIGGER "trg_club_member_count" AFTER INSERT OR DELETE ON "public"."club_members" FOR EACH ROW EXECUTE FUNCTION "public"."update_club_member_count"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_increment_read_count" AFTER UPDATE OF "status" ON "public"."book_requests" FOR EACH ROW EXECUTE FUNCTION "public"."increment_read_count_on_return"();
 
 
 
@@ -1105,6 +1151,18 @@ GRANT ALL ON FUNCTION "public"."get_community_stats"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "anon";
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."increment_read_count_on_return"() TO "anon";
+GRANT ALL ON FUNCTION "public"."increment_read_count_on_return"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."increment_read_count_on_return"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_club_member_count"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_club_member_count"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_club_member_count"() TO "service_role";
 
 
 

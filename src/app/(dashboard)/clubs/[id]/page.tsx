@@ -116,7 +116,6 @@ export default function ClubDetailPage() {
     const { error } = await supabase.from('club_members').insert({ club_id: clubId, user_id: currentUserId })
     if (error) return
 
-    await supabase.from('clubs').update({ member_count: club.member_count + 1 }).eq('id', clubId)
     setIsMember(true)
     setClub(prev => prev ? { ...prev, member_count: prev.member_count + 1 } : prev)
 
@@ -133,7 +132,6 @@ export default function ClubDetailPage() {
   const handleLeave = async () => {
     if (!currentUserId || !club) return
     await supabase.from('club_members').delete().eq('club_id', clubId).eq('user_id', currentUserId)
-    await supabase.from('clubs').update({ member_count: Math.max(0, club.member_count - 1) }).eq('id', clubId)
     setIsMember(false)
     setClub(prev => prev ? { ...prev, member_count: Math.max(0, prev.member_count - 1) } : prev)
     fetchClub()
@@ -153,13 +151,14 @@ export default function ClubDetailPage() {
       setNewPost('')
 
       const memberIds = members.map(m => m.user_id).filter(id => id !== currentUserId)
-      for (const memberId of memberIds) {
-        await createNotification({
-          userId: memberId,
+      if (memberIds.length > 0) {
+        const notifications = memberIds.map(id => ({
+          user_id: id,
           type: 'club_announcement',
           title: `New announcement in "${club?.name}"`,
           link: `/clubs/${clubId}`,
-        })
+        }))
+        await supabase.from('notifications').insert(notifications)
       }
 
       fetchClub()

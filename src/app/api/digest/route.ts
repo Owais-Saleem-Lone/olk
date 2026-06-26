@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { createClient } from '@supabase/supabase-js'
+import { escapeHtml } from '@/lib/html-escape'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -46,8 +47,8 @@ export async function POST(request: Request) {
   const bookListHtml = newBooks.map(b => `
     <tr>
       <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
-        <strong style="color: #f1f5f9;">${b.title}</strong>
-        ${b.author ? `<br/><span style="color: #94a3b8; font-size: 13px;">by ${b.author}</span>` : ''}
+        <strong style="color: #f1f5f9;">${escapeHtml(b.title)}</strong>
+        ${b.author ? `<br/><span style="color: #94a3b8; font-size: 13px;">by ${escapeHtml(b.author)}</span>` : ''}
         <br/><span style="color: #2dd4bf; font-size: 12px; font-weight: 600;">${b.listing_type === 'donate' ? 'Free' : 'Lend'}</span>
       </td>
     </tr>
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
     const email = authUser?.user?.email
     if (!email) continue
 
-    const name = sub.display_name?.split('@')[0] || 'Reader'
+    const name = escapeHtml(sub.display_name?.split('@')[0] || 'Reader')
 
     await resend.emails.send({
       from: fromAddress,
