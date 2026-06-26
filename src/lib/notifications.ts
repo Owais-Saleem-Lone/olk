@@ -21,5 +21,5 @@ export async function createNotification({ userId, type, title, link }: Notifica
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, type, title }),
-  }).catch(() => {})
+  }).catch(err => console.error('Email notification failed:', err))
 }

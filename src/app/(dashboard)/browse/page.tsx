@@ -6,6 +6,10 @@ import { createNotification } from '@/lib/notifications'
 import { formatDistance } from '@/lib/geo'
 import Link from 'next/link'
 import ReportModal from '@/components/report-modal'
+
+function sanitizeSearchQuery(input: string): string {
+  return input.replace(/[%_\\,().]/g, c => '\\' + c)
+}
 import BookNotesModal from '@/components/book-notes-modal'
 
 type Profile = {
@@ -136,7 +140,8 @@ export default function BrowsePage() {
         .order('created_at', { ascending: false })
 
       if (query.trim() !== '') {
-        dbQuery = dbQuery.or(`title.ilike.%${query}%,author.ilike.%${query}%`)
+        const q = sanitizeSearchQuery(query)
+        dbQuery = dbQuery.or(`title.ilike.%${q}%,author.ilike.%${q}%`)
       }
       if (filterGenre) dbQuery = dbQuery.eq('genre', filterGenre)
       if (filterType) dbQuery = dbQuery.eq('listing_type', filterType)

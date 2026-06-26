@@ -35,6 +35,7 @@ export default function ClubsPage() {
   const [filterInterest, setFilterInterest] = useState('')
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [joinedClubs, setJoinedClubs] = useState<Set<string>>(new Set())
+  const [joiningClub, setJoiningClub] = useState<string | null>(null)
   const mounted = useRef(false)
 
   useEffect(() => { fetchClubs() }, [])
@@ -115,17 +116,20 @@ export default function ClubsPage() {
   }
 
   const handleJoin = async (clubId: string) => {
+    if (joiningClub) return
+    setJoiningClub(clubId)
+
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) { setJoiningClub(null); return }
 
     const { error } = await supabase.from('club_members').insert({ club_id: clubId, user_id: user.id })
-    if (error && error.code === '23505') return
+    if (error && error.code === '23505') { setJoiningClub(null); return }
 
     if (!error) {
-      await supabase.from('clubs').update({ member_count: clubs.find(c => c.id === clubId)!.member_count + 1 }).eq('id', clubId)
       setJoinedClubs(prev => new Set(prev).add(clubId))
       setClubs(prev => prev.map(c => c.id === clubId ? { ...c, member_count: c.member_count + 1 } : c))
     }
+    setJoiningClub(null)
   }
 
   const handleSearch = (e: React.FormEvent) => {
@@ -234,8 +238,9 @@ export default function ClubsPage() {
                       Member ✓
                     </Link>
                   ) : (
-                    <button onClick={() => handleJoin(club.id)} className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-2 rounded-lg text-sm transition-colors">
-                      Join Club
+                    <button onClick={() => handleJoin(club.id)} disabled={joiningClub === club.id}
+                      className="w-full bg-white/5 hover:bg-white/10 disabled:opacity-40 border border-white/10 text-white font-medium py-2 rounded-lg text-sm transition-colors">
+                      {joiningClub === club.id ? 'Joining...' : 'Join Club'}
                     </button>
                   )}
                 </div>
