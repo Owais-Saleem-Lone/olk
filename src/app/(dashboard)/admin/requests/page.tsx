@@ -10,8 +10,12 @@ type Request = {
   created_at: string
   handed_over_at: string | null
   completed_at: string | null
-  requester: { display_name: string | null } | null
-  book: { id: string; title: string; listing_type: string; owner: { display_name: string | null } | null } | null
+  requester_id: string
+  book_id: string
+  requester_name: string | null
+  book_title: string | null
+  book_listing_type: string | null
+  owner_name: string | null
 }
 
 type Overdue = {
@@ -47,13 +51,39 @@ export default function AdminRequestsPage() {
     setLoading(true)
     let query = supabase
       .from('book_requests')
-      .select('id, status, created_at, handed_over_at, completed_at, requester:requester_id(display_name), book:book_id(id, title, listing_type, owner:owner_id(display_name))')
+      .select('id, status, created_at, handed_over_at, completed_at, requester_id, book_id')
       .order('created_at', { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
     if (filter !== 'all') query = query.eq('status', filter)
-    const { data } = await query
-    setRequests((data || []) as unknown as Request[])
+    const { data: reqData } = await query
+    if (!reqData || reqData.length === 0) { setRequests([]); setLoading(false); return }
+
+    const bookIds = [...new Set(reqData.map(r => r.book_id))]
+    const requesterIds = [...new Set(reqData.map(r => r.requester_id))]
+
+    const [{ data: booksData }, { data: profilesData }] = await Promise.all([
+      supabase.from('books').select('id, title, listing_type, owner_id').in('id', bookIds),
+      supabase.from('profiles').select('id, display_name').in('id', requesterIds),
+    ])
+
+    const bookMap = new Map((booksData || []).map(b => [b.id, b]))
+    const profileMap = new Map((profilesData || []).map(p => [p.id, p.display_name]))
+
+    const ownerIds = [...new Set((booksData || []).map(b => b.owner_id))]
+    const { data: ownerProfiles } = await supabase.from('profiles').select('id, display_name').in('id', ownerIds)
+    const ownerMap = new Map((ownerProfiles || []).map(p => [p.id, p.display_name]))
+
+    setRequests(reqData.map(r => {
+      const book = bookMap.get(r.book_id)
+      return {
+        ...r,
+        requester_name: profileMap.get(r.requester_id) || null,
+        book_title: book?.title || null,
+        book_listing_type: book?.listing_type || null,
+        owner_name: book ? (ownerMap.get(book.owner_id) || null) : null,
+      }
+    }))
     setLoading(false)
   }
 
@@ -149,15 +179,14 @@ export default function AdminRequestsPage() {
                   </thead>
                   <tbody>
                     {requests.map(r => {
-                      const bk = r.book as Request['book']
                       return (
                         <tr key={r.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
                           <td className="p-3">
-                            <p className="text-white truncate max-w-48">{bk?.title || 'Deleted'}</p>
-                            <p className="text-xs text-slate-500">{bk?.listing_type}</p>
+                            <p className="text-white truncate max-w-48">{r.book_title || 'Deleted'}</p>
+                            <p className="text-xs text-slate-500">{r.book_listing_type}</p>
                           </td>
-                          <td className="p-3 text-slate-400 hidden md:table-cell">{(bk?.owner as { display_name: string | null } | null)?.display_name || '—'}</td>
-                          <td className="p-3 text-slate-400 hidden md:table-cell">{(r.requester as { display_name: string | null } | null)?.display_name || '—'}</td>
+                          <td className="p-3 text-slate-400 hidden md:table-cell">{r.owner_name || '—'}</td>
+                          <td className="p-3 text-slate-400 hidden md:table-cell">{r.requester_name || '—'}</td>
                           <td className="p-3">
                             <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColor[r.status] || 'bg-white/5 text-slate-400 border-white/10'}`}>
                               {r.status.replace('_', ' ')}

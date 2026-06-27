@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { createAnnouncement, deactivateAnnouncement, manageGenre, manageArea, saveBotm } from '@/lib/admin-actions'
+import { createAnnouncement, deleteAnnouncement, manageGenre, manageArea, saveBotm } from '@/lib/admin-actions'
 
 type Announcement = { id: string; title: string; body: string | null; type: string; is_banner: boolean; active: boolean; starts_at: string; ends_at: string | null; created_at: string }
 type Genre = { id: string; name: string; display_order: number; active: boolean }
@@ -82,9 +82,9 @@ export default function AdminContentPage() {
     if (res.success) { setMsg('Announcement created'); setAnnTitle(''); setAnnBody(''); loadAnnouncements() }
   }
 
-  async function handleDeactivateAnn(id: string) {
-    const res = await deactivateAnnouncement(id)
-    if (res.success) { setMsg('Deactivated'); loadAnnouncements() }
+  async function handleDeleteAnn(id: string) {
+    const res = await deleteAnnouncement(id)
+    if (res.success) { setMsg('Announcement deleted'); loadAnnouncements() }
   }
 
   async function handleAddGenre() {
@@ -175,7 +175,7 @@ export default function AdminContentPage() {
 
           <div className="space-y-2">
             {announcements.map(a => (
-              <div key={a.id} className={`bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 ${!a.active ? 'opacity-50' : ''}`}>
+              <div key={a.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -191,9 +191,7 @@ export default function AdminContentPage() {
                     {a.body && <p className="text-xs text-slate-400">{a.body}</p>}
                     <p className="text-xs text-slate-600 mt-1">{new Date(a.created_at).toLocaleDateString()} {a.ends_at ? `· Ends ${new Date(a.ends_at).toLocaleDateString()}` : ''}</p>
                   </div>
-                  {a.active && (
-                    <button onClick={() => handleDeactivateAnn(a.id)} className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors">Deactivate</button>
-                  )}
+                  <button onClick={() => handleDeleteAnn(a.id)} className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors">Delete</button>
                 </div>
               </div>
             ))}

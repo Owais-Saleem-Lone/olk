@@ -13,17 +13,20 @@ type Report = {
   created_at: string
   assigned_to: string | null
   resolved_at: string | null
-  reporter: { display_name: string | null } | null
-  reported_user: { id: string; display_name: string | null } | null
-  reported_book: { id: string; title: string } | null
-  resolved_by_admin: { display_name: string | null } | null
+  reporter_id: string
+  reported_user_id: string | null
+  reported_book_id: string | null
+  reporter_name: string | null
+  reported_user_name: string | null
+  reported_book_title: string | null
+  resolved_by_name: string | null
 }
 
 type AdminNote = {
   id: string
   content: string
   created_at: string
-  admin: { display_name: string | null } | null
+  admin_name: string | null
 }
 
 const CATEGORIES = ['spam', 'inappropriate', 'fake_listing', 'harassment', 'scam', 'other']
@@ -48,26 +51,53 @@ export default function AdminReportsPage() {
     setLoading(true)
     let query = supabase
       .from('reports')
-      .select('id, reason, details, status, category, created_at, assigned_to, resolved_at, reporter:reporter_id(display_name), reported_user:reported_user_id(id, display_name), reported_book:reported_book_id(id, title), resolved_by_admin:resolved_by(display_name)')
+      .select('id, reason, details, status, category, created_at, assigned_to, resolved_at, resolved_by, reporter_id, reported_user_id, reported_book_id')
       .order('created_at', { ascending: false })
       .limit(100)
 
     if (filter !== 'all') query = query.eq('status', filter)
     if (filterCat) query = query.eq('category', filterCat)
 
-    const { data } = await query
-    setReports((data || []) as unknown as Report[])
+    const { data: reportsData } = await query
+    if (!reportsData || reportsData.length === 0) { setReports([]); setLoading(false); return }
+
+    const profileIds = [...new Set([
+      ...reportsData.map(r => r.reporter_id),
+      ...reportsData.map(r => r.reported_user_id).filter(Boolean),
+      ...reportsData.map(r => r.resolved_by).filter(Boolean),
+    ] as string[])]
+    const bookIds = [...new Set(reportsData.map(r => r.reported_book_id).filter(Boolean) as string[])]
+
+    const [{ data: profiles }, { data: books }] = await Promise.all([
+      profileIds.length > 0 ? supabase.from('profiles').select('id, display_name').in('id', profileIds) : { data: [] },
+      bookIds.length > 0 ? supabase.from('books').select('id, title').in('id', bookIds) : { data: [] },
+    ])
+
+    const profileMap = new Map((profiles || []).map(p => [p.id, p.display_name]))
+    const bookMap = new Map((books || []).map(b => [b.id, b.title]))
+
+    setReports(reportsData.map(r => ({
+      ...r,
+      reporter_name: profileMap.get(r.reporter_id) || null,
+      reported_user_name: r.reported_user_id ? profileMap.get(r.reported_user_id) || null : null,
+      reported_book_title: r.reported_book_id ? bookMap.get(r.reported_book_id) || null : null,
+      resolved_by_name: r.resolved_by ? profileMap.get(r.resolved_by) || null : null,
+    })))
     setLoading(false)
   }
 
   async function selectReport(r: Report) {
     setSelected(r)
-    const { data } = await supabase
+    const { data: notesData } = await supabase
       .from('admin_notes')
-      .select('id, content, created_at, admin:admin_id(display_name)')
+      .select('id, content, created_at, admin_id')
       .eq('report_id', r.id)
       .order('created_at', { ascending: true })
-    setNotes((data || []) as unknown as AdminNote[])
+    if (!notesData || notesData.length === 0) { setNotes([]); return }
+    const adminIds = [...new Set(notesData.map(n => n.admin_id))]
+    const { data: profiles } = await supabase.from('profiles').select('id, display_name').in('id', adminIds)
+    const profileMap = new Map((profiles || []).map(p => [p.id, p.display_name]))
+    setNotes(notesData.map(n => ({ ...n, admin_name: profileMap.get(n.admin_id) || null })))
   }
 
   async function handleStatus(status: string) {
@@ -85,12 +115,7 @@ export default function AdminReportsPage() {
     setActing(false)
     if (res.success) {
       setNewNote('')
-      const { data } = await supabase
-        .from('admin_notes')
-        .select('id, content, created_at, admin:admin_id(display_name)')
-        .eq('report_id', selected.id)
-        .order('created_at', { ascending: true })
-      setNotes((data || []) as unknown as AdminNote[])
+      selectReport(selected)
     }
   }
 
@@ -105,12 +130,12 @@ export default function AdminReportsPage() {
     if (!selected || !quickReason.trim()) return
     setActing(true)
     let res
-    if (quickAction === 'ban' && selected.reported_user) {
-      res = await banUser((selected.reported_user as { id: string }).id, quickReason, false, 7)
-    } else if (quickAction === 'warn' && selected.reported_user) {
-      res = await warnUser((selected.reported_user as { id: string }).id, quickReason)
-    } else if (quickAction === 'hide' && selected.reported_book) {
-      res = await hideBook((selected.reported_book as { id: string }).id, quickReason)
+    if (quickAction === 'ban' && selected.reported_user_id) {
+      res = await banUser(selected.reported_user_id, quickReason, false, 7)
+    } else if (quickAction === 'warn' && selected.reported_user_id) {
+      res = await warnUser(selected.reported_user_id, quickReason)
+    } else if (quickAction === 'hide' && selected.reported_book_id) {
+      res = await hideBook(selected.reported_book_id, quickReason)
     }
     setActing(false)
     if (res?.success) {
@@ -187,7 +212,7 @@ export default function AdminReportsPage() {
                       )}
                     </div>
                     <p className="text-xs text-slate-600 mt-1.5">
-                      By {(r.reporter as { display_name: string | null } | null)?.display_name || 'Unknown'} · {new Date(r.created_at).toLocaleDateString()}
+                      By {r.reporter_name || 'Unknown'} · {new Date(r.created_at).toLocaleDateString()}
                     </p>
                   </div>
                   <span className="text-slate-600 text-xs">→</span>
@@ -209,9 +234,9 @@ export default function AdminReportsPage() {
               {selected.details && <p className="text-sm text-slate-400 mb-3">{selected.details}</p>}
 
               <div className="flex flex-wrap gap-2 mb-4 text-xs text-slate-500">
-                <span>Reporter: {(selected.reporter as { display_name: string | null } | null)?.display_name || 'Unknown'}</span>
-                {selected.reported_user && <span>Against: {(selected.reported_user as { display_name: string | null })?.display_name}</span>}
-                {selected.reported_book && <span>Book: {(selected.reported_book as { title: string })?.title}</span>}
+                <span>Reporter: {selected.reporter_name || 'Unknown'}</span>
+                {selected.reported_user_name && <span>Against: {selected.reported_user_name}</span>}
+                {selected.reported_book_title && <span>Book: {selected.reported_book_title}</span>}
                 <span>{new Date(selected.created_at).toLocaleString()}</span>
               </div>
 
@@ -245,13 +270,13 @@ export default function AdminReportsPage() {
               <div className="border-t border-white/5 pt-4 mb-4">
                 <p className="text-xs text-slate-500 mb-2">Quick Actions</p>
                 <div className="flex flex-wrap gap-2">
-                  {selected.reported_user && (
+                  {selected.reported_user_id && (
                     <>
                       <button onClick={() => setQuickAction('ban')} className="text-xs bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 px-3 py-1.5 rounded-lg transition-colors">Ban User</button>
                       <button onClick={() => setQuickAction('warn')} className="text-xs bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg transition-colors">Warn User</button>
                     </>
                   )}
-                  {selected.reported_book && (
+                  {selected.reported_book_id && (
                     <button onClick={() => setQuickAction('hide')} className="text-xs bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 px-3 py-1.5 rounded-lg transition-colors">Hide Book</button>
                   )}
                 </div>
@@ -261,7 +286,7 @@ export default function AdminReportsPage() {
               {selected.resolved_at && (
                 <div className="text-xs text-slate-500 border-t border-white/5 pt-3">
                   Resolved {new Date(selected.resolved_at).toLocaleString()}
-                  {selected.resolved_by_admin && ` by ${(selected.resolved_by_admin as { display_name: string | null })?.display_name}`}
+                  {selected.resolved_by_name && ` by ${selected.resolved_by_name}`}
                 </div>
               )}
             </div>
@@ -276,7 +301,7 @@ export default function AdminReportsPage() {
                   {notes.map(n => (
                     <div key={n.id} className="bg-white/[0.03] border border-white/[0.04] rounded-lg p-3">
                       <p className="text-sm text-slate-300">{n.content}</p>
-                      <p className="text-xs text-slate-600 mt-1">{(n.admin as { display_name: string | null } | null)?.display_name || 'Admin'} · {new Date(n.created_at).toLocaleString()}</p>
+                      <p className="text-xs text-slate-600 mt-1">{n.admin_name || 'Admin'} · {new Date(n.created_at).toLocaleString()}</p>
                     </div>
                   ))}
                 </div>

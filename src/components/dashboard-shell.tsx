@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import DashboardSidebar from './dashboard-sidebar'
 import NotificationBell from './notification-bell'
+import AnnouncementBanner from './announcement-banner'
 
 export default function DashboardShell({
   displayName,
@@ -90,6 +91,7 @@ export default function DashboardShell({
         <div className="hidden md:block absolute top-6 right-8 z-20">
           <NotificationBell />
         </div>
+        <AnnouncementBanner />
         {children}
       </main>
     </div>

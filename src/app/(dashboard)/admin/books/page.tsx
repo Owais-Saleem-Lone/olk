@@ -16,7 +16,8 @@ type Book = {
   admin_hide_reason: string | null
   created_at: string
   cover_url: string | null
-  owner: { display_name: string | null; area_name: string | null } | null
+  owner_id: string
+  owner_name: string | null
 }
 
 export default function AdminBooksPage() {
@@ -52,7 +53,7 @@ export default function AdminBooksPage() {
     setLoading(true)
     let query = supabase
       .from('books')
-      .select('id, title, author, genre, condition, listing_type, status, hidden_by_admin, admin_hide_reason, created_at, cover_url, owner:owner_id(display_name, area_name)')
+      .select('id, title, author, genre, condition, listing_type, status, hidden_by_admin, admin_hide_reason, created_at, cover_url, owner_id')
       .order('created_at', { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
@@ -60,8 +61,17 @@ export default function AdminBooksPage() {
     if (filter === 'available') query = query.eq('status', 'available')
     if (filter === 'unavailable') query = query.eq('status', 'unavailable')
 
-    const { data } = await query
-    setBooks((data || []) as unknown as Book[])
+    const { data: booksData } = await query
+    if (!booksData || booksData.length === 0) { setBooks([]); setLoading(false); return }
+
+    const ownerIds = [...new Set(booksData.map(b => b.owner_id))]
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, display_name')
+      .in('id', ownerIds)
+
+    const profileMap = new Map((profiles || []).map(p => [p.id, p.display_name]))
+    setBooks(booksData.map(b => ({ ...b, owner_name: profileMap.get(b.owner_id) || null })))
     setLoading(false)
   }
 
@@ -69,7 +79,7 @@ export default function AdminBooksPage() {
     ? books.filter(b =>
         b.title.toLowerCase().includes(search.toLowerCase()) ||
         b.author?.toLowerCase().includes(search.toLowerCase()) ||
-        (b.owner as { display_name: string | null } | null)?.display_name?.toLowerCase().includes(search.toLowerCase())
+        b.owner_name?.toLowerCase().includes(search.toLowerCase())
       )
     : filterGenre
     ? books.filter(b => b.genre === filterGenre)
@@ -214,7 +224,7 @@ export default function AdminBooksPage() {
                     </td>
                     <td className="p-3 text-slate-400 hidden md:table-cell">{b.author || '—'}</td>
                     <td className="p-3 text-slate-400 hidden lg:table-cell">{b.genre || '—'}</td>
-                    <td className="p-3 text-slate-400 hidden lg:table-cell">{(b.owner as { display_name: string | null } | null)?.display_name || '—'}</td>
+                    <td className="p-3 text-slate-400 hidden lg:table-cell">{b.owner_name || '—'}</td>
                     <td className="p-3">
                       {b.hidden_by_admin ? (
                         <span className="text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full">Hidden</span>

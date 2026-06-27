@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import DashboardShell from '@/components/dashboard-shell'
+import AnnouncementBanner from '@/components/announcement-banner'
 
 export default async function DashboardLayout({
   children,
@@ -36,7 +37,10 @@ export default async function DashboardLayout({
             </div>
           </div>
         </header>
-        <main className="p-4 md:p-8 max-w-7xl mx-auto">{children}</main>
+        <main className="p-4 md:p-8 max-w-7xl mx-auto">
+          <AnnouncementBanner />
+          {children}
+        </main>
       </div>
     )
   }
