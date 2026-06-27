@@ -554,13 +554,13 @@ export async function createAnnouncement(data: {
   }
 }
 
-export async function deactivateAnnouncement(id: string): Promise<ActionResult> {
+export async function deleteAnnouncement(id: string): Promise<ActionResult> {
   try {
     const admin = await guardRole('moderator')
     const supabase = await createClient()
 
-    await supabase.from('announcements').update({ active: false }).eq('id', id)
-    await auditLog(admin.id, 'deactivate_announcement', 'announcement', id)
+    await supabase.from('announcements').delete().eq('id', id)
+    await auditLog(admin.id, 'delete_announcement', 'announcement', id)
     revalidatePath('/admin')
     return { success: true }
   } catch (e) {

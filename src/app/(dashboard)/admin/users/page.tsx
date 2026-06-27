@@ -21,7 +21,7 @@ type User = {
 type UserDetail = User & {
   books_count: number
   requests_count: number
-  warnings: { id: string; reason: string; created_at: string; admin: { display_name: string | null } | null }[]
+  warnings: { id: string; reason: string; created_at: string; admin_id: string; admin_name: string | null }[]
   bans: { id: string; reason: string; is_permanent: boolean; created_at: string; expires_at: string | null; unbanned_at: string | null }[]
 }
 
@@ -71,15 +71,25 @@ export default function AdminUsersPage() {
     ] = await Promise.all([
       supabase.from('books').select('*', { count: 'exact', head: true }).eq('owner_id', user.id),
       supabase.from('book_requests').select('*', { count: 'exact', head: true }).eq('requester_id', user.id),
-      supabase.from('user_warnings').select('id, reason, created_at, admin:admin_id(display_name)').eq('user_id', user.id).order('created_at', { ascending: false }),
+      supabase.from('user_warnings').select('id, reason, created_at, admin_id').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('user_bans').select('id, reason, is_permanent, created_at, expires_at, unbanned_at').eq('user_id', user.id).order('created_at', { ascending: false }),
     ])
+
+    const adminIds = [...new Set((warnings || []).map((w: { admin_id: string }) => w.admin_id))]
+    let adminMap = new Map<string, string | null>()
+    if (adminIds.length > 0) {
+      const { data: admins } = await supabase.from('profiles').select('id, display_name').in('id', adminIds)
+      adminMap = new Map((admins || []).map(a => [a.id, a.display_name]))
+    }
 
     setSelected({
       ...user,
       books_count: bc || 0,
       requests_count: rc || 0,
-      warnings: (warnings as unknown as UserDetail['warnings']) || [],
+      warnings: ((warnings || []) as { id: string; reason: string; created_at: string; admin_id: string }[]).map(w => ({
+        ...w,
+        admin_name: adminMap.get(w.admin_id) || null,
+      })),
       bans: (bans as unknown as UserDetail['bans']) || [],
     })
   }
@@ -294,7 +304,7 @@ export default function AdminUsersPage() {
                       <div key={w.id} className="bg-orange-500/5 border border-orange-500/10 rounded-lg p-2">
                         <p className="text-xs text-orange-300">{w.reason}</p>
                         <p className="text-xs text-slate-600 mt-0.5">
-                          by {(w.admin as { display_name: string | null } | null)?.display_name || 'Admin'} · {new Date(w.created_at).toLocaleDateString()}
+                          by {w.admin_name || 'Admin'} · {new Date(w.created_at).toLocaleDateString()}
                         </p>
                       </div>
                     ))}

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import BookOfMonthCard from '@/components/book-of-month'
 import AboutModal from '@/components/about-modal'
 import AnimatedCounter from '@/components/animated-counter'
+import AnnouncementBanner from '@/components/announcement-banner'
 
 function getTimeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime()
@@ -118,6 +119,11 @@ export default async function Home() {
           </div>
         </div>
       </header>
+
+      {/* ── Announcement Banner ── */}
+      <div className="relative z-10 max-w-4xl mx-auto px-6 pt-6">
+        <AnnouncementBanner />
+      </div>
 
       {/* ── Hero ── */}
       <section className="relative z-10 max-w-4xl mx-auto px-6 pt-24 pb-20 text-center">
