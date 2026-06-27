@@ -45,6 +45,149 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 
 
+CREATE TYPE "public"."admin_role" AS ENUM (
+    'super_admin',
+    'moderator',
+    'viewer'
+);
+
+
+ALTER TYPE "public"."admin_role" OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."admin_get_area_stats"() RETURNS TABLE("area_name" character varying, "user_count" bigint, "book_count" bigint)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    AS $$
+  SELECT
+    p.area_name,
+    count(DISTINCT p.id) AS user_count,
+    count(DISTINCT b.id) AS book_count
+  FROM profiles p
+  LEFT JOIN books b ON b.owner_id = p.id
+  WHERE p.area_name IS NOT NULL AND p.area_name != ''
+  GROUP BY p.area_name
+  ORDER BY user_count DESC;
+$$;
+
+
+ALTER FUNCTION "public"."admin_get_area_stats"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."admin_get_daily_stats"("days_back" integer DEFAULT 30) RETURNS TABLE("day" "date", "new_users" bigint, "new_books" bigint, "new_requests" bigint, "completed_exchanges" bigint)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    AS $$
+  WITH date_series AS (
+    SELECT generate_series(
+      (current_date - (days_back || ' days')::interval)::date,
+      current_date,
+      '1 day'::interval
+    )::date AS day
+  )
+  SELECT
+    ds.day,
+    COALESCE((SELECT count(*) FROM profiles WHERE created_at::date = ds.day), 0) AS new_users,
+    COALESCE((SELECT count(*) FROM books WHERE created_at::date = ds.day), 0) AS new_books,
+    COALESCE((SELECT count(*) FROM book_requests WHERE created_at::date = ds.day), 0) AS new_requests,
+    COALESCE((SELECT count(*) FROM book_requests WHERE completed_at::date = ds.day), 0) AS completed_exchanges
+  FROM date_series ds
+  ORDER BY ds.day;
+$$;
+
+
+ALTER FUNCTION "public"."admin_get_daily_stats"("days_back" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."admin_get_exchange_stats"() RETURNS TABLE("total_requests" bigint, "pending_count" bigint, "accepted_count" bigint, "declined_count" bigint, "handed_over_count" bigint, "returned_count" bigint, "success_rate" numeric)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    AS $$
+  SELECT
+    count(*) AS total_requests,
+    count(*) FILTER (WHERE status = 'pending') AS pending_count,
+    count(*) FILTER (WHERE status = 'accepted') AS accepted_count,
+    count(*) FILTER (WHERE status = 'declined') AS declined_count,
+    count(*) FILTER (WHERE status = 'handed_over') AS handed_over_count,
+    count(*) FILTER (WHERE status = 'returned') AS returned_count,
+    CASE
+      WHEN count(*) FILTER (WHERE status IN ('accepted','handed_over','returned','declined')) > 0
+      THEN round(
+        (count(*) FILTER (WHERE status IN ('handed_over','returned'))::numeric /
+         count(*) FILTER (WHERE status IN ('accepted','handed_over','returned','declined'))::numeric) * 100,
+        1
+      )
+      ELSE 0
+    END AS success_rate
+  FROM book_requests;
+$$;
+
+
+ALTER FUNCTION "public"."admin_get_exchange_stats"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."admin_get_overdue_books"("threshold_days" integer DEFAULT 30) RETURNS TABLE("request_id" "uuid", "book_title" character varying, "book_author" character varying, "owner_name" character varying, "borrower_name" character varying, "handed_over_at" timestamp with time zone, "days_overdue" integer)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    AS $$
+  SELECT
+    br.id AS request_id,
+    b.title AS book_title,
+    b.author AS book_author,
+    owner_p.display_name AS owner_name,
+    borrower_p.display_name AS borrower_name,
+    br.handed_over_at,
+    (current_date - br.handed_over_at::date) AS days_overdue
+  FROM book_requests br
+  JOIN books b ON b.id = br.book_id
+  JOIN profiles owner_p ON owner_p.id = b.owner_id
+  JOIN profiles borrower_p ON borrower_p.id = br.requester_id
+  WHERE br.status = 'handed_over'
+    AND b.listing_type = 'lend'
+    AND br.handed_over_at IS NOT NULL
+    AND (current_date - br.handed_over_at::date) > threshold_days
+  ORDER BY days_overdue DESC;
+$$;
+
+
+ALTER FUNCTION "public"."admin_get_overdue_books"("threshold_days" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."admin_get_rating_distribution"() RETURNS TABLE("score" smallint, "count" bigint)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    AS $$
+  SELECT s.score, COALESCE(r.cnt, 0) AS count
+  FROM generate_series(1, 5) AS s(score)
+  LEFT JOIN (
+    SELECT score, count(*) AS cnt FROM ratings GROUP BY score
+  ) r ON r.score = s.score
+  ORDER BY s.score;
+$$;
+
+
+ALTER FUNCTION "public"."admin_get_rating_distribution"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."admin_get_top_contributors"("lim" integer DEFAULT 10) RETURNS TABLE("user_id" "uuid", "display_name" character varying, "area_name" character varying, "books_listed" bigint, "books_donated" bigint, "books_lent" bigint, "avg_rating" numeric)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    AS $$
+  SELECT
+    p.id AS user_id,
+    p.display_name,
+    p.area_name,
+    count(b.id) AS books_listed,
+    count(b.id) FILTER (WHERE b.listing_type = 'donate') AS books_donated,
+    count(b.id) FILTER (WHERE b.listing_type = 'lend') AS books_lent,
+    COALESCE(round(avg(r.score)::numeric, 1), 0) AS avg_rating
+  FROM profiles p
+  LEFT JOIN books b ON b.owner_id = p.id
+  LEFT JOIN ratings r ON r.rated_user_id = p.id
+  WHERE p.is_banned = false
+  GROUP BY p.id, p.display_name, p.area_name
+  ORDER BY books_listed DESC
+  LIMIT lim;
+$$;
+
+
+ALTER FUNCTION "public"."admin_get_top_contributors"("lim" integer) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."complete_donated_book_reading"("p_request_id" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
@@ -189,6 +332,50 @@ $$;
 ALTER FUNCTION "public"."increment_read_count_on_return"() OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."is_admin"() RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid()
+      AND is_admin = true
+  );
+$$;
+
+
+ALTER FUNCTION "public"."is_admin"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."is_admin_or_mod"() RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid()
+      AND is_admin = true
+      AND admin_role IN ('super_admin', 'moderator')
+  );
+$$;
+
+
+ALTER FUNCTION "public"."is_admin_or_mod"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."is_super_admin"() RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid()
+      AND is_admin = true
+      AND admin_role = 'super_admin'
+  );
+$$;
+
+
+ALTER FUNCTION "public"."is_super_admin"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."update_club_member_count"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
@@ -210,6 +397,62 @@ ALTER FUNCTION "public"."update_club_member_count"() OWNER TO "postgres";
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
+
+
+CREATE TABLE IF NOT EXISTS "public"."admin_audit_log" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "admin_id" "uuid" NOT NULL,
+    "action" "text" NOT NULL,
+    "target_type" "text" NOT NULL,
+    "target_id" "uuid",
+    "details" "jsonb" DEFAULT '{}'::"jsonb",
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."admin_audit_log" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."admin_notes" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "report_id" "uuid" NOT NULL,
+    "admin_id" "uuid" NOT NULL,
+    "content" "text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."admin_notes" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."announcements" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "admin_id" "uuid" NOT NULL,
+    "title" "text" NOT NULL,
+    "body" "text",
+    "type" "text" DEFAULT 'info'::"text",
+    "is_banner" boolean DEFAULT false,
+    "active" boolean DEFAULT true,
+    "starts_at" timestamp with time zone DEFAULT "now"(),
+    "ends_at" timestamp with time zone,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "announcements_type_check" CHECK (("type" = ANY (ARRAY['info'::"text", 'warning'::"text", 'success'::"text", 'event'::"text"])))
+);
+
+
+ALTER TABLE "public"."announcements" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."areas" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "name" character varying(200) NOT NULL,
+    "district" character varying(100),
+    "active" boolean DEFAULT true,
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."areas" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."book_notes" (
@@ -293,6 +536,9 @@ CREATE TABLE IF NOT EXISTS "public"."books" (
     "lending_duration_months" smallint,
     "acquired_via_donation" boolean DEFAULT false NOT NULL,
     "read_count" integer DEFAULT 0 NOT NULL,
+    "hidden_by_admin" boolean DEFAULT false,
+    "admin_hide_reason" "text",
+    "hidden_at" timestamp with time zone,
     CONSTRAINT "books_condition_check" CHECK ((("condition")::"text" = ANY ((ARRAY['excellent'::character varying, 'good'::character varying, 'fair'::character varying, 'poor'::character varying])::"text"[]))),
     CONSTRAINT "books_lending_duration_months_check" CHECK (("lending_duration_months" = ANY (ARRAY[1, 2, 3]))),
     CONSTRAINT "books_listing_type_check" CHECK ((("listing_type")::"text" = ANY ((ARRAY['donate'::character varying, 'lend'::character varying])::"text"[]))),
@@ -345,6 +591,18 @@ CREATE TABLE IF NOT EXISTS "public"."clubs" (
 ALTER TABLE "public"."clubs" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."genres" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "name" character varying(100) NOT NULL,
+    "display_order" integer DEFAULT 0,
+    "active" boolean DEFAULT true,
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."genres" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."messages" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "request_id" "uuid" NOT NULL,
@@ -355,6 +613,19 @@ CREATE TABLE IF NOT EXISTS "public"."messages" (
 
 
 ALTER TABLE "public"."messages" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."notification_templates" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "name" character varying(100) NOT NULL,
+    "title" "text" NOT NULL,
+    "body" "text",
+    "type" "text" DEFAULT 'admin'::"text",
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."notification_templates" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."notifications" (
@@ -372,6 +643,18 @@ CREATE TABLE IF NOT EXISTS "public"."notifications" (
 ALTER TABLE "public"."notifications" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."platform_settings" (
+    "key" "text" NOT NULL,
+    "value" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL,
+    "description" "text",
+    "updated_at" timestamp with time zone DEFAULT "now"(),
+    "updated_by" "uuid"
+);
+
+
+ALTER TABLE "public"."platform_settings" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "id" "uuid" NOT NULL,
     "display_name" character varying(50),
@@ -381,7 +664,13 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "is_admin" boolean DEFAULT false,
     "latitude" double precision,
     "longitude" double precision,
-    "email_digest" boolean DEFAULT true
+    "email_digest" boolean DEFAULT true,
+    "admin_role" "public"."admin_role",
+    "is_banned" boolean DEFAULT false,
+    "ban_reason" "text",
+    "ban_expires_at" timestamp with time zone,
+    "warning_count" integer DEFAULT 0,
+    "last_active_at" timestamp with time zone DEFAULT "now"()
 );
 
 
@@ -411,11 +700,43 @@ CREATE TABLE IF NOT EXISTS "public"."reports" (
     "reason" "text" NOT NULL,
     "details" "text",
     "status" "text" DEFAULT 'pending'::"text",
-    "created_at" timestamp with time zone DEFAULT "now"()
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "assigned_to" "uuid",
+    "resolved_at" timestamp with time zone,
+    "resolved_by" "uuid",
+    "category" "text" DEFAULT 'other'::"text"
 );
 
 
 ALTER TABLE "public"."reports" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."user_bans" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "admin_id" "uuid" NOT NULL,
+    "reason" "text" NOT NULL,
+    "is_permanent" boolean DEFAULT false,
+    "expires_at" timestamp with time zone,
+    "unbanned_at" timestamp with time zone,
+    "unbanned_by" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."user_bans" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."user_warnings" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "admin_id" "uuid" NOT NULL,
+    "reason" "text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."user_warnings" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."wishlists" (
@@ -431,6 +752,31 @@ CREATE TABLE IF NOT EXISTS "public"."wishlists" (
 
 
 ALTER TABLE "public"."wishlists" OWNER TO "postgres";
+
+
+ALTER TABLE ONLY "public"."admin_audit_log"
+    ADD CONSTRAINT "admin_audit_log_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."admin_notes"
+    ADD CONSTRAINT "admin_notes_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."announcements"
+    ADD CONSTRAINT "announcements_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."areas"
+    ADD CONSTRAINT "areas_name_key" UNIQUE ("name");
+
+
+
+ALTER TABLE ONLY "public"."areas"
+    ADD CONSTRAINT "areas_pkey" PRIMARY KEY ("id");
+
 
 
 ALTER TABLE ONLY "public"."book_notes"
@@ -498,13 +844,38 @@ ALTER TABLE ONLY "public"."clubs"
 
 
 
+ALTER TABLE ONLY "public"."genres"
+    ADD CONSTRAINT "genres_name_key" UNIQUE ("name");
+
+
+
+ALTER TABLE ONLY "public"."genres"
+    ADD CONSTRAINT "genres_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."messages"
     ADD CONSTRAINT "messages_pkey" PRIMARY KEY ("id");
 
 
 
+ALTER TABLE ONLY "public"."notification_templates"
+    ADD CONSTRAINT "notification_templates_name_key" UNIQUE ("name");
+
+
+
+ALTER TABLE ONLY "public"."notification_templates"
+    ADD CONSTRAINT "notification_templates_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."notifications"
     ADD CONSTRAINT "notifications_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."platform_settings"
+    ADD CONSTRAINT "platform_settings_pkey" PRIMARY KEY ("key");
 
 
 
@@ -528,8 +899,38 @@ ALTER TABLE ONLY "public"."reports"
 
 
 
+ALTER TABLE ONLY "public"."user_bans"
+    ADD CONSTRAINT "user_bans_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."user_warnings"
+    ADD CONSTRAINT "user_warnings_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."wishlists"
     ADD CONSTRAINT "wishlists_pkey" PRIMARY KEY ("id");
+
+
+
+CREATE INDEX "idx_admin_notes_report" ON "public"."admin_notes" USING "btree" ("report_id");
+
+
+
+CREATE INDEX "idx_audit_log_admin" ON "public"."admin_audit_log" USING "btree" ("admin_id");
+
+
+
+CREATE INDEX "idx_audit_log_created" ON "public"."admin_audit_log" USING "btree" ("created_at" DESC);
+
+
+
+CREATE INDEX "idx_audit_log_target" ON "public"."admin_audit_log" USING "btree" ("target_type", "target_id");
+
+
+
+CREATE INDEX "idx_bans_user" ON "public"."user_bans" USING "btree" ("user_id");
 
 
 
@@ -541,11 +942,35 @@ CREATE UNIQUE INDEX "idx_unique_active_request" ON "public"."book_requests" USIN
 
 
 
+CREATE INDEX "idx_warnings_user" ON "public"."user_warnings" USING "btree" ("user_id");
+
+
+
 CREATE OR REPLACE TRIGGER "trg_club_member_count" AFTER INSERT OR DELETE ON "public"."club_members" FOR EACH ROW EXECUTE FUNCTION "public"."update_club_member_count"();
 
 
 
 CREATE OR REPLACE TRIGGER "trg_increment_read_count" AFTER UPDATE OF "status" ON "public"."book_requests" FOR EACH ROW EXECUTE FUNCTION "public"."increment_read_count_on_return"();
+
+
+
+ALTER TABLE ONLY "public"."admin_audit_log"
+    ADD CONSTRAINT "admin_audit_log_admin_id_fkey" FOREIGN KEY ("admin_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."admin_notes"
+    ADD CONSTRAINT "admin_notes_admin_id_fkey" FOREIGN KEY ("admin_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."admin_notes"
+    ADD CONSTRAINT "admin_notes_report_id_fkey" FOREIGN KEY ("report_id") REFERENCES "public"."reports"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."announcements"
+    ADD CONSTRAINT "announcements_admin_id_fkey" FOREIGN KEY ("admin_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -639,6 +1064,11 @@ ALTER TABLE ONLY "public"."notifications"
 
 
 
+ALTER TABLE ONLY "public"."platform_settings"
+    ADD CONSTRAINT "platform_settings_updated_by_fkey" FOREIGN KEY ("updated_by") REFERENCES "public"."profiles"("id");
+
+
+
 ALTER TABLE ONLY "public"."profiles"
     ADD CONSTRAINT "profiles_id_fkey" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
@@ -660,6 +1090,11 @@ ALTER TABLE ONLY "public"."ratings"
 
 
 ALTER TABLE ONLY "public"."reports"
+    ADD CONSTRAINT "reports_assigned_to_fkey" FOREIGN KEY ("assigned_to") REFERENCES "public"."profiles"("id");
+
+
+
+ALTER TABLE ONLY "public"."reports"
     ADD CONSTRAINT "reports_reported_book_id_fkey" FOREIGN KEY ("reported_book_id") REFERENCES "public"."books"("id") ON DELETE SET NULL;
 
 
@@ -674,6 +1109,36 @@ ALTER TABLE ONLY "public"."reports"
 
 
 
+ALTER TABLE ONLY "public"."reports"
+    ADD CONSTRAINT "reports_resolved_by_fkey" FOREIGN KEY ("resolved_by") REFERENCES "public"."profiles"("id");
+
+
+
+ALTER TABLE ONLY "public"."user_bans"
+    ADD CONSTRAINT "user_bans_admin_id_fkey" FOREIGN KEY ("admin_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."user_bans"
+    ADD CONSTRAINT "user_bans_unbanned_by_fkey" FOREIGN KEY ("unbanned_by") REFERENCES "public"."profiles"("id");
+
+
+
+ALTER TABLE ONLY "public"."user_bans"
+    ADD CONSTRAINT "user_bans_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."user_warnings"
+    ADD CONSTRAINT "user_warnings_admin_id_fkey" FOREIGN KEY ("admin_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."user_warnings"
+    ADD CONSTRAINT "user_warnings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."wishlists"
     ADD CONSTRAINT "wishlists_matched_book_id_fkey" FOREIGN KEY ("matched_book_id") REFERENCES "public"."books"("id") ON DELETE SET NULL;
 
@@ -681,6 +1146,122 @@ ALTER TABLE ONLY "public"."wishlists"
 
 ALTER TABLE ONLY "public"."wishlists"
     ADD CONSTRAINT "wishlists_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+CREATE POLICY "Admins can delete any book" ON "public"."books" FOR DELETE TO "authenticated" USING ("public"."is_super_admin"());
+
+
+
+CREATE POLICY "Admins can delete any club" ON "public"."clubs" FOR DELETE TO "authenticated" USING ("public"."is_super_admin"());
+
+
+
+CREATE POLICY "Admins can insert audit log" ON "public"."admin_audit_log" FOR INSERT TO "authenticated" WITH CHECK (("public"."is_admin"() AND ("admin_id" = "auth"."uid"())));
+
+
+
+CREATE POLICY "Admins can insert bans" ON "public"."user_bans" FOR INSERT TO "authenticated" WITH CHECK (("public"."is_admin_or_mod"() AND ("admin_id" = "auth"."uid"())));
+
+
+
+CREATE POLICY "Admins can insert notes" ON "public"."admin_notes" FOR INSERT TO "authenticated" WITH CHECK (("public"."is_admin_or_mod"() AND ("admin_id" = "auth"."uid"())));
+
+
+
+CREATE POLICY "Admins can insert notifications for anyone" ON "public"."notifications" FOR INSERT TO "authenticated" WITH CHECK ("public"."is_admin_or_mod"());
+
+
+
+CREATE POLICY "Admins can insert warnings" ON "public"."user_warnings" FOR INSERT TO "authenticated" WITH CHECK (("public"."is_admin_or_mod"() AND ("admin_id" = "auth"."uid"())));
+
+
+
+CREATE POLICY "Admins can manage announcements" ON "public"."announcements" TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
+CREATE POLICY "Admins can manage areas" ON "public"."areas" TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
+CREATE POLICY "Admins can manage genres" ON "public"."genres" TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
+CREATE POLICY "Admins can manage templates" ON "public"."notification_templates" TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
+CREATE POLICY "Admins can remove club members" ON "public"."club_members" FOR DELETE TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
+CREATE POLICY "Admins can update any book" ON "public"."books" FOR UPDATE TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
+CREATE POLICY "Admins can update any club" ON "public"."clubs" FOR UPDATE TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
+CREATE POLICY "Admins can update any profile" ON "public"."profiles" FOR UPDATE TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
+CREATE POLICY "Admins can update any request" ON "public"."book_requests" FOR UPDATE TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
+CREATE POLICY "Admins can update bans" ON "public"."user_bans" FOR UPDATE TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
+CREATE POLICY "Admins can update reports" ON "public"."reports" FOR UPDATE TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
+CREATE POLICY "Admins can view all bans" ON "public"."user_bans" FOR SELECT TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
+CREATE POLICY "Admins can view all books" ON "public"."books" FOR SELECT TO "authenticated" USING ("public"."is_admin"());
+
+
+
+CREATE POLICY "Admins can view all messages" ON "public"."messages" FOR SELECT TO "authenticated" USING ("public"."is_admin"());
+
+
+
+CREATE POLICY "Admins can view all profiles" ON "public"."profiles" FOR SELECT TO "authenticated" USING ("public"."is_admin"());
+
+
+
+CREATE POLICY "Admins can view all ratings" ON "public"."ratings" FOR SELECT TO "authenticated" USING ("public"."is_admin"());
+
+
+
+CREATE POLICY "Admins can view all reports" ON "public"."reports" FOR SELECT TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
+CREATE POLICY "Admins can view all requests" ON "public"."book_requests" FOR SELECT TO "authenticated" USING ("public"."is_admin"());
+
+
+
+CREATE POLICY "Admins can view all warnings" ON "public"."user_warnings" FOR SELECT TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
+CREATE POLICY "Admins can view audit log" ON "public"."admin_audit_log" FOR SELECT TO "authenticated" USING ("public"."is_admin"());
+
+
+
+CREATE POLICY "Admins can view notes" ON "public"."admin_notes" FOR SELECT TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
+CREATE POLICY "Admins can view templates" ON "public"."notification_templates" FOR SELECT TO "authenticated" USING ("public"."is_admin_or_mod"());
 
 
 
@@ -714,7 +1295,23 @@ CREATE POLICY "Admins view all reports" ON "public"."reports" FOR SELECT USING (
 
 
 
+CREATE POLICY "Anyone can read settings" ON "public"."platform_settings" FOR SELECT TO "authenticated", "anon" USING (true);
+
+
+
+CREATE POLICY "Anyone can view active announcements" ON "public"."announcements" FOR SELECT TO "authenticated", "anon" USING ((("active" = true) AND ("starts_at" <= "now"()) AND (("ends_at" IS NULL) OR ("ends_at" > "now"()))));
+
+
+
+CREATE POLICY "Anyone can view active areas" ON "public"."areas" FOR SELECT TO "authenticated", "anon" USING (("active" = true));
+
+
+
 CREATE POLICY "Anyone can view active clubs" ON "public"."clubs" FOR SELECT TO "authenticated", "anon" USING (("active" = true));
+
+
+
+CREATE POLICY "Anyone can view active genres" ON "public"."genres" FOR SELECT TO "authenticated", "anon" USING (("active" = true));
 
 
 
@@ -791,6 +1388,10 @@ CREATE POLICY "Reader can insert own progress" ON "public"."book_progress" FOR I
 
 
 CREATE POLICY "Reader can update own progress" ON "public"."book_progress" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "reader_id")) WITH CHECK (("auth"."uid"() = "reader_id"));
+
+
+
+CREATE POLICY "Super admins can manage settings" ON "public"."platform_settings" TO "authenticated" USING ("public"."is_super_admin"());
 
 
 
@@ -912,6 +1513,18 @@ CREATE POLICY "Users view own reports" ON "public"."reports" FOR SELECT USING ((
 
 
 
+ALTER TABLE "public"."admin_audit_log" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."admin_notes" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."announcements" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."areas" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."book_notes" ENABLE ROW LEVEL SECURITY;
 
 
@@ -939,10 +1552,19 @@ ALTER TABLE "public"."club_posts" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."clubs" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."genres" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."messages" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."notification_templates" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."notifications" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."platform_settings" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
@@ -952,6 +1574,12 @@ ALTER TABLE "public"."ratings" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."reports" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."user_bans" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."user_warnings" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."wishlists" ENABLE ROW LEVEL SECURITY;
@@ -1124,6 +1752,42 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."admin_get_area_stats"() TO "anon";
+GRANT ALL ON FUNCTION "public"."admin_get_area_stats"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."admin_get_area_stats"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."admin_get_daily_stats"("days_back" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."admin_get_daily_stats"("days_back" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."admin_get_daily_stats"("days_back" integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."admin_get_exchange_stats"() TO "anon";
+GRANT ALL ON FUNCTION "public"."admin_get_exchange_stats"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."admin_get_exchange_stats"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."admin_get_overdue_books"("threshold_days" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."admin_get_overdue_books"("threshold_days" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."admin_get_overdue_books"("threshold_days" integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."admin_get_rating_distribution"() TO "anon";
+GRANT ALL ON FUNCTION "public"."admin_get_rating_distribution"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."admin_get_rating_distribution"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."admin_get_top_contributors"("lim" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."admin_get_top_contributors"("lim" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."admin_get_top_contributors"("lim" integer) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."complete_donated_book_reading"("p_request_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."complete_donated_book_reading"("p_request_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."complete_donated_book_reading"("p_request_id" "uuid") TO "service_role";
@@ -1160,6 +1824,24 @@ GRANT ALL ON FUNCTION "public"."increment_read_count_on_return"() TO "service_ro
 
 
 
+GRANT ALL ON FUNCTION "public"."is_admin"() TO "anon";
+GRANT ALL ON FUNCTION "public"."is_admin"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."is_admin"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."is_admin_or_mod"() TO "anon";
+GRANT ALL ON FUNCTION "public"."is_admin_or_mod"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."is_admin_or_mod"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."is_super_admin"() TO "anon";
+GRANT ALL ON FUNCTION "public"."is_super_admin"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."is_super_admin"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."update_club_member_count"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_club_member_count"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_club_member_count"() TO "service_role";
@@ -1178,6 +1860,30 @@ GRANT ALL ON FUNCTION "public"."update_club_member_count"() TO "service_role";
 
 
 
+
+
+
+GRANT ALL ON TABLE "public"."admin_audit_log" TO "anon";
+GRANT ALL ON TABLE "public"."admin_audit_log" TO "authenticated";
+GRANT ALL ON TABLE "public"."admin_audit_log" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."admin_notes" TO "anon";
+GRANT ALL ON TABLE "public"."admin_notes" TO "authenticated";
+GRANT ALL ON TABLE "public"."admin_notes" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."announcements" TO "anon";
+GRANT ALL ON TABLE "public"."announcements" TO "authenticated";
+GRANT ALL ON TABLE "public"."announcements" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."areas" TO "anon";
+GRANT ALL ON TABLE "public"."areas" TO "authenticated";
+GRANT ALL ON TABLE "public"."areas" TO "service_role";
 
 
 
@@ -1235,15 +1941,33 @@ GRANT ALL ON TABLE "public"."clubs" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."genres" TO "anon";
+GRANT ALL ON TABLE "public"."genres" TO "authenticated";
+GRANT ALL ON TABLE "public"."genres" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."messages" TO "anon";
 GRANT ALL ON TABLE "public"."messages" TO "authenticated";
 GRANT ALL ON TABLE "public"."messages" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."notification_templates" TO "anon";
+GRANT ALL ON TABLE "public"."notification_templates" TO "authenticated";
+GRANT ALL ON TABLE "public"."notification_templates" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."notifications" TO "anon";
 GRANT ALL ON TABLE "public"."notifications" TO "authenticated";
 GRANT ALL ON TABLE "public"."notifications" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."platform_settings" TO "anon";
+GRANT ALL ON TABLE "public"."platform_settings" TO "authenticated";
+GRANT ALL ON TABLE "public"."platform_settings" TO "service_role";
 
 
 
@@ -1262,6 +1986,18 @@ GRANT ALL ON TABLE "public"."ratings" TO "service_role";
 GRANT ALL ON TABLE "public"."reports" TO "anon";
 GRANT ALL ON TABLE "public"."reports" TO "authenticated";
 GRANT ALL ON TABLE "public"."reports" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."user_bans" TO "anon";
+GRANT ALL ON TABLE "public"."user_bans" TO "authenticated";
+GRANT ALL ON TABLE "public"."user_bans" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."user_warnings" TO "anon";
+GRANT ALL ON TABLE "public"."user_warnings" TO "authenticated";
+GRANT ALL ON TABLE "public"."user_warnings" TO "service_role";
 
 
 
