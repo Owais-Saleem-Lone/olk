@@ -1,4 +1,7 @@
-import { createClient } from '@/lib/supabase/client'
+'use server'
+
+import { createClient } from '@/lib/supabase/server'
+import { sendNotificationEmail } from '@/lib/send-notification-email'
 
 type NotificationPayload = {
   userId: string
@@ -8,18 +11,27 @@ type NotificationPayload = {
 }
 
 export async function createNotification({ userId, type, title, link }: NotificationPayload) {
-  const supabase = createClient()
+  const supabase = await createClient()
 
-  await supabase.from('notifications').insert({
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const { error } = await supabase.from('notifications').insert({
     user_id: userId,
     type,
     title,
     link: link || '/notifications',
   })
 
-  fetch('/api/send-email', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, type, title }),
-  }).catch(err => console.error('Email notification failed:', err))
+  if (error) {
+    throw error
+  }
+
+  try {
+    await sendNotificationEmail({ userId, type, title })
+  } catch (err) {
+    console.error('Email notification failed:', err)
+  }
 }

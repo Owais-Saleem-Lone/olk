@@ -21,6 +21,7 @@ export default function WishlistPage() {
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
   const [adding, setAdding] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => { fetchWishlist() }, [])
 
@@ -43,20 +44,25 @@ export default function WishlistPage() {
     e.preventDefault()
     if (!title.trim()) return
     setAdding(true)
+    setError('')
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setAdding(false); return }
 
-    const { error } = await supabase.from('wishlists').insert({
+    const { error: insertError } = await supabase.from('wishlists').insert({
       user_id: user.id,
       title: title.trim(),
       author: author.trim() || null,
     })
 
-    if (!error) {
+    if (!insertError) {
       setTitle('')
       setAuthor('')
       fetchWishlist()
+    } else if (insertError.code === '23505') {
+      setError('That title is already on your wishlist.')
+    } else {
+      setError('Could not add to wishlist. Please try again.')
     }
     setAdding(false)
   }
@@ -99,6 +105,7 @@ export default function WishlistPage() {
             {adding ? 'Adding...' : '+ Add to Wishlist'}
           </button>
         </div>
+        {error && <p className="text-red-400 text-xs mt-3">{error}</p>}
       </form>
 
       {/* Wishlist Items */}

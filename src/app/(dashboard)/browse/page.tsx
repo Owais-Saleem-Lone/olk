@@ -227,6 +227,8 @@ export default function BrowsePage() {
     if (error) {
       if (error.code === '23505') {
         alert('You already have an active request for this book.')
+      } else if (error.message.startsWith('RATE_LIMIT_EXCEEDED:')) {
+        alert("You've reached your daily request limit. Try again tomorrow.")
       } else {
         console.error('Error requesting book:', error)
         alert('Could not request book: ' + error.message)
