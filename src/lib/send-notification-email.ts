@@ -1,3 +1,4 @@
+import 'server-only'
 import { Resend } from 'resend'
 import { createClient } from '@supabase/supabase-js'
 import { escapeHtml } from '@/lib/html-escape'
@@ -11,23 +12,19 @@ const NOTIFICATION_SUBJECTS: Record<string, string> = {
   new_message: 'New message on OLK',
   handover_confirmed: 'Book handover confirmed',
   book_returned: 'Book has been returned',
+  club_joined: 'New member in your club',
 }
 
-export async function POST(request: Request) {
-  if (!resend) {
-    return Response.json({ error: 'Email service not configured' }, { status: 503 })
-  }
-
-  const body = await request.json()
-  const { userId, type, title } = body as {
-    userId: string
-    type: string
-    title: string
-  }
-
-  if (!userId || !type || !title) {
-    return Response.json({ error: 'Missing required fields' }, { status: 400 })
-  }
+export async function sendNotificationEmail({
+  userId,
+  type,
+  title,
+}: {
+  userId: string
+  type: string
+  title: string
+}) {
+  if (!resend) return
 
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,10 +33,7 @@ export async function POST(request: Request) {
 
   const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId)
   const email = authUser?.user?.email
-
-  if (!email) {
-    return Response.json({ error: 'No email found for user' }, { status: 404 })
-  }
+  if (!email) return
 
   const subject = NOTIFICATION_SUBJECTS[type] || 'Notification from OLK'
   const fromAddress = process.env.RESEND_FROM_EMAIL || 'OLK <notifications@olkashmir.com>'
@@ -67,8 +61,5 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error('Resend error:', error)
-    return Response.json({ error: 'Failed to send email' }, { status: 500 })
   }
-
-  return Response.json({ success: true })
 }

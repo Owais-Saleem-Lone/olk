@@ -172,12 +172,7 @@ export default function MyBooksPage() {
       setMessage('Book added successfully!')
 
       const { data: matches } = await supabase
-        .from('wishlists')
-        .select('id, user_id, title')
-        .eq('active', true)
-        .is('matched_book_id', null)
-        .ilike('title', `%${title}%`)
-        .neq('user_id', user.id)
+        .rpc('match_wishlists_for_book', { p_title: title, p_owner_id: user.id })
 
       if (matches && matches.length > 0) {
         const { data: newBook } = await supabase

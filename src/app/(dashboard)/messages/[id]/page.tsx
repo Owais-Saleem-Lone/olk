@@ -120,6 +120,9 @@ export default function ChatPage() {
 
     if (error) {
       setContent(msgContent)
+      if (error.message.startsWith('RATE_LIMIT_EXCEEDED:')) {
+        alert("You've sent too many messages this hour. Please wait a bit before sending more.")
+      }
     } else if (inserted) {
       setMessages(prev =>
         prev.some(m => m.id === inserted.id) ? prev : [...prev, inserted]
