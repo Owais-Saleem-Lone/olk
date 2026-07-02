@@ -6,6 +6,91 @@ type BookData = {
   title: string
   author: string
   coverUrl: string | null
+  genre: string | null
+  publicationYear: number | null
+  description: string | null
+}
+
+// Keyword -> app genre taxonomy. Open Library subjects are noisy folksonomy
+// tags (a historical-romance novel can carry a bare "History" tag alongside
+// dozens of fiction/literature tags), so a single substring hit isn't
+// trustworthy. Instead we score every category by how many distinct subject
+// strings match its keywords and take the winner, requiring both a minimum
+// count and a clear lead over the runner-up — otherwise we leave genre unset
+// rather than guess wrong.
+const GENRE_KEYWORDS: Array<[string, string[]]> = [
+  ['Physics', ['physics']],
+  ['Chemistry', ['chemistry']],
+  ['Biology', ['biology', 'botany', 'zoology']],
+  ['Mathematics', ['mathematics', 'algebra', 'calculus', 'geometry', 'trigonometry']],
+  ['Civil Engineering', ['civil engineering']],
+  ['Mechanical Engineering', ['mechanical engineering']],
+  ['Electrical Engineering', ['electrical engineering', 'electronics']],
+  ['IT/Computer Science', ['computer science', 'programming', 'software', 'computing', 'algorithms']],
+  ['Anatomy', ['anatomy']],
+  ['Physiology', ['physiology']],
+  ['Clinical Medicine', ['medicine', 'medical', 'clinical']],
+  ['Psychology', ['psychology']],
+  ['Philosophy', ['philosophy']],
+  ['Geography', ['geography']],
+  ['Civics', ['civics', 'political science', 'government']],
+  ['History', ['history']],
+  ['Urdu Literature', ['urdu']],
+  ['Hindi Literature', ['hindi']],
+  ['Persian Literature', ['persian', 'farsi']],
+  ['Arabic Literature', ['arabic']],
+  ['Kashmiri Literature', ['kashmiri']],
+  ['English Literature', ['fiction', 'literature', 'novel', 'poetry', 'drama']],
+]
+
+function guessGenre(subjects: string[]): string | null {
+  const scores = GENRE_KEYWORDS.map(([genre, keywords]) => ({
+    genre,
+    count: subjects.filter(s => {
+      const lower = s.toLowerCase()
+      return keywords.some(kw => lower.includes(kw))
+    }).length,
+  })).sort((a, b) => b.count - a.count)
+
+  const [top, runnerUp] = scores
+  if (!top || top.count < 2 || top.count <= (runnerUp?.count ?? 0)) return null
+  return top.genre
+}
+
+function extractYear(publishDate: string | undefined): number | null {
+  const match = publishDate?.match(/\d{4}/)
+  return match ? parseInt(match[0], 10) : null
+}
+
+function extractDescription(raw: unknown): string | null {
+  if (!raw) return null
+  if (typeof raw === 'string') return raw
+  if (typeof raw === 'object' && raw !== null && 'value' in raw) {
+    const value = (raw as { value?: unknown }).value
+    return typeof value === 'string' ? value : null
+  }
+  return null
+}
+
+async function fetchDescription(editionKey: string | undefined): Promise<string | null> {
+  if (!editionKey) return null
+  try {
+    const res = await fetch(`https://openlibrary.org${editionKey}.json`)
+    if (!res.ok) return null
+    const edition = await res.json()
+
+    const editionDescription = extractDescription(edition.description)
+    if (editionDescription) return editionDescription
+
+    const workKey = edition.works?.[0]?.key
+    if (!workKey) return null
+    const workRes = await fetch(`https://openlibrary.org${workKey}.json`)
+    if (!workRes.ok) return null
+    const work = await workRes.json()
+    return extractDescription(work.description)
+  } catch {
+    return null
+  }
 }
 
 async function lookupISBN(isbn: string): Promise<BookData | null> {
@@ -14,10 +99,16 @@ async function lookupISBN(isbn: string): Promise<BookData | null> {
   const data = await res.json()
   const book = data[`ISBN:${isbn}`]
   if (!book) return null
+
+  const subjects: string[] = (book.subjects || []).map((s: { name?: string }) => s.name).filter(Boolean)
+
   return {
     title: book.title || '',
     author: book.authors?.[0]?.name || '',
     coverUrl: book.cover?.medium || book.cover?.large || null,
+    genre: guessGenre(subjects),
+    publicationYear: extractYear(book.publish_date),
+    description: await fetchDescription(book.key),
   }
 }
 

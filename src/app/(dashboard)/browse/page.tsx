@@ -28,6 +28,8 @@ type Book = {
   genre: string | null
   owner_id: string
   cover_url: string | null
+  description: string | null
+  publication_year: number | null
   distance_km?: number | null
   owner_name?: string | null
   owner_area?: string | null
@@ -501,10 +503,18 @@ export default function BrowsePage() {
                 <h3 className="text-sm font-semibold mb-0.5 text-white leading-snug">{book.title}</h3>
                 {book.author && <p className="text-slate-400 text-xs mb-2">by {book.author}</p>}
 
-                {book.genre && (
-                  <span className="inline-block bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-medium px-2.5 py-1 rounded-full mb-2">
-                    {book.genre}
-                  </span>
+                <div className="flex items-center gap-2 flex-wrap mb-2">
+                  {book.genre && (
+                    <span className="inline-block bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-medium px-2.5 py-1 rounded-full">
+                      {book.genre}
+                    </span>
+                  )}
+                  {book.publication_year && (
+                    <span className="text-xs text-slate-500">{book.publication_year}</span>
+                  )}
+                </div>
+                {book.description && (
+                  <p className="text-xs text-slate-500 mb-2 line-clamp-2">{book.description}</p>
                 )}
                 {(book.read_count ?? 0) > 0 && (
                   <p className="text-xs text-slate-500 mb-3">📖 Read {book.read_count}×</p>
