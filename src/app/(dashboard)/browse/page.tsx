@@ -12,6 +12,8 @@ function sanitizeSearchQuery(input: string): string {
 }
 import BookNotesModal from '@/components/book-notes-modal'
 
+const RADIUS_STEPS: Array<number | null> = [2, 5, 10, null]
+
 type Profile = {
   id: string
   display_name: string | null
@@ -46,6 +48,8 @@ export default function BrowsePage() {
   const [filterType, setFilterType] = useState('')
   const [filterCondition, setFilterCondition] = useState('')
   const [filterArea, setFilterArea] = useState('')
+  const [radiusKm, setRadiusKm] = useState<number | null>(null)
+  const [hasLocation, setHasLocation] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [requestedBooks, setRequestedBooks] = useState<Set<string>>(new Set())
   const [bookmarkedBooks, setBookmarkedBooks] = useState<Set<string>>(new Set())
@@ -106,6 +110,7 @@ export default function BrowsePage() {
     }
 
     if (userLat && userLng) {
+      setHasLocation(true)
       const { data, error } = await supabase.rpc('get_books_nearby', {
         user_lat: userLat,
         user_lng: userLng,
@@ -256,12 +261,16 @@ export default function BrowsePage() {
     }
   }
 
-  const displayBooks = filterArea
+  let displayBooks = filterArea
     ? books.filter(b => {
         const area = profiles[b.owner_id]?.area_name
         return area && area.toLowerCase().includes(filterArea.toLowerCase())
       })
     : books
+
+  if (radiusKm != null) {
+    displayBooks = displayBooks.filter(b => b.distance_km != null && b.distance_km <= radiusKm)
+  }
 
   return (
     <div>
@@ -310,9 +319,9 @@ export default function BrowsePage() {
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
           </svg>
           Filters
-          {(filterGenre || filterType || filterCondition || filterArea) && (
+          {(filterGenre || filterType || filterCondition || filterArea || radiusKm != null) && (
             <span className="bg-teal-500/20 text-teal-400 text-xs font-bold px-1.5 py-0.5 rounded-full">
-              {[filterGenre, filterType, filterCondition, filterArea].filter(Boolean).length}
+              {[filterGenre, filterType, filterCondition, filterArea, radiusKm != null ? 'radius' : ''].filter(Boolean).length}
             </span>
           )}
         </button>
@@ -391,6 +400,32 @@ export default function BrowsePage() {
               placeholder="Filter by area..."
               className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
+
+            {hasLocation && (
+              <div className="sm:col-span-2 lg:col-span-4 bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-slate-300">Distance</span>
+                  <span className="text-sm text-teal-400 font-medium">
+                    {radiusKm == null ? 'Any distance' : `Within ${radiusKm}km`}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={3}
+                  step={1}
+                  value={RADIUS_STEPS.indexOf(radiusKm)}
+                  onChange={(e) => setRadiusKm(RADIUS_STEPS[parseInt(e.target.value, 10)])}
+                  className="w-full accent-teal-500 cursor-pointer"
+                />
+                <div className="flex justify-between text-xs text-slate-500 mt-1">
+                  <span>2km</span>
+                  <span>5km</span>
+                  <span>10km</span>
+                  <span>Any</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </form>
