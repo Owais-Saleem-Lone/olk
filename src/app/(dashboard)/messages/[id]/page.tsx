@@ -180,12 +180,14 @@ export default function ChatPage() {
         <Link href="/messages" className="text-slate-400 hover:text-white transition-colors text-xl leading-none">
           ←
         </Link>
-        <div className="w-10 h-10 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 font-bold flex-shrink-0">
+        <Link href={otherUserId ? `/user/${otherUserId}` : '#'} className="w-10 h-10 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 font-bold flex-shrink-0 hover:bg-teal-500/20 transition-colors">
           {(otherUser?.display_name || '?')[0].toUpperCase()}
-        </div>
+        </Link>
         <div>
           <h1 className="text-base font-semibold leading-tight">
-            {otherUser?.display_name || 'Anonymous'}
+            <Link href={otherUserId ? `/user/${otherUserId}` : '#'} className="hover:text-teal-400 transition-colors">
+              {otherUser?.display_name || 'Anonymous'}
+            </Link>
           </h1>
           <p className="text-xs text-slate-500">
             {otherUser?.area_name && <span>📍 {otherUser.area_name} · </span>}

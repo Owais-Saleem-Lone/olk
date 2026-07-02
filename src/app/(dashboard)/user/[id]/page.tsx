@@ -8,6 +8,7 @@ import Link from 'next/link'
 type Profile = {
   display_name: string | null
   area_name: string | null
+  bio: string | null
   created_at: string
 }
 
@@ -49,7 +50,7 @@ export default function UserProfilePage() {
 
     const { data: profileData } = await supabase
       .from('profiles')
-      .select('display_name, area_name, created_at')
+      .select('display_name, area_name, bio, created_at')
       .eq('id', userId)
       .single()
 
@@ -147,6 +148,9 @@ export default function UserProfilePage() {
                   ✓ Trusted Sharer
                 </span>
               </div>
+            )}
+            {profile?.bio && (
+              <p className="text-sm text-slate-300 mt-3 leading-relaxed">{profile.bio}</p>
             )}
           </div>
         </div>
