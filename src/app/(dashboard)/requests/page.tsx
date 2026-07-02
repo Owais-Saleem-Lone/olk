@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { createNotification } from '@/lib/notifications'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import RatingModal from '@/components/rating-modal'
 import RequestStepper from '@/components/request-stepper'
 
@@ -274,7 +275,10 @@ export default function RequestsPage() {
                     {req.books?.title || "Unknown Book"}
                   </p>
                   <p className="text-sm text-slate-400">
-                    Requested by <span className="text-teal-400">{req.profiles?.display_name || "Unknown User"}</span>
+                    Requested by{' '}
+                    <Link href={`/user/${req.requester_id}`} className="text-teal-400 hover:text-teal-300 hover:underline">
+                      {req.profiles?.display_name || "Unknown User"}
+                    </Link>
                     {req.profiles?.area_name && (
                       <span className="text-slate-500"> from {req.profiles.area_name}</span>
                     )}

@@ -7,6 +7,7 @@ export default function ProfilePage() {
   const supabase = createClient()
   const [displayName, setDisplayName] = useState('')
   const [areaName, setAreaName] = useState('')
+  const [bio, setBio] = useState('')
   const [latitude, setLatitude] = useState<number | null>(null)
   const [longitude, setLongitude] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -34,6 +35,7 @@ export default function ProfilePage() {
       if (data) {
         setDisplayName(data.display_name || '')
         setAreaName(data.area_name || '')
+        setBio(data.bio || '')
         setLatitude(data.latitude ?? null)
         setLongitude(data.longitude ?? null)
         setEmailDigest(data.email_digest ?? true)
@@ -88,6 +90,7 @@ export default function ProfilePage() {
       id: user.id,
       display_name: displayName,
       area_name: areaName,
+      bio: bio.trim() || null,
       latitude,
       longitude,
       email_digest: emailDigest,
@@ -135,6 +138,21 @@ export default function ProfilePage() {
               placeholder="e.g., Srinagar - Rajbagh"
             />
             <p className="text-xs text-slate-500 mt-1">Keep it approximate for privacy (no exact house numbers!)</p>
+          </div>
+
+          <div>
+            <div className="flex items-baseline justify-between mb-1.5">
+              <label className="block text-sm font-medium text-slate-300">Bio</label>
+              <span className="text-xs text-slate-500">{bio.length}/300</span>
+            </div>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value.slice(0, 300))}
+              rows={3}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+              placeholder="A few words about yourself and the kinds of books you love..."
+            />
+            <p className="text-xs text-slate-500 mt-1">Shown on your public profile to help others get to know you</p>
           </div>
 
           {/* Location Section */}
