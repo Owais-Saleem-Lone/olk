@@ -44,6 +44,8 @@ export default function MyBooksPage() {
   const [condition, setCondition] = useState('good')
   const [listingType, setListingType] = useState('donate')
   const [genre, setGenre] = useState('General')
+  const [description, setDescription] = useState('')
+  const [publicationYear, setPublicationYear] = useState('')
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState('')
   const [coverUrl, setCoverUrl] = useState('')
@@ -164,6 +166,8 @@ export default function MyBooksPage() {
       title, author, condition, listing_type: listingType,
       genre, cover_url: finalCoverUrl, owner_id: user.id,
       lending_duration_months: listingType === 'lend' ? lendingDuration : null,
+      description: description.trim() || null,
+      publication_year: publicationYear ? parseInt(publicationYear, 10) : null,
     })
 
     if (error) {
@@ -198,6 +202,7 @@ export default function MyBooksPage() {
       }
 
       setTitle(''); setAuthor(''); setGenre('General')
+      setDescription(''); setPublicationYear('')
       setCoverFile(null); setCoverUrl(''); setCoverPreview('')
       fetchMyBooks()
     }
@@ -377,6 +382,20 @@ export default function MyBooksPage() {
                   <option value="General" className="bg-slate-900">General / Other</option>
                 </optgroup>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">Publication Year <span className="text-slate-500 font-normal">(optional)</span></label>
+              <input type="number" min="1000" max="2200" value={publicationYear} onChange={(e) => setPublicationYear(e.target.value)}
+                placeholder="e.g., 2008"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">Description <span className="text-slate-500 font-normal">(optional)</span></label>
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
+                placeholder="A short blurb about the book..."
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none" />
             </div>
 
             <div>
@@ -802,6 +821,9 @@ export default function MyBooksPage() {
               setCoverPreview(data.coverUrl)
               setCoverFile(null)
             }
+            if (data.genre) setGenre(data.genre)
+            if (data.publicationYear) setPublicationYear(String(data.publicationYear))
+            if (data.description) setDescription(data.description)
             setShowScanner(false)
           }}
           onClose={() => setShowScanner(false)}
