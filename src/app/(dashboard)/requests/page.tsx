@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { createNotification } from '@/lib/notifications'
 import { useRouter } from 'next/navigation'
 import RatingModal from '@/components/rating-modal'
+import RequestStepper from '@/components/request-stepper'
 
 // FIXED: Removed the [] from books and profiles. 
 // Since a request belongs to ONE book and ONE user, Supabase returns them as single objects, not arrays.
@@ -265,7 +266,8 @@ export default function RequestsPage() {
         ) : (
           <div className="space-y-4">
             {incomingRequests.map((req) => (
-              <div key={req.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div key={req.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 flex flex-col gap-4">
+               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                   {/* FIXED: Now accessing the object directly without [0] */}
                   <p className="text-white font-semibold">
@@ -278,7 +280,7 @@ export default function RequestsPage() {
                     )}
                   </p>
                 </div>
-                
+
                 <div className="flex items-center gap-2 flex-wrap">
                   {req.status === 'pending' && (
                     <>
@@ -351,6 +353,10 @@ export default function RequestsPage() {
                     <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">Declined ✗</span>
                   )}
                 </div>
+               </div>
+               <div className="pt-1 md:max-w-xs">
+                 <RequestStepper status={req.status} listingType={req.books?.listing_type || 'donate'} />
+               </div>
               </div>
             ))}
           </div>
@@ -430,6 +436,10 @@ export default function RequestsPage() {
                       <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">Declined ✗</span>
                     )}
                   </div>
+                </div>
+
+                <div className="sm:max-w-xs">
+                  <RequestStepper status={req.status} listingType={req.books?.listing_type || 'donate'} />
                 </div>
 
                 {/* Reading progress — only when the book is physically in the reader's hands */}
