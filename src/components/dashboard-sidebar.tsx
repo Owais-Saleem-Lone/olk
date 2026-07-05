@@ -3,14 +3,15 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import type { FeatureFlags } from '@/lib/platform-settings'
 
 const NAV_ITEMS = [
   { href: '/browse', label: '📚 Browse Books' },
   { href: '/my-books', label: '➕ My Books' },
   { href: '/saved', label: '🔖 Saved Books' },
-  { href: '/wishlist', label: '✨ Wishlist' },
-  { href: '/clubs', label: '🏘️ Clubs' },
-  { href: '/messages', label: '💬 Messages' },
+  { href: '/wishlist', label: '✨ Wishlist', flag: 'feature_wishlists' as const },
+  { href: '/clubs', label: '🏘️ Clubs', flag: 'feature_clubs' as const },
+  { href: '/messages', label: '💬 Messages', flag: 'feature_messages' as const },
   { href: '/requests', label: '📩 Requests' },
   { href: '/notifications', label: '🔔 Notifications' },
   { href: '/profile', label: '👤 My Profile' },
@@ -20,10 +21,12 @@ export default function DashboardSidebar({
   displayName,
   email,
   isAdmin,
+  featureFlags,
 }: {
   displayName: string | null
   email: string | null
   isAdmin: boolean
+  featureFlags: FeatureFlags
 }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -42,7 +45,7 @@ export default function DashboardSidebar({
       </Link>
 
       <nav className="space-y-2 flex-1">
-        {NAV_ITEMS.map(({ href, label }) => {
+        {NAV_ITEMS.filter(item => !item.flag || featureFlags[item.flag]).map(({ href, label }) => {
           const isActive = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link

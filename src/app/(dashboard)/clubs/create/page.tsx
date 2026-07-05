@@ -27,8 +27,6 @@ export default function CreateClubPage() {
   const [longitude, setLongitude] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
 
-  useEffect(() => { checkEligibility() }, [])
-
   const checkEligibility = async () => {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
@@ -83,6 +81,8 @@ export default function CreateClubPage() {
     setEligible(completedCount >= 5 && !userHasReports)
     setLoading(false)
   }
+
+  useEffect(() => { queueMicrotask(() => checkEligibility()) }, [])
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -144,7 +144,7 @@ export default function CreateClubPage() {
           </div>
         </div>
         <p className="text-sm text-slate-400 mb-6">
-          Keep sharing books and building trust — you'll be eligible soon!
+          Keep sharing books and building trust — you&apos;ll be eligible soon!
         </p>
         <Link href="/clubs" className="text-sm text-teal-400 hover:text-teal-300">← Back to Clubs</Link>
       </div>

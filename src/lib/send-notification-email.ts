@@ -2,6 +2,7 @@ import 'server-only'
 import { Resend } from 'resend'
 import { createClient } from '@supabase/supabase-js'
 import { escapeHtml } from '@/lib/html-escape'
+import { EMAIL_BRAND } from '@/lib/email-brand'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
@@ -44,17 +45,17 @@ export async function sendNotificationEmail({
     to: email,
     subject,
     html: `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background: #0f172a; color: #e2e8f0; border-radius: 16px;">
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background: ${EMAIL_BRAND.bg}; color: ${EMAIL_BRAND.text}; border-radius: 16px;">
         <div style="text-align: center; margin-bottom: 24px;">
-          <div style="display: inline-block; background: linear-gradient(135deg, #2dd4bf, #0d9488); padding: 8px 14px; border-radius: 8px; font-weight: bold; font-size: 14px; color: white;">OLK</div>
+          <div style="display: inline-block; background: linear-gradient(135deg, ${EMAIL_BRAND.tealGradientFrom}, ${EMAIL_BRAND.tealGradientTo}); padding: 8px 14px; border-radius: 8px; font-weight: bold; font-size: 14px; color: white;">OLK</div>
         </div>
         <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-          <p style="font-size: 16px; line-height: 1.6; margin: 0; color: #f1f5f9;">${escapeHtml(title)}</p>
+          <p style="font-size: 16px; line-height: 1.6; margin: 0; color: ${EMAIL_BRAND.cardText};">${escapeHtml(title)}</p>
         </div>
         <div style="text-align: center;">
-          <a href="${siteUrl}/notifications" style="display: inline-block; background: #14b8a6; color: white; font-weight: 600; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-size: 14px;">View on OLK</a>
+          <a href="${siteUrl}/notifications" style="display: inline-block; background: ${EMAIL_BRAND.teal}; color: white; font-weight: 600; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-size: 14px;">View on OLK</a>
         </div>
-        <p style="text-align: center; font-size: 12px; color: #64748b; margin-top: 24px;">Open Library Kashmir — Share a book, change a life.</p>
+        <p style="text-align: center; font-size: 12px; color: ${EMAIL_BRAND.textFaint}; margin-top: 24px;">Open Library Kashmir — Share a book, change a life.</p>
       </div>
     `,
   })

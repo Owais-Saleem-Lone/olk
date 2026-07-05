@@ -17,10 +17,6 @@ export default function ProfilePage() {
   const [locating, setLocating] = useState(false)
   const [locationError, setLocationError] = useState('')
 
-  useEffect(() => {
-    fetchProfile()
-  }, [])
-
   const fetchProfile = async () => {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
@@ -43,6 +39,10 @@ export default function ProfilePage() {
     }
     setLoading(false)
   }
+
+  useEffect(() => {
+    queueMicrotask(() => fetchProfile())
+  }, [])
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {

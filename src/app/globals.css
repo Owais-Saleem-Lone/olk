@@ -5,11 +5,26 @@
   --foreground: #171717;
 }
 
+/*
+ * OLK brand palette — single source of truth for the teal/slate identity
+ * (mirrors the Guide/main.tex olkSlate/olkTeal colors and, for email HTML
+ * that can't reference these, src/lib/email-brand.ts). These values match
+ * Tailwind's stock slate-900 and teal-400/500/600, so existing
+ * bg-teal-500-style classes stay visually identical; new code should
+ * prefer the brand- utilities these generate.
+ */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --color-brand-slate: #0f172a;
+  --color-brand-slate-light: #1e293b;
+  --color-brand-slate-muted: #334155;
+  --color-brand-teal: #14b8a6;
+  --color-brand-teal-dark: #0d9488;
+  --color-brand-teal-light: #2dd4bf;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +37,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
 }

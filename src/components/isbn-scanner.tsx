@@ -11,6 +11,15 @@ type BookData = {
   description: string | null
 }
 
+// BarcodeDetector is a real, shipping browser API (Chrome/Edge/Android
+// WebView) but isn't part of TypeScript's default DOM lib types yet.
+interface BarcodeDetector {
+  detect(source: HTMLVideoElement): Promise<{ rawValue: string }[]>
+}
+declare const BarcodeDetector: {
+  new (options: { formats: string[] }): BarcodeDetector
+}
+
 // Keyword -> app genre taxonomy. Open Library subjects are noisy folksonomy
 // tags (a historical-romance novel can carry a bare "History" tag alongside
 // dozens of fiction/literature tags), so a single substring hit isn't
@@ -148,7 +157,7 @@ export default function ISBNScanner({ onResult, onClose }: {
         await videoRef.current.play()
       }
 
-      const detector = new (window as any).BarcodeDetector({ formats: ['ean_13', 'ean_8'] })
+      const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8'] })
 
       const scan = async () => {
         if (!videoRef.current || !streamRef.current) return

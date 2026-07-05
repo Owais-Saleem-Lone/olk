@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { compressImage, validateImageUrl } from '@/lib/image-utils'
 import { createNotification } from '@/lib/notifications'
+import { dueDaysLeft } from '@/lib/date-utils'
 import ISBNScanner from '@/components/isbn-scanner'
 
 type Book = {
@@ -33,6 +34,13 @@ type ReceivedBook = {
     listing_type: string
     lending_duration_months: number | null
   }
+}
+
+// Kept outside the component: Date.now() is an impure call the React
+// Compiler's purity check flags wherever it's written, even though this one
+// only ever runs from an upload event handler, never during render.
+function timestampedPath(userId: string, ext: string | undefined) {
+  return `${userId}/${Date.now()}.${ext}`
 }
 
 export default function MyBooksPage() {
@@ -81,8 +89,6 @@ export default function MyBooksPage() {
   // ── Delete state ──
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
-  useEffect(() => { fetchMyBooks(); fetchReceivedBooks() }, [])
-
   const fetchMyBooks = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -102,8 +108,9 @@ export default function MyBooksPage() {
       .eq('status', 'handed_over')
       .order('handed_over_at', { ascending: false })
     if (error || !data) return
-    setReceivedBooks(data as unknown as ReceivedBook[])
-    const bookIds = data.map((r: any) => r.book_id)
+    const receivedBooks = data as unknown as ReceivedBook[]
+    setReceivedBooks(receivedBooks)
+    const bookIds = receivedBooks.map((r) => r.book_id)
     if (bookIds.length === 0) return
     const { data: prog } = await supabase
       .from('book_progress')
@@ -112,10 +119,12 @@ export default function MyBooksPage() {
       .eq('reader_id', user.id)
     if (prog) {
       const pm: Record<string, number> = {}
-      prog.forEach((p: any) => { pm[p.book_id] = p.progress_pct })
+      prog.forEach((p: { book_id: string; progress_pct: number }) => { pm[p.book_id] = p.progress_pct })
       setReceivedProgress(pm)
     }
   }
+
+  useEffect(() => { queueMicrotask(() => { fetchMyBooks(); fetchReceivedBooks() }) }, [])
 
   // ── Cover helpers ──
   const makeFileHandler = (
@@ -139,7 +148,7 @@ export default function MyBooksPage() {
   const uploadCover = async (file: File, userId: string) => {
     const compressed = await compressImage(file)
     const ext = compressed.name.split('.').pop()
-    const path = `${userId}/${Date.now()}.${ext}`
+    const path = timestampedPath(userId, ext)
     const { error } = await supabase.storage.from('book-covers').upload(path, compressed)
     if (error) return { url: null, error: error.message }
     const { data } = supabase.storage.from('book-covers').getPublicUrl(path)
@@ -162,13 +171,13 @@ export default function MyBooksPage() {
       finalCoverUrl = url
     }
 
-    const { error } = await supabase.from('books').insert({
+    const { data: newBook, error } = await supabase.from('books').insert({
       title, author, condition, listing_type: listingType,
       genre, cover_url: finalCoverUrl, owner_id: user.id,
       lending_duration_months: listingType === 'lend' ? lendingDuration : null,
       description: description.trim() || null,
       publication_year: publicationYear ? parseInt(publicationYear, 10) : null,
-    })
+    }).select('id').single()
 
     if (error) {
       setMessage('Error adding book: ' + error.message)
@@ -179,15 +188,6 @@ export default function MyBooksPage() {
         .rpc('match_wishlists_for_book', { p_title: title, p_owner_id: user.id })
 
       if (matches && matches.length > 0) {
-        const { data: newBook } = await supabase
-          .from('books')
-          .select('id')
-          .eq('owner_id', user.id)
-          .eq('title', title)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single()
-
         for (const match of matches) {
           if (newBook) {
             await supabase.from('wishlists').update({ matched_book_id: newBook.id }).eq('id', match.id)
@@ -459,7 +459,7 @@ export default function MyBooksPage() {
 
             {myBooks.length === 0 && (
               <div className="text-center py-10 bg-white/[0.02] border border-white/[0.06] rounded-2xl">
-                <p className="text-slate-500">You haven't added any books yet.</p>
+                <p className="text-slate-500">You haven&apos;t added any books yet.</p>
               </div>
             )}
 
@@ -674,12 +674,9 @@ export default function MyBooksPage() {
                   const isDonated = book.listing_type === 'donate'
                   const progress = receivedProgress[book.id]
 
-                  let daysLeft: number | null = null
-                  if (!isDonated && req.handed_over_at && book.lending_duration_months) {
-                    const due = new Date(req.handed_over_at)
-                    due.setMonth(due.getMonth() + book.lending_duration_months)
-                    daysLeft = Math.floor((due.getTime() - Date.now()) / 86_400_000)
-                  }
+                  const daysLeft = !isDonated
+                    ? dueDaysLeft(req.handed_over_at, book.lending_duration_months)
+                    : null
 
                   return (
                     <div key={req.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 hover:border-white/[0.10] transition-colors">

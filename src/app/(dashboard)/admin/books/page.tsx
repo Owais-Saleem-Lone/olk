@@ -42,7 +42,13 @@ export default function AdminBooksPage() {
   const [page, setPage] = useState(0)
   const PAGE_SIZE = 50
 
-  useEffect(() => { loadBooks(); loadGenres() }, [filter, page])
+  useEffect(() => { loadGenres() }, [])
+
+  useEffect(() => {
+    const t = setTimeout(() => { loadBooks() }, 300)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, filterGenre, search, page])
 
   async function loadGenres() {
     const { data } = await supabase.from('genres').select('name').eq('active', true).order('display_order')
@@ -51,6 +57,18 @@ export default function AdminBooksPage() {
 
   async function loadBooks() {
     setLoading(true)
+
+    const term = search.trim().replace(/[,()%]/g, '')
+
+    let ownerIds: string[] = []
+    if (term) {
+      const { data: matchingOwners } = await supabase
+        .from('profiles')
+        .select('id')
+        .ilike('display_name', `%${term}%`)
+      ownerIds = (matchingOwners || []).map(p => p.id)
+    }
+
     let query = supabase
       .from('books')
       .select('id, title, author, genre, condition, listing_type, status, hidden_by_admin, admin_hide_reason, created_at, cover_url, owner_id')
@@ -60,30 +78,28 @@ export default function AdminBooksPage() {
     if (filter === 'hidden') query = query.eq('hidden_by_admin', true)
     if (filter === 'available') query = query.eq('status', 'available')
     if (filter === 'unavailable') query = query.eq('status', 'unavailable')
+    if (filterGenre) query = query.eq('genre', filterGenre)
+
+    if (term) {
+      const ownerClause = ownerIds.length > 0 ? `,owner_id.in.(${ownerIds.join(',')})` : ''
+      query = query.or(`title.ilike.%${term}%,author.ilike.%${term}%${ownerClause}`)
+    }
 
     const { data: booksData } = await query
     if (!booksData || booksData.length === 0) { setBooks([]); setLoading(false); return }
 
-    const ownerIds = [...new Set(booksData.map(b => b.owner_id))]
+    const bookOwnerIds = [...new Set(booksData.map(b => b.owner_id))]
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id, display_name')
-      .in('id', ownerIds)
+      .in('id', bookOwnerIds)
 
     const profileMap = new Map((profiles || []).map(p => [p.id, p.display_name]))
     setBooks(booksData.map(b => ({ ...b, owner_name: profileMap.get(b.owner_id) || null })))
     setLoading(false)
   }
 
-  const filteredBooks = search
-    ? books.filter(b =>
-        b.title.toLowerCase().includes(search.toLowerCase()) ||
-        b.author?.toLowerCase().includes(search.toLowerCase()) ||
-        b.owner_name?.toLowerCase().includes(search.toLowerCase())
-      )
-    : filterGenre
-    ? books.filter(b => b.genre === filterGenre)
-    : books
+  const filteredBooks = books
 
   function toggleSelect(id: string) {
     setSelected(prev => {
@@ -156,13 +172,13 @@ export default function AdminBooksPage() {
         <input
           type="text"
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => { setSearch(e.target.value); setPage(0) }}
           placeholder="Search books or owners..."
           className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
         />
         <select
           value={filterGenre}
-          onChange={e => setFilterGenre(e.target.value)}
+          onChange={e => { setFilterGenre(e.target.value); setPage(0) }}
           className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
         >
           <option value="">All Genres</option>

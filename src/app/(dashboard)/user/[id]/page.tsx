@@ -41,10 +41,6 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
-  useEffect(() => {
-    fetchUserProfile()
-  }, [userId])
-
   const fetchUserProfile = async () => {
     setLoading(true)
 
@@ -90,6 +86,10 @@ export default function UserProfilePage() {
     setLoading(false)
   }
 
+  useEffect(() => {
+    queueMicrotask(() => fetchUserProfile())
+  }, [userId])
+
   if (loading) {
     return <p className="text-slate-400 text-center py-20">Loading profile...</p>
   }
@@ -99,7 +99,7 @@ export default function UserProfilePage() {
       <div className="text-center py-20">
         <div className="text-5xl mb-4">👤</div>
         <h2 className="text-xl font-semibold mb-2">User not found</h2>
-        <p className="text-slate-400 mb-6">This profile doesn't exist or has been removed.</p>
+        <p className="text-slate-400 mb-6">This profile doesn&apos;t exist or has been removed.</p>
         <Link href="/browse" className="text-teal-400 hover:text-teal-300 text-sm">
           ← Back to Browse
         </Link>

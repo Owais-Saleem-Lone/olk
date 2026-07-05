@@ -6,6 +6,8 @@ import { createNotification } from '@/lib/notifications'
 import { useRouter } from 'next/navigation'
 import RatingModal from '@/components/rating-modal'
 import RequestCard from '@/components/request-card'
+import { useFeatureFlags } from '@/lib/use-feature-flags'
+import { dueDaysLeft } from '@/lib/date-utils'
 
 // FIXED: Removed the [] from books and profiles.
 // Since a request belongs to ONE book and ONE user, Supabase returns them as single objects, not arrays.
@@ -20,16 +22,10 @@ type BookRequest = {
   profiles: { display_name: string | null; area_name: string | null }
 }
 
-function dueDaysLeft(handedOverAt: string | null, months: number | null): number | null {
-  if (!handedOverAt || !months) return null
-  const due = new Date(handedOverAt)
-  due.setMonth(due.getMonth() + months)
-  return Math.floor((due.getTime() - Date.now()) / 86_400_000)
-}
-
 export default function RequestsPage() {
   const supabase = createClient()
   const router = useRouter()
+  const featureFlags = useFeatureFlags()
   const [incomingRequests, setIncomingRequests] = useState<BookRequest[]>([])
   const [outgoingRequests, setOutgoingRequests] = useState<BookRequest[]>([])
   const [ownerProfiles, setOwnerProfiles] = useState<Record<string, { display_name: string | null; area_name: string | null }>>({})
@@ -43,10 +39,6 @@ export default function RequestsPage() {
   const [ratingTarget, setRatingTarget] = useState<{
     requestId: string; raterId: string; ratedUserId: string; ratedUserName: string; bookTitle: string
   } | null>(null)
-
-  useEffect(() => {
-    fetchRequests()
-  }, [])
 
   const fetchRequests = async () => {
     setLoading(true)
@@ -72,12 +64,13 @@ export default function RequestsPage() {
 
     if (outError) console.error('Outgoing error:', outError)
     if (outgoingData) {
-      setOutgoingRequests(outgoingData as any)
+      const outgoing = outgoingData as unknown as BookRequest[]
+      setOutgoingRequests(outgoing)
 
       // profiles(display_name, area_name) above resolves via requester_id, i.e. ME —
       // useless for outgoing cards. books.owner_id has no FK to profiles (only to
       // auth.users), so PostgREST can't embed it; batch-fetch owner profiles instead.
-      const ownerIds = [...new Set((outgoingData as any[]).map(r => r.books?.owner_id).filter(Boolean))]
+      const ownerIds = [...new Set(outgoing.map(r => r.books?.owner_id).filter(Boolean))]
       if (ownerIds.length > 0) {
         const { data: ownerProfileData } = await supabase
           .from('profiles')
@@ -85,13 +78,13 @@ export default function RequestsPage() {
           .in('id', ownerIds)
         if (ownerProfileData) {
           const map: Record<string, { display_name: string | null; area_name: string | null }> = {}
-          ownerProfileData.forEach((p: any) => { map[p.id] = p })
+          ownerProfileData.forEach((p) => { map[p.id] = p })
           setOwnerProfiles(map)
         }
       }
 
       // Fetch existing reading progress for handed-over outgoing requests
-      const handedOverIds = (outgoingData as any[])
+      const handedOverIds = outgoing
         .filter(r => r.status === 'handed_over')
         .map(r => r.id)
       if (handedOverIds.length > 0) {
@@ -102,7 +95,7 @@ export default function RequestsPage() {
           .eq('reader_id', user.id)
         if (progressData) {
           const inputs: Record<string, number> = {}
-          progressData.forEach((p: any) => { inputs[p.request_id] = p.progress_pct })
+          progressData.forEach((p: { request_id: string; progress_pct: number }) => { inputs[p.request_id] = p.progress_pct })
           setProgressInputs(prev => ({ ...prev, ...inputs }))
         }
       }
@@ -130,13 +123,17 @@ export default function RequestsPage() {
     } 
 
     if (incomingData) {
-      setIncomingRequests(incomingData as any)
+      setIncomingRequests(incomingData as unknown as BookRequest[])
     } else {
       setIncomingRequests([])
     }
 
     setLoading(false)
   }
+
+  useEffect(() => {
+    queueMicrotask(() => fetchRequests())
+  }, [])
 
   const handleUpdateStatus = async (requestId: string, newStatus: string) => {
     const { error } = await supabase
@@ -304,15 +301,17 @@ export default function RequestsPage() {
                         >
                           🤝 Confirm Handover
                         </button>
-                        <button
-                          onClick={() => handleMessage(req.id)}
-                          className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
-                        >
-                          💬 Message
-                        </button>
+                        {featureFlags.feature_messages && (
+                          <button
+                            onClick={() => handleMessage(req.id)}
+                            className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+                          >
+                            💬 Message
+                          </button>
+                        )}
                       </>
                     )}
-                    {req.status === 'handed_over' && req.books?.listing_type === 'donate' && currentUserId && !ratedRequests.has(req.id) && (
+                    {featureFlags.feature_ratings && req.status === 'handed_over' && req.books?.listing_type === 'donate' && currentUserId && !ratedRequests.has(req.id) && (
                       <button onClick={() => setRatingTarget({ requestId: req.id, raterId: currentUserId, ratedUserId: req.requester_id, ratedUserName: req.profiles?.display_name || 'User', bookTitle: req.books?.title || '' })}
                         className="bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors">⭐ Rate</button>
                     )}
@@ -324,15 +323,17 @@ export default function RequestsPage() {
                         >
                           📗 Mark Returned
                         </button>
-                        <button
-                          onClick={() => handleMessage(req.id)}
-                          className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
-                        >
-                          💬 Message
-                        </button>
+                        {featureFlags.feature_messages && (
+                          <button
+                            onClick={() => handleMessage(req.id)}
+                            className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+                          >
+                            💬 Message
+                          </button>
+                        )}
                       </>
                     )}
-                    {req.status === 'returned' && currentUserId && !ratedRequests.has(req.id) && (
+                    {featureFlags.feature_ratings && req.status === 'returned' && currentUserId && !ratedRequests.has(req.id) && (
                       <button onClick={() => setRatingTarget({ requestId: req.id, raterId: currentUserId, ratedUserId: req.requester_id, ratedUserName: req.profiles?.display_name || 'User', bookTitle: req.books?.title || '' })}
                         className="bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors">⭐ Rate</button>
                     )}
@@ -349,7 +350,7 @@ export default function RequestsPage() {
         <h2 className="text-xl font-semibold mb-4">📤 Outgoing Requests</h2>
         {outgoingRequests.length === 0 ? (
           <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 text-center text-slate-500">
-            You haven't requested any books yet.
+            You haven&apos;t requested any books yet.
           </div>
         ) : (
           <div className="space-y-4">
@@ -381,15 +382,17 @@ export default function RequestsPage() {
                           >
                             🤝 Confirm Handover
                           </button>
-                          <button
-                            onClick={() => handleMessage(req.id)}
-                            className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
-                          >
-                            💬 Message
-                          </button>
+                          {featureFlags.feature_messages && (
+                            <button
+                              onClick={() => handleMessage(req.id)}
+                              className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+                            >
+                              💬 Message
+                            </button>
+                          )}
                         </>
                       )}
-                      {req.status === 'handed_over' && req.books?.listing_type === 'donate' && currentUserId && !ratedRequests.has(req.id) && (
+                      {featureFlags.feature_ratings && req.status === 'handed_over' && req.books?.listing_type === 'donate' && currentUserId && !ratedRequests.has(req.id) && (
                         <button onClick={() => setRatingTarget({ requestId: req.id, raterId: currentUserId, ratedUserId: req.books?.owner_id, ratedUserName: 'the owner', bookTitle: req.books?.title || '' })}
                           className="bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors">⭐ Rate</button>
                       )}
@@ -401,15 +404,17 @@ export default function RequestsPage() {
                           >
                             📗 Mark Returned
                           </button>
-                          <button
-                            onClick={() => handleMessage(req.id)}
-                            className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
-                          >
-                            💬 Message
-                          </button>
+                          {featureFlags.feature_messages && (
+                            <button
+                              onClick={() => handleMessage(req.id)}
+                              className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+                            >
+                              💬 Message
+                            </button>
+                          )}
                         </>
                       )}
-                      {req.status === 'returned' && currentUserId && !ratedRequests.has(req.id) && (
+                      {featureFlags.feature_ratings && req.status === 'returned' && currentUserId && !ratedRequests.has(req.id) && (
                         <button onClick={() => setRatingTarget({ requestId: req.id, raterId: currentUserId, ratedUserId: req.books?.owner_id, ratedUserName: 'the owner', bookTitle: req.books?.title || '' })}
                           className="bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors">⭐ Rate</button>
                       )}
@@ -473,7 +478,7 @@ export default function RequestsPage() {
                           ) : (
                             <div className="flex items-center justify-between gap-3">
                               <p className="text-xs text-teal-300">
-                                🎉 You've finished the book! Ready to pass it on to the next reader?
+                                🎉 You&apos;ve finished the book! Ready to pass it on to the next reader?
                               </p>
                               <button
                                 onClick={() => setConfirmComplete(req.id)}

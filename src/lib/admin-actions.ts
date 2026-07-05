@@ -481,19 +481,6 @@ export async function removeClubMember(clubId: string, userId: string): Promise<
       .eq('club_id', clubId)
       .eq('user_id', userId)
 
-    await supabase.from('clubs')
-      .update({ member_count: undefined as unknown as number })
-      .eq('id', clubId)
-
-    const { count } = await supabase
-      .from('club_members')
-      .select('*', { count: 'exact', head: true })
-      .eq('club_id', clubId)
-
-    await supabase.from('clubs')
-      .update({ member_count: (count ?? 0) + 1 })
-      .eq('id', clubId)
-
     await auditLog(admin.id, 'remove_club_member', 'club', clubId, { userId })
     revalidatePath('/admin')
     return { success: true }
@@ -714,7 +701,7 @@ export async function updatePlatformSetting(key: string, value: string): Promise
     const supabase = await createClient()
 
     await supabase.from('platform_settings')
-      .update({ value: JSON.parse(`"${value}"`), updated_at: new Date().toISOString(), updated_by: admin.id })
+      .update({ value: JSON.stringify(value), updated_at: new Date().toISOString(), updated_by: admin.id })
       .eq('key', key)
 
     await auditLog(admin.id, 'update_setting', 'setting', null, { key, value })

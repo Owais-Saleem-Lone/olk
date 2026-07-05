@@ -23,8 +23,6 @@ export default function WishlistPage() {
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => { fetchWishlist() }, [])
-
   const fetchWishlist = async () => {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
@@ -39,6 +37,8 @@ export default function WishlistPage() {
     if (data) setItems(data)
     setLoading(false)
   }
+
+  useEffect(() => { queueMicrotask(() => fetchWishlist()) }, [])
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -77,7 +77,7 @@ export default function WishlistPage() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-2">Wishlist</h1>
-      <p className="text-slate-400 mb-8">Books you're looking for — we'll notify you when someone lists a match</p>
+      <p className="text-slate-400 mb-8">Books you&apos;re looking for — we&apos;ll notify you when someone lists a match</p>
 
       {/* Add Form */}
       <form onSubmit={handleAdd} className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 mb-8">
@@ -113,7 +113,7 @@ export default function WishlistPage() {
         <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-10 text-center">
           <div className="text-4xl mb-3">✨</div>
           <p className="text-slate-500 mb-2">Your wishlist is empty</p>
-          <p className="text-xs text-slate-600">Add a book you're looking for and we'll let you know when it's available nearby.</p>
+          <p className="text-xs text-slate-600">Add a book you&apos;re looking for and we&apos;ll let you know when it&apos;s available nearby.</p>
         </div>
       ) : (
         <div className="space-y-3">

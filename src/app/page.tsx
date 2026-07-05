@@ -261,7 +261,7 @@ export default async function Home() {
             <h2 className="text-3xl md:text-4xl font-bold">Happening right now</h2>
           </div>
           <div className="space-y-3 max-w-2xl mx-auto">
-            {recentActivity.map((item: any, i: number) => {
+            {recentActivity.map((item: { title: string; listing_type: string; created_at: string; profiles: unknown }, i: number) => {
               const profile = item.profiles as { display_name: string | null; area_name: string | null } | null
               const name = profile?.display_name?.split('@')[0] || 'Someone'
               const area = profile?.area_name
@@ -386,7 +386,7 @@ export default async function Home() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {activeClubs.map((club: any) => (
+            {activeClubs.map((club) => (
               <Link
                 key={club.id}
                 href={user ? `/clubs/${club.id}` : "/login"}

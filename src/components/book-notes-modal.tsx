@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { wordCount } from '@/lib/text-limits'
 
 type Note = {
   id: string
@@ -9,10 +10,6 @@ type Note = {
   note: string
   created_at: string
   profiles: { display_name: string | null } | null
-}
-
-function wordCount(text: string) {
-  return text.trim().split(/\s+/).filter(Boolean).length
 }
 
 export default function BookNotesModal({
@@ -32,8 +29,6 @@ export default function BookNotesModal({
   const [myNoteId, setMyNoteId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
-
-  useEffect(() => { fetchNotes() }, [])
 
   const fetchNotes = async () => {
     setLoading(true)
@@ -55,6 +50,8 @@ export default function BookNotesModal({
     }
     setLoading(false)
   }
+
+  useEffect(() => { queueMicrotask(() => fetchNotes()) }, [])
 
   const otherNotesCount = notes.filter(n => n.user_id !== currentUserId).length
   const hasMyNote = myNoteId !== null

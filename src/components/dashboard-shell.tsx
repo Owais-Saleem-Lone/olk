@@ -6,23 +6,32 @@ import Link from 'next/link'
 import DashboardSidebar from './dashboard-sidebar'
 import NotificationBell from './notification-bell'
 import AnnouncementBanner from './announcement-banner'
+import type { FeatureFlags } from '@/lib/platform-settings'
 
 export default function DashboardShell({
   displayName,
   email,
   isAdmin,
+  featureFlags,
   children,
 }: {
   displayName: string | null
   email: string | null
   isAdmin: boolean
+  featureFlags: FeatureFlags
   children: React.ReactNode
 }) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
 
   // Close sidebar whenever the route changes (nav link tapped, sign out, etc.)
-  useEffect(() => { setOpen(false) }, [pathname])
+  // Adjusting state during render (rather than in an effect) avoids an extra
+  // commit/paint cycle — see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prevPathname, setPrevPathname] = useState(pathname)
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname)
+    setOpen(false)
+  }
 
   // Lock background scroll while drawer is open on mobile
   useEffect(() => {
@@ -83,7 +92,7 @@ export default function DashboardShell({
           </svg>
         </button>
 
-        <DashboardSidebar displayName={displayName} email={email} isAdmin={isAdmin} />
+        <DashboardSidebar displayName={displayName} email={email} isAdmin={isAdmin} featureFlags={featureFlags} />
       </div>
 
       {/* ── Main content ── */}

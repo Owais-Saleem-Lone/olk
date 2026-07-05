@@ -10,11 +10,13 @@
 
 - 📚 **Community Book Sharing** – List books you own and are willing to lend to others.
 - 🤝 **Seamless Requesting** – Browse available books and request to borrow them directly.
+- ✨ **Wishlist & Smart Matching** – Ask for a book you can't find, and get notified the moment someone nearby lists a match.
+- 🏘️ **Local Clubs** – Create or join interest-based reading clubs once you've built up trust in the community.
 - 💬 **Messaging System** – Coordinate book pickups and drop‑offs via dedicated 1‑on‑1 chat.
 - 🔔 **Real‑time Notifications** – Get instantly notified when your books are requested or messages are received.
 - 🌟 **Book of the Month** – A curated selection to encourage community‑wide reading.
 - 🛡️ **Reporting & Moderation** – Keep the community safe with a built‑in reporting modal for users and books.
-- ⚙️ **Admin Dashboard** – Specialized view for community moderators to manage reports and content.
+- ⚙️ **Admin Dashboard** – Specialized view for moderators to manage reports and content, with platform-wide feature flags and a maintenance-mode switch.
 - 🔐 **Secure Authentication** – Robust user auth and route protection powered by Supabase.
 
 ---
@@ -29,6 +31,8 @@
 | **Supabase**     | Auth, PostgreSQL Database, Realtime & Storage|
 | **Tailwind CSS** | Utility‑first styling for rapid UI dev       |
 | **Vercel**       | Seamless deployment and hosting              |
+| **Vitest**       | Unit tests, run automatically in CI          |
+| **GitHub Actions** | Lint + test on every push and pull request |
 
 ---
 
@@ -154,16 +158,22 @@ The codebase is structured for scalability, leveraging Next.js App Router and Se
 .
 ├── src/
 │   ├── app/
-│   │   ├── (dashboard)/       # 🔒 Protected routes (Auth required via Middleware)
+│   │   ├── (dashboard)/       # 🔒 Protected routes (Auth required via Proxy)
 │   │   │   ├── admin/         # ⚙️ Admin panel for moderation
 │   │   │   ├── browse/        # 📚 Browse available books
+│   │   │   ├── clubs/         # 🏘️ Local reading clubs
 │   │   │   ├── messages/      # 💬 1‑on‑1 chat interface
 │   │   │   ├── my-books/      # 📖 Manage your listed books
 │   │   │   ├── notifications/ # 🔔 View alerts
 │   │   │   ├── profile/       # 👤 Edit display name & area
-│   │   │   └── requests/      # 🤝 Handle borrow requests
+│   │   │   ├── requests/      # 🤝 Handle borrow requests
+│   │   │   ├── saved/         # 🔖 Bookmarked books
+│   │   │   ├── user/          # Public profile pages
+│   │   │   └── wishlist/      # ✨ Wishlist & smart matching
+│   │   ├── api/digest/        # 📧 Weekly email digest cron endpoint
 │   │   ├── login/             # 🔑 Auth: Login
 │   │   ├── register/          # 📝 Auth: Registration
+│   │   ├── maintenance/       # 🚧 Shown when maintenance mode is on
 │   │   ├── layout.tsx         # Root layout (Fonts, Globals)
 │   │   └── page.tsx           # Landing Page & Book of the Month
 │   ├── components/
@@ -177,7 +187,7 @@ The codebase is structured for scalability, leveraging Next.js App Router and Se
 │   │   └── supabase/
 │   │       ├── client.ts      # Supabase Browser Client
 │   │       └── server.ts      # Supabase Server Client (SSR)
-│   └── middleware.ts          # Route protection for (dashboard)
+│   └── proxy.ts               # Route protection for (dashboard)
 ├── supabase/
 │   └── .temp/                 # Supabase CLI linked project config
 └── ...config files
@@ -187,13 +197,13 @@ The codebase is structured for scalability, leveraging Next.js App Router and Se
 
 ## 🔒 Security & Routing
 
-To keep your data safe, **OLK** uses a dedicated middleware layer that intercepts every request before it reaches a page.  
+To keep your data safe, **OLK** uses a dedicated Proxy layer (Next.js 16's rename of Middleware) that intercepts every request before it reaches a page.
 
 - All routes inside the `(dashboard)` folder are **protected** – they require a valid Supabase session.  
 - If a user tries to access these pages without being logged in, they are automatically redirected to the `/login` page.  
-- The middleware also preserves the originally requested URL, so after a successful login, the user is sent right back where they wanted to go.  
+- The same layer also enforces platform-wide feature flags and maintenance mode.
 
-The logic lives in `src/middleware.ts` and is fully integrated with Supabase’s authentication helpers. This approach gives you a clean, server‑side security layer without cluttering your components with auth checks.
+The logic lives in `src/proxy.ts` and is fully integrated with Supabase’s authentication helpers. This approach gives you a clean, server‑side security layer without cluttering your components with auth checks.
 
 ## 📜 Available Scripts
 
@@ -203,6 +213,7 @@ The logic lives in `src/middleware.ts` and is fully integrated with Supabase’s
 | `npm run build`  | Builds the application for production          |
 | `npm run start`  | Starts the production server                   |
 | `npm run lint`   | Runs ESLint to analyze code quality            |
+| `npm test`       | Runs the Vitest unit test suite                |
 
 ---
 

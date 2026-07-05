@@ -13,35 +13,13 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 
+CREATE SCHEMA IF NOT EXISTS "public";
+
+
+ALTER SCHEMA "public" OWNER TO "pg_database_owner";
+
+
 COMMENT ON SCHEMA "public" IS 'standard public schema';
-
-
-
-CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
-
-
-
-
-
-
-CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
-
-
-
-
-
-
-CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA "vault";
-
-
-
-
-
-
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
-
-
-
 
 
 
@@ -188,6 +166,69 @@ $$;
 ALTER FUNCTION "public"."admin_get_top_contributors"("lim" integer) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."check_book_notes_limits"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  word_count INT;
+  other_notes_count INT;
+BEGIN
+  word_count := array_length(regexp_split_to_array(btrim(NEW.note), '\s+'), 1);
+  IF word_count > 100 THEN
+    RAISE EXCEPTION 'Note exceeds the 100-word limit (got % words)', word_count;
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    SELECT count(*) INTO other_notes_count
+    FROM public.book_notes
+    WHERE book_id = NEW.book_id AND user_id <> NEW.user_id;
+
+    IF other_notes_count >= 10 THEN
+      RAISE EXCEPTION 'This book already has 10 community notes';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."check_book_notes_limits"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."check_club_creation_eligibility"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  completed_count INT;
+  report_count INT;
+BEGIN
+  SELECT
+    (SELECT count(*) FROM public.book_requests br
+       JOIN public.books b ON b.id = br.book_id
+       WHERE b.owner_id = NEW.creator_id AND br.status IN ('handed_over', 'returned'))
+    +
+    (SELECT count(*) FROM public.book_requests br
+       WHERE br.requester_id = NEW.creator_id AND br.status IN ('handed_over', 'returned'))
+  INTO completed_count;
+
+  SELECT count(*) INTO report_count
+  FROM public.reports WHERE reported_user_id = NEW.creator_id;
+
+  IF completed_count < 5 OR report_count > 0 THEN
+    RAISE EXCEPTION 'Not eligible to create a club: requires 5+ completed exchanges and a clean report record';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."check_club_creation_eligibility"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."complete_donated_book_reading"("p_request_id" "uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
@@ -231,7 +272,61 @@ $$;
 ALTER FUNCTION "public"."complete_donated_book_reading"("p_request_id" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) RETURNS TABLE("id" "uuid", "title" character varying, "author" character varying, "condition" character varying, "listing_type" character varying, "status" character varying, "genre" character varying, "cover_url" "text", "owner_id" "uuid", "created_at" timestamp with time zone, "distance_km" double precision, "owner_name" character varying, "owner_area" character varying, "read_count" integer, "acquired_via_donation" boolean)
+CREATE OR REPLACE FUNCTION "public"."enforce_message_rate_limit"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+  v_limit int;
+  v_count int;
+BEGIN
+  v_limit := public.get_platform_setting_int('max_messages_per_hour', 30);
+
+  SELECT count(*) INTO v_count
+  FROM public.messages
+  WHERE sender_id = NEW.sender_id
+    AND created_at > now() - interval '1 hour';
+
+  IF v_count >= v_limit THEN
+    RAISE EXCEPTION 'RATE_LIMIT_EXCEEDED: max % messages per hour reached', v_limit
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."enforce_message_rate_limit"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."enforce_request_rate_limit"() RETURNS "trigger"
+    LANGUAGE "plpgsql"
+    AS $$
+DECLARE
+  v_limit int;
+  v_count int;
+BEGIN
+  v_limit := public.get_platform_setting_int('max_requests_per_day', 10);
+
+  SELECT count(*) INTO v_count
+  FROM public.book_requests
+  WHERE requester_id = NEW.requester_id
+    AND created_at > now() - interval '24 hours';
+
+  IF v_count >= v_limit THEN
+    RAISE EXCEPTION 'RATE_LIMIT_EXCEEDED: max % requests per day reached', v_limit
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."enforce_request_rate_limit"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) RETURNS TABLE("id" "uuid", "title" character varying, "author" character varying, "condition" character varying, "listing_type" character varying, "status" character varying, "genre" character varying, "cover_url" "text", "owner_id" "uuid", "created_at" timestamp with time zone, "distance_km" double precision, "owner_name" character varying, "owner_area" character varying, "read_count" integer, "acquired_via_donation" boolean, "description" "text", "publication_year" smallint)
     LANGUAGE "sql" STABLE SECURITY DEFINER
     AS $$
   SELECT
@@ -251,7 +346,9 @@ CREATE OR REPLACE FUNCTION "public"."get_books_nearby"("user_lat" double precisi
     p.display_name AS owner_name,
     p.area_name AS owner_area,
     b.read_count,
-    b.acquired_via_donation
+    b.acquired_via_donation,
+    b.description,
+    b.publication_year
   FROM books b
   JOIN profiles p ON p.id = b.owner_id
   WHERE b.status IN ('available', 'given', 'unavailable')
@@ -302,6 +399,16 @@ $$;
 
 
 ALTER FUNCTION "public"."get_community_stats"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_platform_setting_int"("p_key" "text", "p_default" integer) RETURNS integer
+    LANGUAGE "sql" STABLE
+    AS $$
+  SELECT COALESCE((SELECT (value #>> '{}')::int FROM public.platform_settings WHERE key = p_key), p_default);
+$$;
+
+
+ALTER FUNCTION "public"."get_platform_setting_int"("p_key" "text", "p_default" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
@@ -374,6 +481,23 @@ $$;
 
 
 ALTER FUNCTION "public"."is_super_admin"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."match_wishlists_for_book"("p_title" "text", "p_owner_id" "uuid", "p_threshold" real DEFAULT 0.35) RETURNS TABLE("id" "uuid", "user_id" "uuid", "title" "text")
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT w.id, w.user_id, w.title
+  FROM public.wishlists w
+  WHERE w.active = true
+    AND w.matched_book_id IS NULL
+    AND w.user_id <> p_owner_id
+    AND similarity(w.title, p_title) > p_threshold
+  ORDER BY similarity(w.title, p_title) DESC;
+$$;
+
+
+ALTER FUNCTION "public"."match_wishlists_for_book"("p_title" "text", "p_owner_id" "uuid", "p_threshold" real) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."update_club_member_count"() RETURNS "trigger"
@@ -504,7 +628,7 @@ CREATE TABLE IF NOT EXISTS "public"."book_requests" (
     "created_at" timestamp with time zone DEFAULT "now"(),
     "handed_over_at" timestamp with time zone,
     "completed_at" timestamp with time zone,
-    CONSTRAINT "book_requests_status_check" CHECK ((("status")::"text" = ANY ((ARRAY['pending'::character varying, 'accepted'::character varying, 'declined'::character varying, 'handed_over'::character varying, 'returned'::character varying])::"text"[])))
+    CONSTRAINT "book_requests_status_check" CHECK ((("status")::"text" = ANY (ARRAY[('pending'::character varying)::"text", ('accepted'::character varying)::"text", ('declined'::character varying)::"text", ('handed_over'::character varying)::"text", ('returned'::character varying)::"text"])))
 );
 
 
@@ -539,10 +663,13 @@ CREATE TABLE IF NOT EXISTS "public"."books" (
     "hidden_by_admin" boolean DEFAULT false,
     "admin_hide_reason" "text",
     "hidden_at" timestamp with time zone,
-    CONSTRAINT "books_condition_check" CHECK ((("condition")::"text" = ANY ((ARRAY['excellent'::character varying, 'good'::character varying, 'fair'::character varying, 'poor'::character varying])::"text"[]))),
+    "description" "text",
+    "publication_year" smallint,
+    CONSTRAINT "books_condition_check" CHECK ((("condition")::"text" = ANY (ARRAY[('excellent'::character varying)::"text", ('good'::character varying)::"text", ('fair'::character varying)::"text", ('poor'::character varying)::"text"]))),
     CONSTRAINT "books_lending_duration_months_check" CHECK (("lending_duration_months" = ANY (ARRAY[1, 2, 3]))),
-    CONSTRAINT "books_listing_type_check" CHECK ((("listing_type")::"text" = ANY ((ARRAY['donate'::character varying, 'lend'::character varying])::"text"[]))),
-    CONSTRAINT "books_status_check" CHECK ((("status")::"text" = ANY ((ARRAY['available'::character varying, 'unavailable'::character varying, 'given'::character varying])::"text"[])))
+    CONSTRAINT "books_listing_type_check" CHECK ((("listing_type")::"text" = ANY (ARRAY[('donate'::character varying)::"text", ('lend'::character varying)::"text"]))),
+    CONSTRAINT "books_publication_year_check" CHECK ((("publication_year" IS NULL) OR (("publication_year" >= 1000) AND ("publication_year" <= 2200)))),
+    CONSTRAINT "books_status_check" CHECK ((("status")::"text" = ANY (ARRAY[('available'::character varying)::"text", ('unavailable'::character varying)::"text", ('given'::character varying)::"text"])))
 );
 
 
@@ -670,7 +797,9 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "ban_reason" "text",
     "ban_expires_at" timestamp with time zone,
     "warning_count" integer DEFAULT 0,
-    "last_active_at" timestamp with time zone DEFAULT "now"()
+    "last_active_at" timestamp with time zone DEFAULT "now"(),
+    "bio" "text",
+    CONSTRAINT "profiles_bio_check" CHECK ((("bio" IS NULL) OR ("char_length"("bio") <= 300)))
 );
 
 
@@ -934,11 +1063,15 @@ CREATE INDEX "idx_bans_user" ON "public"."user_bans" USING "btree" ("user_id");
 
 
 
+CREATE INDEX "idx_books_title_trgm" ON "public"."books" USING "gin" ("title" "public"."gin_trgm_ops");
+
+
+
 CREATE INDEX "idx_notifications_user" ON "public"."notifications" USING "btree" ("user_id", "created_at" DESC);
 
 
 
-CREATE UNIQUE INDEX "idx_unique_active_request" ON "public"."book_requests" USING "btree" ("book_id", "requester_id") WHERE (("status")::"text" = ANY ((ARRAY['pending'::character varying, 'accepted'::character varying, 'handed_over'::character varying])::"text"[]));
+CREATE UNIQUE INDEX "idx_unique_active_request" ON "public"."book_requests" USING "btree" ("book_id", "requester_id") WHERE (("status")::"text" = ANY (ARRAY[('pending'::character varying)::"text", ('accepted'::character varying)::"text", ('handed_over'::character varying)::"text"]));
 
 
 
@@ -946,7 +1079,31 @@ CREATE INDEX "idx_warnings_user" ON "public"."user_warnings" USING "btree" ("use
 
 
 
+CREATE INDEX "idx_wishlists_title_trgm" ON "public"."wishlists" USING "gin" ("title" "public"."gin_trgm_ops");
+
+
+
+CREATE UNIQUE INDEX "idx_wishlists_user_title_unique" ON "public"."wishlists" USING "btree" ("user_id", "lower"("btrim"("title")));
+
+
+
+CREATE OR REPLACE TRIGGER "trg_check_book_notes_limits" BEFORE INSERT OR UPDATE ON "public"."book_notes" FOR EACH ROW EXECUTE FUNCTION "public"."check_book_notes_limits"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_check_club_creation_eligibility" BEFORE INSERT ON "public"."clubs" FOR EACH ROW EXECUTE FUNCTION "public"."check_club_creation_eligibility"();
+
+
+
 CREATE OR REPLACE TRIGGER "trg_club_member_count" AFTER INSERT OR DELETE ON "public"."club_members" FOR EACH ROW EXECUTE FUNCTION "public"."update_club_member_count"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_enforce_message_rate_limit" BEFORE INSERT ON "public"."messages" FOR EACH ROW EXECUTE FUNCTION "public"."enforce_message_rate_limit"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_enforce_request_rate_limit" BEFORE INSERT ON "public"."book_requests" FOR EACH ROW EXECUTE FUNCTION "public"."enforce_request_rate_limit"();
 
 
 
@@ -1277,24 +1434,6 @@ CREATE POLICY "Admins manage book_of_month" ON "public"."book_of_month" USING ((
 
 
 
-CREATE POLICY "Admins update profiles" ON "public"."profiles" FOR UPDATE USING ((EXISTS ( SELECT 1
-   FROM "public"."profiles" "profiles_1"
-  WHERE (("profiles_1"."id" = "auth"."uid"()) AND ("profiles_1"."is_admin" = true)))));
-
-
-
-CREATE POLICY "Admins update reports" ON "public"."reports" FOR UPDATE USING ((EXISTS ( SELECT 1
-   FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true)))));
-
-
-
-CREATE POLICY "Admins view all reports" ON "public"."reports" FOR SELECT USING ((EXISTS ( SELECT 1
-   FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true)))));
-
-
-
 CREATE POLICY "Anyone can read settings" ON "public"."platform_settings" FOR SELECT TO "authenticated", "anon" USING (true);
 
 
@@ -1332,10 +1471,6 @@ CREATE POLICY "Authenticated users can view club members" ON "public"."club_memb
 
 
 CREATE POLICY "Authenticated users can view reading progress" ON "public"."book_progress" FOR SELECT TO "authenticated" USING (true);
-
-
-
-CREATE POLICY "Authenticated users insert notifications" ON "public"."notifications" FOR INSERT WITH CHECK (("auth"."uid"() IS NOT NULL));
 
 
 
@@ -1501,6 +1636,10 @@ CREATE POLICY "Users create reports" ON "public"."reports" FOR INSERT WITH CHECK
 
 
 
+CREATE POLICY "Users insert own notifications" ON "public"."notifications" FOR INSERT TO "authenticated" WITH CHECK (("auth"."uid"() = "user_id"));
+
+
+
 CREATE POLICY "Users read own notifications" ON "public"."notifications" FOR SELECT USING (("auth"."uid"() = "user_id"));
 
 
@@ -1585,170 +1724,10 @@ ALTER TABLE "public"."user_warnings" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."wishlists" ENABLE ROW LEVEL SECURITY;
 
 
-
-
-ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
-
-
-
-
-
-
-ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."messages";
-
-
-
 GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1788,9 +1767,33 @@ GRANT ALL ON FUNCTION "public"."admin_get_top_contributors"("lim" integer) TO "s
 
 
 
+GRANT ALL ON FUNCTION "public"."check_book_notes_limits"() TO "anon";
+GRANT ALL ON FUNCTION "public"."check_book_notes_limits"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."check_book_notes_limits"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."check_club_creation_eligibility"() TO "anon";
+GRANT ALL ON FUNCTION "public"."check_club_creation_eligibility"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."check_club_creation_eligibility"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."complete_donated_book_reading"("p_request_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."complete_donated_book_reading"("p_request_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."complete_donated_book_reading"("p_request_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."enforce_message_rate_limit"() TO "anon";
+GRANT ALL ON FUNCTION "public"."enforce_message_rate_limit"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."enforce_message_rate_limit"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."enforce_request_rate_limit"() TO "anon";
+GRANT ALL ON FUNCTION "public"."enforce_request_rate_limit"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."enforce_request_rate_limit"() TO "service_role";
 
 
 
@@ -1809,6 +1812,12 @@ GRANT ALL ON FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "
 GRANT ALL ON FUNCTION "public"."get_community_stats"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_community_stats"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_community_stats"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_platform_setting_int"("p_key" "text", "p_default" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_platform_setting_int"("p_key" "text", "p_default" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_platform_setting_int"("p_key" "text", "p_default" integer) TO "service_role";
 
 
 
@@ -1842,24 +1851,16 @@ GRANT ALL ON FUNCTION "public"."is_super_admin"() TO "service_role";
 
 
 
+REVOKE ALL ON FUNCTION "public"."match_wishlists_for_book"("p_title" "text", "p_owner_id" "uuid", "p_threshold" real) FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."match_wishlists_for_book"("p_title" "text", "p_owner_id" "uuid", "p_threshold" real) TO "anon";
+GRANT ALL ON FUNCTION "public"."match_wishlists_for_book"("p_title" "text", "p_owner_id" "uuid", "p_threshold" real) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."match_wishlists_for_book"("p_title" "text", "p_owner_id" "uuid", "p_threshold" real) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."update_club_member_count"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_club_member_count"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_club_member_count"() TO "service_role";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -2007,12 +2008,6 @@ GRANT ALL ON TABLE "public"."wishlists" TO "service_role";
 
 
 
-
-
-
-
-
-
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "authenticated";
@@ -2037,30 +2032,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

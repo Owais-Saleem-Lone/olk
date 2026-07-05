@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { NOTIFICATION_ICONS as ICONS } from '@/lib/notification-icons'
 
 type Notification = {
   id: string
@@ -14,15 +15,8 @@ type Notification = {
   created_at: string
 }
 
-const ICONS: Record<string, string> = {
-  book_requested: '📩',
-  request_accepted: '✅',
-  request_declined: '❌',
-  new_message: '💬',
-  handover_confirmed: '🤝',
-  book_returned: '📗',
-  club_joined: '🏘️',
-  club_announcement: '📢',
+function randomInstanceId() {
+  return Math.random().toString(36).slice(2, 8)
 }
 
 function timeAgo(iso: string) {
@@ -42,7 +36,7 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-  const instanceId = useRef(Math.random().toString(36).slice(2, 8))
+  const instanceId = useRef(randomInstanceId())
 
   useEffect(() => {
     let aborted = false

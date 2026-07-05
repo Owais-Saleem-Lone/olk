@@ -1,10 +1,11 @@
 import { Resend } from 'resend'
 import { createClient } from '@supabase/supabase-js'
 import { escapeHtml } from '@/lib/html-escape'
+import { EMAIL_BRAND } from '@/lib/email-brand'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
-export async function POST(request: Request) {
+async function handleDigest(request: Request) {
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -47,49 +48,62 @@ export async function POST(request: Request) {
   const bookListHtml = newBooks.map(b => `
     <tr>
       <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
-        <strong style="color: #f1f5f9;">${escapeHtml(b.title)}</strong>
-        ${b.author ? `<br/><span style="color: #94a3b8; font-size: 13px;">by ${escapeHtml(b.author)}</span>` : ''}
-        <br/><span style="color: #2dd4bf; font-size: 12px; font-weight: 600;">${b.listing_type === 'donate' ? 'Free' : 'Lend'}</span>
+        <strong style="color: ${EMAIL_BRAND.cardText};">${escapeHtml(b.title)}</strong>
+        ${b.author ? `<br/><span style="color: ${EMAIL_BRAND.textMuted}; font-size: 13px;">by ${escapeHtml(b.author)}</span>` : ''}
+        <br/><span style="color: ${EMAIL_BRAND.tealGradientFrom}; font-size: 12px; font-weight: 600;">${b.listing_type === 'donate' ? 'Free' : 'Lend'}</span>
       </td>
     </tr>
   `).join('')
 
   let sent = 0
+  const failures: { userId: string; error: string }[] = []
 
   for (const sub of subscribers) {
-    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(sub.id)
-    const email = authUser?.user?.email
-    if (!email) continue
+    try {
+      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(sub.id)
+      const email = authUser?.user?.email
+      if (!email) continue
 
-    const name = escapeHtml(sub.display_name?.split('@')[0] || 'Reader')
+      const name = escapeHtml(sub.display_name?.split('@')[0] || 'Reader')
 
-    await resend.emails.send({
-      from: fromAddress,
-      to: email,
-      subject: `${newBooks.length} new book${newBooks.length > 1 ? 's' : ''} on OLK this week`,
-      html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background: #0f172a; color: #e2e8f0; border-radius: 16px;">
-          <div style="text-align: center; margin-bottom: 24px;">
-            <div style="display: inline-block; background: linear-gradient(135deg, #2dd4bf, #0d9488); padding: 8px 14px; border-radius: 8px; font-weight: bold; font-size: 14px; color: white;">OLK</div>
+      await resend.emails.send({
+        from: fromAddress,
+        to: email,
+        subject: `${newBooks.length} new book${newBooks.length > 1 ? 's' : ''} on OLK this week`,
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background: ${EMAIL_BRAND.bg}; color: ${EMAIL_BRAND.text}; border-radius: 16px;">
+            <div style="text-align: center; margin-bottom: 24px;">
+              <div style="display: inline-block; background: linear-gradient(135deg, ${EMAIL_BRAND.tealGradientFrom}, ${EMAIL_BRAND.tealGradientTo}); padding: 8px 14px; border-radius: 8px; font-weight: bold; font-size: 14px; color: white;">OLK</div>
+            </div>
+            <p style="font-size: 18px; font-weight: 600; margin: 0 0 4px; color: white;">Hey ${name}!</p>
+            <p style="font-size: 14px; color: ${EMAIL_BRAND.textMuted}; margin: 0 0 20px;">Here's what's new on Open Library Kashmir this week:</p>
+            <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 4px 16px;">
+              <table style="width: 100%; border-collapse: collapse;">${bookListHtml}</table>
+            </div>
+            <div style="text-align: center; margin-top: 24px;">
+              <a href="${siteUrl}/browse" style="display: inline-block; background: ${EMAIL_BRAND.teal}; color: white; font-weight: 600; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-size: 14px;">Browse All Books</a>
+            </div>
+            <p style="text-align: center; font-size: 11px; color: ${EMAIL_BRAND.textFooter}; margin-top: 24px;">
+              You're receiving this because you have digest emails enabled.
+              <a href="${siteUrl}/profile" style="color: ${EMAIL_BRAND.textFaint};">Unsubscribe</a>
+            </p>
           </div>
-          <p style="font-size: 18px; font-weight: 600; margin: 0 0 4px; color: white;">Hey ${name}!</p>
-          <p style="font-size: 14px; color: #94a3b8; margin: 0 0 20px;">Here's what's new on Open Library Kashmir this week:</p>
-          <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 4px 16px;">
-            <table style="width: 100%; border-collapse: collapse;">${bookListHtml}</table>
-          </div>
-          <div style="text-align: center; margin-top: 24px;">
-            <a href="${siteUrl}/browse" style="display: inline-block; background: #14b8a6; color: white; font-weight: 600; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-size: 14px;">Browse All Books</a>
-          </div>
-          <p style="text-align: center; font-size: 11px; color: #475569; margin-top: 24px;">
-            You're receiving this because you have digest emails enabled.
-            <a href="${siteUrl}/profile" style="color: #64748b;">Unsubscribe</a>
-          </p>
-        </div>
-      `,
-    })
+        `,
+      })
 
-    sent++
+      sent++
+    } catch (e) {
+      failures.push({ userId: sub.id, error: (e as Error).message })
+    }
   }
 
-  return Response.json({ sent, books: newBooks.length })
+  return Response.json({ sent, books: newBooks.length, failures: failures.length, failureDetails: failures })
+}
+
+export async function GET(request: Request) {
+  return handleDigest(request)
+}
+
+export async function POST(request: Request) {
+  return handleDigest(request)
 }

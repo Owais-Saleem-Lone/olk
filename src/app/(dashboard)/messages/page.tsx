@@ -13,6 +13,15 @@ type Conversation = {
   lastMessageAt: string | null
 }
 
+type OutgoingRequest = { id: string; books: { title: string; owner_id: string } | null }
+type IncomingRequest = {
+  id: string
+  requester_id: string
+  books: { title: string } | null
+  profiles: { display_name: string | null; area_name: string | null } | null
+}
+type MessageRow = { request_id: string; content: string; created_at: string }
+
 function timeAgo(isoString: string) {
   const diff = Date.now() - new Date(isoString).getTime()
   const mins = Math.floor(diff / 60000)
@@ -31,18 +40,17 @@ export default function MessagesPage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { fetchConversations() }, [])
-
   const fetchConversations = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
 
     // Accepted requests I made (I'm the requester, other user is the book owner)
-    const { data: outgoing } = await supabase
+    const { data: outgoingData } = await supabase
       .from('book_requests')
       .select('id, books(title, owner_id)')
       .eq('requester_id', user.id)
       .eq('status', 'accepted')
+    const outgoing = outgoingData as unknown as OutgoingRequest[] | null
 
     // Accepted requests on my books (I'm the owner, other user is the requester)
     const { data: myBooks } = await supabase
@@ -52,37 +60,39 @@ export default function MessagesPage() {
 
     const myBookIds = myBooks?.map(b => b.id) || []
 
-    const { data: incoming } = myBookIds.length > 0
+    const { data: incomingData } = myBookIds.length > 0
       ? await supabase
           .from('book_requests')
           .select('id, requester_id, books(title), profiles(display_name, area_name)')
           .in('book_id', myBookIds)
           .eq('status', 'accepted')
       : { data: [] }
+    const incoming = incomingData as unknown as IncomingRequest[] | null
 
     // Batch-fetch owner profiles for outgoing requests
-    const ownerIds = (outgoing || []).map((r: any) => r.books?.owner_id).filter(Boolean)
+    const ownerIds = (outgoing || []).map((r) => r.books?.owner_id).filter(Boolean) as string[]
     const { data: ownerProfiles } = ownerIds.length > 0
       ? await supabase.from('profiles').select('id, display_name, area_name').in('id', ownerIds)
       : { data: [] }
     const ownerMap: Record<string, { display_name: string | null; area_name: string | null }> = {}
-    ownerProfiles?.forEach((p: any) => { ownerMap[p.id] = p })
+    ownerProfiles?.forEach((p) => { ownerMap[p.id] = p })
 
     // Batch-fetch last message for all conversations in one query
     const allRequestIds = [
-      ...(outgoing || []).map((r: any) => r.id),
-      ...(incoming || []).map((r: any) => r.id),
+      ...(outgoing || []).map((r) => r.id),
+      ...(incoming || []).map((r) => r.id),
     ]
 
     const lastMsgMap: Record<string, { content: string; created_at: string }> = {}
     if (allRequestIds.length > 0) {
-      const { data: allMsgs } = await supabase
+      const { data: allMsgsData } = await supabase
         .from('messages')
         .select('request_id, content, created_at')
         .in('request_id', allRequestIds)
         .order('created_at', { ascending: false })
+      const allMsgs = allMsgsData as MessageRow[] | null
 
-      allMsgs?.forEach((m: any) => {
+      allMsgs?.forEach((m) => {
         if (!lastMsgMap[m.request_id]) {
           lastMsgMap[m.request_id] = { content: m.content, created_at: m.created_at }
         }
@@ -90,15 +100,15 @@ export default function MessagesPage() {
     }
 
     const convs: Conversation[] = [
-      ...(outgoing || []).map((req: any) => ({
+      ...(outgoing || []).map((req) => ({
         requestId: req.id,
         bookTitle: req.books?.title || 'Unknown Book',
-        otherUserName: ownerMap[req.books?.owner_id]?.display_name ?? null,
-        otherUserArea: ownerMap[req.books?.owner_id]?.area_name ?? null,
+        otherUserName: req.books?.owner_id ? ownerMap[req.books.owner_id]?.display_name ?? null : null,
+        otherUserArea: req.books?.owner_id ? ownerMap[req.books.owner_id]?.area_name ?? null : null,
         lastMessage: lastMsgMap[req.id]?.content ?? null,
         lastMessageAt: lastMsgMap[req.id]?.created_at ?? null,
       })),
-      ...(incoming || []).map((req: any) => ({
+      ...(incoming || []).map((req) => ({
         requestId: req.id,
         bookTitle: req.books?.title || 'Unknown Book',
         otherUserName: req.profiles?.display_name ?? null,
@@ -119,6 +129,8 @@ export default function MessagesPage() {
     setConversations(convs)
     setLoading(false)
   }
+
+  useEffect(() => { queueMicrotask(() => fetchConversations()) }, [])
 
   if (loading) return <p className="text-slate-400">Loading messages...</p>
 

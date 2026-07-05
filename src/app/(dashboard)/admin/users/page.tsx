@@ -43,10 +43,12 @@ export default function AdminUsersPage() {
   const [newRole, setNewRole] = useState<string>('moderator')
   const [acting, setActing] = useState(false)
 
-  useEffect(() => { loadUsers() }, [filter])
-
   async function loadUsers() {
     setLoading(true)
+
+    const term = search.trim().replace(/[,()%]/g, '')
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(term)
+
     let query = supabase
       .from('profiles')
       .select('id, display_name, area_name, is_admin, admin_role, is_banned, ban_reason, ban_expires_at, warning_count, created_at, last_active_at')
@@ -57,10 +59,22 @@ export default function AdminUsersPage() {
     if (filter === 'admin') query = query.eq('is_admin', true)
     if (filter === 'warned') query = query.gt('warning_count', 0)
 
+    if (term) {
+      // id is a uuid column — ilike can't be applied to it directly, so an
+      // exact match is only attempted when the term is a full, valid uuid.
+      query = query.or(`display_name.ilike.%${term}%,area_name.ilike.%${term}%${isUuid ? `,id.eq.${term}` : ''}`)
+    }
+
     const { data } = await query
     setUsers(data || [])
     setLoading(false)
   }
+
+  useEffect(() => {
+    const t = setTimeout(() => { loadUsers() }, 300)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, search])
 
   async function selectUser(user: User) {
     const [
@@ -94,13 +108,7 @@ export default function AdminUsersPage() {
     })
   }
 
-  const filteredUsers = search
-    ? users.filter(u =>
-        u.display_name?.toLowerCase().includes(search.toLowerCase()) ||
-        u.area_name?.toLowerCase().includes(search.toLowerCase()) ||
-        u.id.toLowerCase().includes(search.toLowerCase())
-      )
-    : users
+  const filteredUsers = users
 
   async function handleBan() {
     if (!selected || !banReason.trim()) return

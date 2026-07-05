@@ -44,26 +44,6 @@ export default function ChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    fetchChat()
-
-    const channel = supabase
-      .channel(`chat:${requestId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `request_id=eq.${requestId}` },
-        (payload) => {
-          const incoming = payload.new as Message
-          setMessages(prev =>
-            prev.some(m => m.id === incoming.id) ? prev : [...prev, incoming]
-          )
-        }
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [requestId])
-
-  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
@@ -79,9 +59,10 @@ export default function ChatPage() {
       .single()
 
     if (req) {
-      setBookTitle((req.books as any)?.title ?? null)
+      const books = req.books as unknown as { title: string; owner_id: string } | null
+      setBookTitle(books?.title ?? null)
       const otherId = req.requester_id === user.id
-        ? (req.books as any)?.owner_id
+        ? books?.owner_id
         : req.requester_id
 
       if (otherId) {
@@ -104,6 +85,26 @@ export default function ChatPage() {
     if (data) setMessages(data)
     setLoading(false)
   }
+
+  useEffect(() => {
+    queueMicrotask(() => fetchChat())
+
+    const channel = supabase
+      .channel(`chat:${requestId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `request_id=eq.${requestId}` },
+        (payload) => {
+          const incoming = payload.new as Message
+          setMessages(prev =>
+            prev.some(m => m.id === incoming.id) ? prev : [...prev, incoming]
+          )
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [requestId])
 
   const handleSend = async () => {
     if (!content.trim() || !currentUserId || sending) return

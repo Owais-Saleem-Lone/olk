@@ -24,13 +24,15 @@ export default function RatingModal({
   const [hoveredScore, setHoveredScore] = useState(0)
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   const handleSubmit = async () => {
     if (score === 0) return
     setSubmitting(true)
+    setError('')
 
     const supabase = createClient()
-    const { error } = await supabase.from('ratings').insert({
+    const { error: submitError } = await supabase.from('ratings').insert({
       request_id: requestId,
       rater_id: raterId,
       rated_user_id: ratedUserId,
@@ -38,9 +40,8 @@ export default function RatingModal({
       comment: comment.trim() || null,
     })
 
-    if (error) {
-      if (error.code === '23505') alert('You have already rated this exchange.')
-      else alert('Error submitting rating: ' + error.message)
+    if (submitError) {
+      setError(submitError.code === '23505' ? 'You have already rated this exchange.' : 'Error submitting rating: ' + submitError.message)
     } else {
       onSubmitted()
     }
@@ -55,7 +56,7 @@ export default function RatingModal({
       <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
         <h3 className="text-lg font-semibold mb-1">Rate your experience</h3>
         <p className="text-sm text-slate-400 mb-5">
-          How was your exchange with <span className="text-white">{ratedUserName}</span> for <span className="text-teal-400">"{bookTitle}"</span>?
+          How was your exchange with <span className="text-white">{ratedUserName}</span> for <span className="text-teal-400">&quot;{bookTitle}&quot;</span>?
         </p>
 
         {/* Stars */}
@@ -87,6 +88,10 @@ export default function RatingModal({
           rows={2}
           className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none mb-4"
         />
+
+        {error && (
+          <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4">{error}</p>
+        )}
 
         <div className="flex gap-3">
           <button

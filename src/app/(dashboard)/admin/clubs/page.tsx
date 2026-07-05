@@ -35,8 +35,6 @@ export default function AdminClubsPage() {
   const [transferModal, setTransferModal] = useState(false)
   const [transferUserId, setTransferUserId] = useState('')
 
-  useEffect(() => { loadClubs() }, [filter])
-
   async function loadClubs() {
     setLoading(true)
     let query = supabase
@@ -51,6 +49,8 @@ export default function AdminClubsPage() {
     setClubs((data || []) as unknown as Club[])
     setLoading(false)
   }
+
+  useEffect(() => { queueMicrotask(() => loadClubs()) }, [filter])
 
   async function selectClub(club: Club) {
     setSelected(club)
@@ -219,14 +219,21 @@ export default function AdminClubsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setTransferModal(false)}>
           <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-white mb-4">Transfer Club Ownership</h3>
-            <p className="text-sm text-slate-400 mb-3">Enter the user ID of the new owner (must be a club member).</p>
-            <input
-              type="text"
+            <p className="text-sm text-slate-400 mb-3">Choose the new owner (must be a club member).</p>
+            <select
               value={transferUserId}
               onChange={e => setTransferUserId(e.target.value)}
-              placeholder="User ID"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500 mb-4 font-mono"
-            />
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 mb-4"
+            >
+              <option value="">Select a member…</option>
+              {members
+                .filter(m => m.user_id !== (selected?.creator as { id: string } | null)?.id)
+                .map(m => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {(m.user as { display_name: string | null } | null)?.display_name || m.user_id}
+                  </option>
+                ))}
+            </select>
             <div className="flex gap-2">
               <button onClick={() => setTransferModal(false)} className="flex-1 bg-white/5 text-slate-400 py-2 rounded-lg text-sm hover:bg-white/10">Cancel</button>
               <button onClick={handleTransfer} disabled={!transferUserId.trim() || acting} className="flex-1 bg-amber-500 text-white py-2 rounded-lg text-sm hover:bg-amber-400 disabled:opacity-50">

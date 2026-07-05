@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { NOTIFICATION_ICONS as ICONS } from '@/lib/notification-icons'
 
 type Notification = {
   id: string
@@ -12,15 +13,6 @@ type Notification = {
   link: string | null
   read: boolean
   created_at: string
-}
-
-const ICONS: Record<string, string> = {
-  book_requested: '📩',
-  request_accepted: '✅',
-  request_declined: '❌',
-  new_message: '💬',
-  handover_confirmed: '🤝',
-  book_returned: '📗',
 }
 
 function timeAgo(iso: string) {
@@ -41,8 +33,6 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { fetchAll() }, [])
-
   const fetchAll = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
@@ -57,6 +47,8 @@ export default function NotificationsPage() {
     if (data) setNotifications(data)
     setLoading(false)
   }
+
+  useEffect(() => { queueMicrotask(() => fetchAll()) }, [])
 
   const markAllRead = async () => {
     const ids = notifications.filter(n => !n.read).map(n => n.id)

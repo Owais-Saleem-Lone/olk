@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { createNotification } from '@/lib/notifications'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import ConfirmModal from '@/components/confirm-modal'
 
 type Club = {
   id: string
@@ -55,8 +56,7 @@ export default function ClubDetailPage() {
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
   const [editDesc, setEditDesc] = useState('')
-
-  useEffect(() => { fetchClub() }, [clubId])
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const fetchClub = async () => {
     setLoading(true)
@@ -99,17 +99,19 @@ export default function ClubDetailPage() {
       .eq('club_id', clubId)
       .order('created_at', { ascending: false })
       .limit(20)
-    if (postsData) setPosts(postsData as any)
+    if (postsData) setPosts(postsData as unknown as Post[])
 
     const { data: membersData } = await supabase
       .from('club_members')
       .select('user_id, joined_at, profiles(display_name, area_name)')
       .eq('club_id', clubId)
       .order('joined_at', { ascending: true })
-    if (membersData) setMembers(membersData as any)
+    if (membersData) setMembers(membersData as unknown as Member[])
 
     setLoading(false)
   }
+
+  useEffect(() => { queueMicrotask(() => fetchClub()) }, [clubId])
 
   const handleJoin = async () => {
     if (!currentUserId || !club) return
@@ -151,14 +153,13 @@ export default function ClubDetailPage() {
       setNewPost('')
 
       const memberIds = members.map(m => m.user_id).filter(id => id !== currentUserId)
-      if (memberIds.length > 0) {
-        const notifications = memberIds.map(id => ({
-          user_id: id,
+      for (const id of memberIds) {
+        await createNotification({
+          userId: id,
           type: 'club_announcement',
           title: `New announcement in "${club?.name}"`,
           link: `/clubs/${clubId}`,
-        }))
-        await supabase.from('notifications').insert(notifications)
+        })
       }
 
       fetchClub()
@@ -174,7 +175,7 @@ export default function ClubDetailPage() {
   }
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this club? This cannot be undone.')) return
+    setConfirmingDelete(false)
     await supabase.from('clubs').update({ active: false }).eq('id', clubId)
     router.push('/clubs')
   }
@@ -248,7 +249,7 @@ export default function ClubDetailPage() {
                   {!editing && (
                     <button onClick={() => setEditing(true)} className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-4 py-2 rounded-lg text-xs transition-colors">Edit</button>
                   )}
-                  <button onClick={handleDelete} className="text-xs text-red-400/70 hover:text-red-400 transition-colors px-4 py-1.5">Delete Club</button>
+                  <button onClick={() => setConfirmingDelete(true)} className="text-xs text-red-400/70 hover:text-red-400 transition-colors px-4 py-1.5">Delete Club</button>
                 </>
               ) : isMember ? (
                 <button onClick={handleLeave} className="bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors">
@@ -315,7 +316,7 @@ export default function ClubDetailPage() {
                   <p className="text-sm text-white leading-relaxed whitespace-pre-wrap">{post.content}</p>
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
                     <p className="text-xs text-slate-500">
-                      {(post.profiles as any)?.display_name || 'Admin'} · {new Date(post.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {post.profiles?.display_name || 'Admin'} · {new Date(post.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
                     {isCreator && (
                       <button onClick={() => handleDeletePost(post.id)} className="text-xs text-slate-600 hover:text-red-400 transition-colors">Delete</button>
@@ -343,12 +344,12 @@ export default function ClubDetailPage() {
                   className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 hover:border-teal-500/20 transition-colors"
                 >
                   <div className="w-8 h-8 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 font-bold text-sm flex-shrink-0">
-                    {((m.profiles as any)?.display_name || '?')[0].toUpperCase()}
+                    {(m.profiles?.display_name || '?')[0].toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm text-white font-medium">{(m.profiles as any)?.display_name || 'Anonymous'}</p>
-                    {(m.profiles as any)?.area_name && (
-                      <p className="text-xs text-slate-500">{(m.profiles as any).area_name}</p>
+                    <p className="text-sm text-white font-medium">{m.profiles?.display_name || 'Anonymous'}</p>
+                    {m.profiles?.area_name && (
+                      <p className="text-xs text-slate-500">{m.profiles.area_name}</p>
                     )}
                   </div>
                   {m.user_id === club?.creator_id && (
@@ -364,6 +365,16 @@ export default function ClubDetailPage() {
       <div className="mt-8">
         <Link href="/clubs" className="text-sm text-slate-400 hover:text-teal-400 transition-colors">← Back to Clubs</Link>
       </div>
+
+      {confirmingDelete && (
+        <ConfirmModal
+          title="Delete this club?"
+          message="This cannot be undone."
+          confirmLabel="Delete Club"
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmingDelete(false)}
+        />
+      )}
     </div>
   )
 }

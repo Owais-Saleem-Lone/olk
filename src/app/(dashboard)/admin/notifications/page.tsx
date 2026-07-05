@@ -30,19 +30,6 @@ export default function AdminNotificationsPage() {
   // Templates
   const [templates, setTemplates] = useState<Template[]>([])
 
-  useEffect(() => {
-    loadAreas()
-    loadTemplates()
-  }, [])
-
-  useEffect(() => {
-    if (bArea) {
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('area_name', bArea).then(({ count }) => setUserCount(count ?? 0))
-    } else {
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).then(({ count }) => setUserCount(count ?? 0))
-    }
-  }, [bArea])
-
   async function loadAreas() {
     const { data } = await supabase.from('areas').select('name').eq('active', true).order('name')
     setAreas(data?.map(a => a.name) || [])
@@ -52,6 +39,18 @@ export default function AdminNotificationsPage() {
     const { data } = await supabase.from('notification_templates').select('*').order('name')
     setTemplates(data || [])
   }
+
+  useEffect(() => {
+    queueMicrotask(() => { loadAreas(); loadTemplates() })
+  }, [])
+
+  useEffect(() => {
+    if (bArea) {
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('area_name', bArea).then(({ count }) => setUserCount(count ?? 0))
+    } else {
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).then(({ count }) => setUserCount(count ?? 0))
+    }
+  }, [bArea])
 
   async function searchUsers(query: string) {
     setDUserSearch(query)
@@ -78,7 +77,7 @@ export default function AdminNotificationsPage() {
     else setMsg(res.error || 'Failed')
   }
 
-  function useTemplate(t: Template) {
+  function applyTemplate(t: Template) {
     if (tab === 'broadcast') { setBTitle(t.title); setBBody(t.body || '') }
     else if (tab === 'direct') { setDTitle(t.title); setDBody(t.body || '') }
     setTab(tab === 'templates' ? 'broadcast' : tab)
@@ -182,7 +181,7 @@ export default function AdminNotificationsPage() {
                   <p className="text-xs text-slate-500">{t.name}</p>
                   {t.body && <p className="text-xs text-slate-400 mt-1 truncate">{t.body}</p>}
                 </div>
-                <button onClick={() => useTemplate(t)} className="text-xs bg-teal-500/10 text-teal-400 border border-teal-500/20 hover:bg-teal-500/20 px-3 py-1.5 rounded-lg transition-colors ml-3">Use</button>
+                <button onClick={() => applyTemplate(t)} className="text-xs bg-teal-500/10 text-teal-400 border border-teal-500/20 hover:bg-teal-500/20 px-3 py-1.5 rounded-lg transition-colors ml-3">Use</button>
               </div>
             ))
           )}

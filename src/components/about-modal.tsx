@@ -8,7 +8,7 @@ const TEAM = [
     initials: 'OS',
     name: 'Mr. Owais Saleem',
     role: 'Chair & Founder',
-    bio: null as string | null,
+    bio: 'Civil engineer by training — NIT Srinagar, then a Master’s at TU Munich — and currently a Research Assistant at HSU Hamburg, working on structural health monitoring and damage localization. OLK is one piece of a larger conviction: that Kashmir can build an egalitarian society where opportunity crosses mountains and lakes, where cutting-edge technology sits comfortably alongside nature and art, and where a community’s well-being is never measured by GDP alone.',
     website: null as string | null,
   },
   {
@@ -95,7 +95,7 @@ export default function AboutModal() {
               <div className="space-y-6 text-slate-300/80 leading-relaxed text-[15px]">
                 <p>For millennia, education was the pursuit of light—to understand the self, to wrestle with contradictions, and to shape a better world. Somewhere along the way, we traded that light for a paycheck.</p>
                 <p><span className="text-white font-semibold">Open Library Kashmir (OLK)</span> is a quiet rebellion against the mechanical.</p>
-                <p>We believe a physicist should know poetry. We believe a philosopher should marvel at quantum mechanics. And we believe a sincere artist—the one told their craft is "worthless"—is, at least, as valuable as any other white-collar job acquired after degrees.</p>
+                <p>We believe a physicist should know poetry. We believe a philosopher should marvel at quantum mechanics. And we believe a sincere artist—the one told their craft is &quot;worthless&quot;—is, at least, as valuable as any other white-collar job acquired after degrees.</p>
                 <p>Here, the natural sciences sit beside ancient history. Here, cutting-edge technology converses with travelogues and cinema that shakes the soul. We are building a sanctuary for the curious, the creative, and the restless.</p>
                 <p>To turn students in the remotest corners into active shapers of society. We don&apos;t just make access to textbooks easy. We hand out the courage to pursue art by creating, literature by writing and translating and publishing, photography and cinema—not just pictures and reels, but documenting stories, lives, and history. The quiet thrill of a life lived with passion.</p>
               </div>

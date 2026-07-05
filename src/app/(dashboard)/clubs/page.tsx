@@ -38,13 +38,6 @@ export default function ClubsPage() {
   const [joiningClub, setJoiningClub] = useState<string | null>(null)
   const mounted = useRef(false)
 
-  useEffect(() => { fetchClubs() }, [])
-
-  useEffect(() => {
-    if (!mounted.current) { mounted.current = true; return }
-    fetchClubs()
-  }, [filterInterest])
-
   const fetchClubs = async () => {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
@@ -114,6 +107,13 @@ export default function ClubsPage() {
 
     setLoading(false)
   }
+
+  useEffect(() => { queueMicrotask(() => fetchClubs()) }, [])
+
+  useEffect(() => {
+    if (!mounted.current) { mounted.current = true; return }
+    queueMicrotask(() => fetchClubs())
+  }, [filterInterest])
 
   const handleJoin = async (clubId: string) => {
     if (joiningClub) return

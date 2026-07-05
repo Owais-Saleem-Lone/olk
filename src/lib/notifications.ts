@@ -1,6 +1,7 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient as createServerClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { sendNotificationEmail } from '@/lib/send-notification-email'
 
 type NotificationPayload = {
@@ -11,14 +12,24 @@ type NotificationPayload = {
 }
 
 export async function createNotification({ userId, type, title, link }: NotificationPayload) {
-  const supabase = await createClient()
+  const supabase = await createServerClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     throw new Error('Unauthorized')
   }
 
-  const { error } = await supabase.from('notifications').insert({
+  // Cross-user notifications (e.g. "your request was accepted") are created
+  // by the *other* party, so RLS (which now only allows auth.uid() = user_id
+  // for regular users) would reject a same-session insert here. This action
+  // is the trusted server-side gate for that: it confirms the caller is
+  // authenticated, then writes with the service-role client.
+  const supabaseAdmin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+
+  const { error } = await supabaseAdmin.from('notifications').insert({
     user_id: userId,
     type,
     title,

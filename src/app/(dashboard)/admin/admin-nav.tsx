@@ -27,7 +27,7 @@ export default function AdminNav({ role }: { role: AdminRole }) {
         .filter(n => HIERARCHY[role] >= HIERARCHY[n.minRole])
         .map(n => {
           const isActive = n.href === '/admin'
-            ? pathname === '/admin' || pathname === '/admin/overview'
+            ? pathname === '/admin'
             : pathname.startsWith(n.href)
           return (
             <Link

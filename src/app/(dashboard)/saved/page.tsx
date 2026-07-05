@@ -25,8 +25,6 @@ export default function SavedBooksPage() {
   const [savedBooks, setSavedBooks] = useState<SavedBook[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { fetchSaved() }, [])
-
   const fetchSaved = async () => {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
@@ -38,9 +36,11 @@ export default function SavedBooksPage() {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
-    if (data) setSavedBooks(data as any)
+    if (data) setSavedBooks(data as unknown as SavedBook[])
     setLoading(false)
   }
+
+  useEffect(() => { queueMicrotask(() => fetchSaved()) }, [])
 
   const handleRemove = async (bookmarkId: string) => {
     await supabase.from('bookmarks').delete().eq('id', bookmarkId)
@@ -52,7 +52,7 @@ export default function SavedBooksPage() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-2">Saved Books</h1>
-      <p className="text-slate-400 mb-8">Books you've bookmarked for later</p>
+      <p className="text-slate-400 mb-8">Books you&apos;ve bookmarked for later</p>
 
       {savedBooks.length === 0 ? (
         <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-10 text-center">

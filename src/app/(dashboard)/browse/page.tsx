@@ -43,7 +43,9 @@ export default function BrowsePage() {
   const [books, setBooks] = useState<Book[]>([])
   const [profiles, setProfiles] = useState<Record<string, Profile>>({})
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(() =>
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('q') || '' : ''
+  )
   const [filterGenre, setFilterGenre] = useState('')
   const [filterType, setFilterType] = useState('')
   const [filterCondition, setFilterCondition] = useState('')
@@ -60,17 +62,6 @@ export default function BrowsePage() {
 
   const mounted = useRef(false)
 
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get('q') || ''
-    setSearchQuery(q)
-    fetchBooks(q)
-  }, [])
-
-  useEffect(() => {
-    if (!mounted.current) { mounted.current = true; return }
-    fetchBooks(searchQuery)
-  }, [filterGenre, filterType, filterCondition])
-
   const fetchBooks = async (query: string = '') => {
     setLoading(true)
 
@@ -86,7 +77,7 @@ export default function BrowsePage() {
         .eq('requester_id', user.id)
         .in('status', ['pending', 'accepted', 'handed_over'])
       if (existingReqs) {
-        setRequestedBooks(new Set(existingReqs.map((r: any) => r.book_id)))
+        setRequestedBooks(new Set(existingReqs.map((r: { book_id: string }) => r.book_id)))
       }
 
       const { data: existingBookmarks } = await supabase
@@ -94,7 +85,7 @@ export default function BrowsePage() {
         .select('book_id')
         .eq('user_id', user.id)
       if (existingBookmarks) {
-        setBookmarkedBooks(new Set(existingBookmarks.map((b: any) => b.book_id)))
+        setBookmarkedBooks(new Set(existingBookmarks.map((b: { book_id: string }) => b.book_id)))
       }
 
       const { data: myProfile } = await supabase
@@ -132,9 +123,9 @@ export default function BrowsePage() {
         setBooks(filtered)
         fetchProgress(filtered)
         const profileMap: Record<string, Profile> = {}
-        filtered.forEach((b: any) => {
+        filtered.forEach((b) => {
           if (!profileMap[b.owner_id]) {
-            profileMap[b.owner_id] = { id: b.owner_id, display_name: b.owner_name, area_name: b.owner_area }
+            profileMap[b.owner_id] = { id: b.owner_id, display_name: b.owner_name ?? null, area_name: b.owner_area ?? null }
           }
         })
         setProfiles(profileMap)
@@ -179,7 +170,7 @@ export default function BrowsePage() {
       .in('book_id', bookIds)
     if (data) {
       const pm: Record<string, number> = {}
-      data.forEach((p: any) => { pm[p.book_id] = p.progress_pct })
+      data.forEach((p: { book_id: string; progress_pct: number }) => { pm[p.book_id] = p.progress_pct })
       setBookProgress(pm)
     }
   }
@@ -189,7 +180,7 @@ export default function BrowsePage() {
     const ownerIds = [...new Set(booksData.map(b => b.owner_id))]
     if (ownerIds.length === 0) return
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('profiles')
       .select('*')
       .in('id', ownerIds)
@@ -202,6 +193,15 @@ export default function BrowsePage() {
       setProfiles(profileMap)
     }
   }
+
+  useEffect(() => {
+    queueMicrotask(() => fetchBooks(searchQuery))
+  }, [])
+
+  useEffect(() => {
+    if (!mounted.current) { mounted.current = true; return }
+    queueMicrotask(() => fetchBooks(searchQuery))
+  }, [filterGenre, filterType, filterCondition])
 
   const toggleBookmark = async (bookId: string) => {
     const { data: { user } } = await supabase.auth.getUser()

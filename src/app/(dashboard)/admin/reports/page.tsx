@@ -44,8 +44,7 @@ export default function AdminReportsPage() {
   const [acting, setActing] = useState(false)
   const [quickAction, setQuickAction] = useState<'ban' | 'warn' | 'hide' | null>(null)
   const [quickReason, setQuickReason] = useState('')
-
-  useEffect(() => { loadReports() }, [filter, filterCat])
+  const [quickBanDays, setQuickBanDays] = useState(7)
 
   async function loadReports() {
     setLoading(true)
@@ -85,6 +84,8 @@ export default function AdminReportsPage() {
     })))
     setLoading(false)
   }
+
+  useEffect(() => { queueMicrotask(() => loadReports()) }, [filter, filterCat])
 
   async function selectReport(r: Report) {
     setSelected(r)
@@ -131,7 +132,7 @@ export default function AdminReportsPage() {
     setActing(true)
     let res
     if (quickAction === 'ban' && selected.reported_user_id) {
-      res = await banUser(selected.reported_user_id, quickReason, false, 7)
+      res = await banUser(selected.reported_user_id, quickReason, false, quickBanDays)
     } else if (quickAction === 'warn' && selected.reported_user_id) {
       res = await warnUser(selected.reported_user_id, quickReason)
     } else if (quickAction === 'hide' && selected.reported_book_id) {
@@ -142,6 +143,7 @@ export default function AdminReportsPage() {
       setMsg(`Action completed`)
       setQuickAction(null)
       setQuickReason('')
+      setQuickBanDays(7)
       await updateReportStatus(selected.id, 'resolved')
       setSelected(null)
       loadReports()
@@ -336,6 +338,18 @@ export default function AdminReportsPage() {
               rows={3}
               className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none mb-4"
             />
+            {quickAction === 'ban' && (
+              <div className="mb-4">
+                <label className="text-sm text-slate-400">Duration (days)</label>
+                <input
+                  type="number"
+                  value={quickBanDays}
+                  onChange={e => setQuickBanDays(Number(e.target.value))}
+                  min={1}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
+            )}
             <div className="flex gap-2">
               <button onClick={() => setQuickAction(null)} className="flex-1 bg-white/5 text-slate-400 py-2 rounded-lg text-sm hover:bg-white/10">Cancel</button>
               <button onClick={handleQuickAction} disabled={!quickReason.trim() || acting} className="flex-1 bg-red-500 text-white py-2 rounded-lg text-sm hover:bg-red-400 disabled:opacity-50">
