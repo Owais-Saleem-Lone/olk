@@ -7,7 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "env:local": "cp .env.docker .env.local && echo 'Switched .env.local to the local Docker Supabase stack -- restart npm run dev.'",
+    "env:remote": "cp .env.remote .env.local && echo 'Switched .env.local to the remote Supabase project -- restart npm run dev.'",
+    "db:reset": "supabase db reset",
+    "db:push": "supabase db push",
+    "db:pull-data": "bash scripts/pull-remote-data.sh"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
