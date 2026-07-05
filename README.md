@@ -38,7 +38,8 @@
 
 - Node.js `18.18.0` or later
 - `npm`, `yarn`, or `pnpm`
-- A [Supabase](https://supabase.com/) account and project
+- [Docker](https://docs.docker.com/get-docker/) (for running Supabase locally — recommended)
+- A [Supabase](https://supabase.com/) account and project (only needed if you want to talk to the hosted/remote database instead)
 
 ### 1. Clone the Repository
 
@@ -57,7 +58,49 @@ yarn install
 pnpm install
 ```
 
-### 3. Link to Your Supabase Project
+### 3. Run Supabase Locally with Docker (recommended)
+
+Instead of relying on the hosted database for every code change, you can run the whole Supabase stack (Postgres, Auth, Storage, Realtime, Studio) locally via Docker. The Supabase CLI drives Docker for you — you never touch `docker compose` directly.
+
+```bash
+# one-time: creates supabase/config.toml (already committed here, so you can skip this)
+npx supabase init
+
+# starts the local stack (pulls images on first run)
+npx supabase start
+
+# applies every migration in supabase/migrations to the local database
+npx supabase db reset
+```
+
+`supabase start` prints a block of local credentials. Point the app at them in `.env.local`:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<the ANON_KEY printed by `supabase start`>
+```
+
+Useful local endpoints:
+
+| Service | URL |
+| --- | --- |
+| API | http://127.0.0.1:54321 |
+| Studio (DB browser/UI) | http://127.0.0.1:54323 |
+| Inbucket/Mailpit (catches auth emails) | http://127.0.0.1:54324 |
+| Postgres | `postgresql://postgres:postgres@127.0.0.1:54322/postgres` |
+
+Day-to-day commands:
+
+```bash
+npx supabase stop        # stop the containers (data persists in a Docker volume)
+npx supabase start       # start them again
+npx supabase db reset    # wipe the local DB and replay all migrations from scratch
+npx supabase status      # print the local credentials again
+```
+
+Since `NEXT_PUBLIC_SUPABASE_URL` in `.env.local` decides where the app talks, switching between local and remote is just swapping that file's values — a backup of the remote credentials is kept in `.env.remote` (gitignored, not read by Next.js) for quick reference.
+
+### 4. Link to Your Supabase Project (only if using the remote database)
 
 If you have the Supabase CLI installed, you can link your local repository to your remote Supabase project. This syncs your database types and configurations:
 
@@ -68,16 +111,16 @@ npx supabase link --project-ref <your-project-ref>
 
 > Your project ref can be found in `supabase/.temp/linked-project.json` after linking.
 
-### 4. Configure Environment Variables
+### 5. Configure Environment Variables
 
-Create a `.env.local` file in the root directory and add your Supabase credentials:
+Create a `.env.local` file in the root directory and add your Supabase credentials (skip this if you're using the local Docker stack from step 3 — its `.env.local` values are already set):
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-### 5. Set Up the Database Schema
+### 6. Set Up the Database Schema
 
 The repository includes a complete SQL schema file at `supabase/schema.sql`. This file contains all the table definitions, relationships, and Row Level Security (RLS) policies needed for the application.
 
@@ -89,7 +132,7 @@ You can apply it in one of two ways:
 ```bash
 npx supabase db push
 ```
-### 6. Run the Development Server
+### 7. Run the Development Server
 
 ```bash
 npm run dev
