@@ -135,8 +135,8 @@ export default function AdminContentPage() {
   return (
     <div>
       {msg && (
-        <div className="mb-4 bg-teal-500/10 border border-teal-500/20 text-teal-400 text-sm px-4 py-2 rounded-lg flex justify-between">
-          {msg}<button onClick={() => setMsg('')} className="text-teal-400/50 hover:text-teal-400">×</button>
+        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-light text-sm px-4 py-2 rounded-lg flex justify-between">
+          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-light/50 hover:text-brand-teal-light">×</button>
         </div>
       )}
 
@@ -154,10 +154,10 @@ export default function AdminContentPage() {
           <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
             <h3 className="text-sm font-medium text-slate-300 mb-4">New Announcement</h3>
             <div className="space-y-3">
-              <input type="text" value={annTitle} onChange={e => setAnnTitle(e.target.value)} placeholder="Title" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
-              <textarea value={annBody} onChange={e => setAnnBody(e.target.value)} placeholder="Body (optional)" rows={3} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none" />
+              <input type="text" value={annTitle} onChange={e => setAnnTitle(e.target.value)} placeholder="Title" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+              <textarea value={annBody} onChange={e => setAnnBody(e.target.value)} placeholder="Body (optional)" rows={3} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none" />
               <div className="flex gap-3">
-                <select value={annType} onChange={e => setAnnType(e.target.value)} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <select value={annType} onChange={e => setAnnType(e.target.value)} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-teal">
                   <option value="info">Info</option>
                   <option value="warning">Warning</option>
                   <option value="success">Success</option>
@@ -167,9 +167,9 @@ export default function AdminContentPage() {
                   <input type="checkbox" checked={annBanner} onChange={e => setAnnBanner(e.target.checked)} className="rounded" />
                   <span className="text-sm text-slate-300">Show as banner</span>
                 </label>
-                <input type="datetime-local" value={annEndsAt} onChange={e => setAnnEndsAt(e.target.value)} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                <input type="datetime-local" value={annEndsAt} onChange={e => setAnnEndsAt(e.target.value)} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
               </div>
-              <button onClick={handleCreateAnnouncement} disabled={!annTitle.trim() || acting} className="bg-teal-500 hover:bg-teal-400 text-white font-medium py-2.5 px-6 rounded-lg text-sm transition-colors disabled:opacity-50">
+              <button onClick={handleCreateAnnouncement} disabled={!annTitle.trim() || acting} className="bg-brand-teal hover:bg-brand-teal-light text-white font-medium py-2.5 px-6 rounded-lg text-sm transition-colors disabled:opacity-50">
                 {acting ? 'Creating...' : 'Create Announcement'}
               </button>
             </div>
@@ -188,7 +188,7 @@ export default function AdminContentPage() {
                         a.type === 'event' ? 'bg-purple-500/10 text-purple-400' :
                         'bg-blue-500/10 text-blue-400'
                       }`}>{a.type}</span>
-                      {a.is_banner && <span className="text-xs bg-teal-500/10 text-teal-400 px-2 py-0.5 rounded-full">Banner</span>}
+                      {a.is_banner && <span className="text-xs bg-brand-teal/10 text-brand-teal-light px-2 py-0.5 rounded-full">Banner</span>}
                     </div>
                     {a.body && <p className="text-xs text-slate-400">{a.body}</p>}
                     <p className="text-xs text-slate-600 mt-1">{new Date(a.created_at).toLocaleDateString()} {a.ends_at ? `· Ends ${new Date(a.ends_at).toLocaleDateString()}` : ''}</p>
@@ -205,8 +205,8 @@ export default function AdminContentPage() {
       {tab === 'genres' && (
         <div>
           <div className="flex gap-2 mb-4">
-            <input type="text" value={newGenre} onChange={e => setNewGenre(e.target.value)} placeholder="New genre name" className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" onKeyDown={e => e.key === 'Enter' && handleAddGenre()} />
-            <button onClick={handleAddGenre} disabled={!newGenre.trim() || acting} className="bg-teal-500 hover:bg-teal-400 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-colors disabled:opacity-50">Add</button>
+            <input type="text" value={newGenre} onChange={e => setNewGenre(e.target.value)} placeholder="New genre name" className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" onKeyDown={e => e.key === 'Enter' && handleAddGenre()} />
+            <button onClick={handleAddGenre} disabled={!newGenre.trim() || acting} className="bg-brand-teal hover:bg-brand-teal-light text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-colors disabled:opacity-50">Add</button>
           </div>
           <div className="flex flex-wrap gap-2">
             {genres.map(g => (
@@ -214,7 +214,7 @@ export default function AdminContentPage() {
                 key={g.id}
                 onClick={() => handleToggleGenre(g.name, g.active)}
                 className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${
-                  g.active ? 'bg-teal-500/10 text-teal-400 border-teal-500/20 hover:bg-teal-500/20' : 'bg-white/[0.03] text-slate-500 border-white/[0.06] hover:bg-white/5 line-through'
+                  g.active ? 'bg-brand-teal/10 text-brand-teal-light border-brand-teal/20 hover:bg-brand-teal/20' : 'bg-white/[0.03] text-slate-500 border-white/[0.06] hover:bg-white/5 line-through'
                 }`}
               >
                 {g.name}
@@ -228,9 +228,9 @@ export default function AdminContentPage() {
       {tab === 'areas' && (
         <div>
           <div className="flex gap-2 mb-4">
-            <input type="text" value={newAreaName} onChange={e => setNewAreaName(e.target.value)} placeholder="Area name" className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
-            <input type="text" value={newAreaDistrict} onChange={e => setNewAreaDistrict(e.target.value)} placeholder="District" className="w-40 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
-            <button onClick={handleAddArea} disabled={!newAreaName.trim() || acting} className="bg-teal-500 hover:bg-teal-400 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-colors disabled:opacity-50">Add</button>
+            <input type="text" value={newAreaName} onChange={e => setNewAreaName(e.target.value)} placeholder="Area name" className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+            <input type="text" value={newAreaDistrict} onChange={e => setNewAreaDistrict(e.target.value)} placeholder="District" className="w-40 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+            <button onClick={handleAddArea} disabled={!newAreaName.trim() || acting} className="bg-brand-teal hover:bg-brand-teal-light text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-colors disabled:opacity-50">Add</button>
           </div>
           {(() => {
             const grouped: Record<string, Area[]> = {}
@@ -267,12 +267,12 @@ export default function AdminContentPage() {
           <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6">
             <h3 className="text-sm font-medium text-slate-300 mb-4">{botm ? 'Update Book of the Month' : 'Set Book of the Month'}</h3>
             <div className="space-y-3">
-              <input type="text" value={botmTitle} onChange={e => setBotmTitle(e.target.value)} placeholder="Title" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
-              <input type="text" value={botmAuthor} onChange={e => setBotmAuthor(e.target.value)} placeholder="Author" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
-              <textarea value={botmDesc} onChange={e => setBotmDesc(e.target.value)} placeholder="Why this book?" rows={3} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none" />
-              <input type="url" value={botmCover} onChange={e => setBotmCover(e.target.value)} placeholder="Cover Image URL" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
-              <input type="text" value={botmLabel} onChange={e => setBotmLabel(e.target.value)} placeholder="e.g. July 2026" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
-              <button onClick={handleSaveBotm} disabled={!botmTitle.trim() || acting} className="w-full bg-teal-500 hover:bg-teal-400 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50">
+              <input type="text" value={botmTitle} onChange={e => setBotmTitle(e.target.value)} placeholder="Title" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+              <input type="text" value={botmAuthor} onChange={e => setBotmAuthor(e.target.value)} placeholder="Author" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+              <textarea value={botmDesc} onChange={e => setBotmDesc(e.target.value)} placeholder="Why this book?" rows={3} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none" />
+              <input type="url" value={botmCover} onChange={e => setBotmCover(e.target.value)} placeholder="Cover Image URL" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+              <input type="text" value={botmLabel} onChange={e => setBotmLabel(e.target.value)} placeholder="e.g. July 2026" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+              <button onClick={handleSaveBotm} disabled={!botmTitle.trim() || acting} className="w-full bg-brand-teal hover:bg-brand-teal-light text-white font-semibold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50">
                 {acting ? 'Saving...' : botm ? 'Update & Replace' : 'Set as Book of the Month'}
               </button>
             </div>

@@ -152,7 +152,7 @@ export default function ClubsPage() {
         {currentUserId && (
           <Link
             href="/clubs/create"
-            className="flex items-center gap-1.5 bg-teal-500 hover:bg-teal-400 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
+            className="flex items-center gap-1.5 bg-brand-teal hover:bg-brand-teal-light text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
           >
             + Create Club
           </Link>
@@ -168,17 +168,17 @@ export default function ClubsPage() {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search clubs..."
-            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
           />
           <select
             value={filterInterest}
             onChange={e => setFilterInterest(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="bg-white/5 border border-white/10 rounded-lg px-3 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-teal"
           >
-            <option value="" className="bg-slate-900">All Interests</option>
-            {INTERESTS.map(i => <option key={i} value={i} className="bg-slate-900">{i}</option>)}
+            <option value="" className="bg-brand-slate">All Interests</option>
+            {INTERESTS.map(i => <option key={i} value={i} className="bg-brand-slate">{i}</option>)}
           </select>
-          <button type="submit" className="bg-teal-500 hover:bg-teal-400 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-sm">
+          <button type="submit" className="bg-brand-teal hover:bg-brand-teal-light text-white font-semibold px-6 py-3 rounded-lg transition-colors text-sm">
             Search
           </button>
         </div>
@@ -201,9 +201,9 @@ export default function ClubsPage() {
       {!loading && clubs.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {clubs.map(club => (
-            <div key={club.id} className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden hover:border-teal-500/30 transition-colors flex flex-col">
+            <div key={club.id} className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden hover:border-brand-teal/30 transition-colors flex flex-col">
               {/* Cover */}
-              <div className="w-full h-32 bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden relative">
+              <div className="w-full h-32 bg-gradient-to-br from-brand-slate-light to-brand-slate overflow-hidden relative">
                 {club.cover_url ? (
                   <Image src={club.cover_url} alt={club.name} fill unoptimized sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover" referrerPolicy="no-referrer" />
                 ) : (
@@ -219,7 +219,7 @@ export default function ClubsPage() {
               </div>
 
               <div className="p-4 flex flex-col flex-1">
-                <Link href={`/clubs/${club.id}`} className="text-base font-semibold text-white hover:text-teal-400 transition-colors mb-1">
+                <Link href={`/clubs/${club.id}`} className="text-base font-semibold text-white hover:text-brand-teal-light transition-colors mb-1">
                   {club.name}
                 </Link>
                 {club.description && (
@@ -230,7 +230,7 @@ export default function ClubsPage() {
                   <div className="text-xs text-slate-500">
                     <span className="text-slate-300 font-medium">{club.member_count}</span> {club.member_count === 1 ? 'member' : 'members'}
                     {club.distance_km != null && (
-                      <span className="ml-2 text-teal-400 font-medium">{formatDistance(club.distance_km)}</span>
+                      <span className="ml-2 text-brand-teal-light font-medium">{formatDistance(club.distance_km)}</span>
                     )}
                     {club.area_name && <span className="ml-1">· 📍 {club.area_name}</span>}
                   </div>
@@ -242,7 +242,7 @@ export default function ClubsPage() {
                       Login to Join
                     </Link>
                   ) : joinedClubs.has(club.id) ? (
-                    <Link href={`/clubs/${club.id}`} className="w-full block text-center bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium py-2 rounded-lg text-sm">
+                    <Link href={`/clubs/${club.id}`} className="w-full block text-center bg-brand-teal/10 text-brand-teal-light border border-brand-teal/20 font-medium py-2 rounded-lg text-sm">
                       Member ✓
                     </Link>
                   ) : (

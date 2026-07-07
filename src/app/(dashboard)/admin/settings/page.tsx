@@ -84,8 +84,8 @@ export default function AdminSettingsPage() {
   return (
     <div>
       {msg && (
-        <div className="mb-4 bg-teal-500/10 border border-teal-500/20 text-teal-400 text-sm px-4 py-2 rounded-lg flex justify-between">
-          {msg}<button onClick={() => setMsg('')} className="text-teal-400/50 hover:text-teal-400">×</button>
+        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-light text-sm px-4 py-2 rounded-lg flex justify-between">
+          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-light/50 hover:text-brand-teal-light">×</button>
         </div>
       )}
 
@@ -117,7 +117,7 @@ export default function AdminSettingsPage() {
                     onClick={() => toggleFeature(s.key, s.value)}
                     disabled={acting}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      s.value === 'true' ? 'bg-teal-500' : 'bg-white/10'
+                      s.value === 'true' ? 'bg-brand-teal' : 'bg-white/10'
                     }`}
                   >
                     <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
@@ -145,15 +145,15 @@ export default function AdminSettingsPage() {
                         type="text"
                         value={editValue}
                         onChange={e => setEditValue(e.target.value)}
-                        className="w-24 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        className="w-24 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
                         autoFocus
                       />
-                      <button onClick={() => handleSaveSetting(s.key)} disabled={acting} className="text-xs bg-teal-500 text-white px-3 py-1.5 rounded-lg hover:bg-teal-400 disabled:opacity-50">Save</button>
+                      <button onClick={() => handleSaveSetting(s.key)} disabled={acting} className="text-xs bg-brand-teal text-white px-3 py-1.5 rounded-lg hover:bg-brand-teal-light disabled:opacity-50">Save</button>
                       <button onClick={() => setEditingSetting(null)} className="text-xs text-slate-400 px-2 py-1.5">Cancel</button>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 ml-4">
-                      <span className="text-sm text-teal-400 font-mono">{s.value}</span>
+                      <span className="text-sm text-brand-teal-light font-mono">{s.value}</span>
                       <button
                         onClick={() => { setEditingSetting(s.key); setEditValue(s.value) }}
                         className="text-xs text-slate-500 hover:text-white px-2 py-1 rounded hover:bg-white/5 transition-colors"
@@ -176,7 +176,7 @@ export default function AdminSettingsPage() {
             <select
               value={auditFilter}
               onChange={e => { setAuditFilter(e.target.value); setAuditPage(0) }}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-teal"
             >
               <option value="">All Actions</option>
               {['ban_user', 'unban_user', 'warn_user', 'hide_book', 'unhide_book', 'edit_book', 'cancel_request', 'force_return', 'update_report', 'set_admin_role', 'update_setting', 'broadcast_notification', 'create_announcement', 'deactivate_club'].map(a => (

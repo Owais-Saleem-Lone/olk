@@ -92,8 +92,8 @@ export default function AdminClubsPage() {
   return (
     <div>
       {msg && (
-        <div className="mb-4 bg-teal-500/10 border border-teal-500/20 text-teal-400 text-sm px-4 py-2 rounded-lg flex justify-between">
-          {msg}<button onClick={() => setMsg('')} className="text-teal-400/50 hover:text-teal-400">×</button>
+        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-light text-sm px-4 py-2 rounded-lg flex justify-between">
+          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-light/50 hover:text-brand-teal-light">×</button>
         </div>
       )}
 
@@ -123,7 +123,7 @@ export default function AdminClubsPage() {
                 key={c.id}
                 onClick={() => selectClub(c)}
                 className={`w-full text-left bg-white/[0.03] border rounded-xl p-4 transition-colors ${
-                  selected?.id === c.id ? 'border-teal-500/30 bg-teal-500/5' : 'border-white/[0.06] hover:bg-white/[0.05]'
+                  selected?.id === c.id ? 'border-brand-teal/30 bg-brand-teal/5' : 'border-white/[0.06] hover:bg-white/[0.05]'
                 } ${!c.active ? 'opacity-60' : ''}`}
               >
                 <div className="flex items-center justify-between">
@@ -217,7 +217,7 @@ export default function AdminClubsPage() {
       {/* Transfer Modal */}
       {transferModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setTransferModal(false)}>
-          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-white mb-4">Transfer Club Ownership</h3>
             <p className="text-sm text-slate-400 mb-3">Choose the new owner (must be a club member).</p>
             <select

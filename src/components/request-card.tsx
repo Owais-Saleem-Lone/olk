@@ -67,7 +67,7 @@ export default function RequestCard({
     <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 flex flex-col gap-4">
       <div className="flex gap-4">
         {/* Cover thumbnail */}
-        <div className="w-14 h-20 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 border border-white/5">
+        <div className="w-14 h-20 rounded-lg overflow-hidden bg-brand-slate-light flex-shrink-0 border border-white/5">
           {coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={coverUrl} alt={title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -88,7 +88,7 @@ export default function RequestCard({
 
           <p className="text-sm text-slate-400 mb-2">
             {otherUserLabel}{' '}
-            <Link href={`/user/${otherUserId}`} className="text-teal-400 hover:text-teal-300 hover:underline">
+            <Link href={`/user/${otherUserId}`} className="text-brand-teal-light hover:text-teal-300 hover:underline">
               {otherUserName}
             </Link>
             {otherUserArea && <span className="text-slate-500"> · 📍 {otherUserArea}</span>}

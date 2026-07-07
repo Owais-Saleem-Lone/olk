@@ -88,19 +88,19 @@ export default function WishlistPage() {
             onChange={e => setTitle(e.target.value)}
             placeholder="Book title you're looking for..."
             required
-            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
           />
           <input
             type="text"
             value={author}
             onChange={e => setAuthor(e.target.value)}
             placeholder="Author (optional)"
-            className="sm:w-48 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+            className="sm:w-48 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
           />
           <button
             type="submit"
             disabled={adding || !title.trim()}
-            className="bg-teal-500 hover:bg-teal-400 disabled:opacity-40 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-sm whitespace-nowrap"
+            className="bg-brand-teal hover:bg-brand-teal-light disabled:opacity-40 text-white font-semibold px-6 py-3 rounded-lg transition-colors text-sm whitespace-nowrap"
           >
             {adding ? 'Adding...' : '+ Add to Wishlist'}
           </button>
@@ -127,7 +127,7 @@ export default function WishlistPage() {
                 {item.matched_book_id ? (
                   <Link
                     href={`/browse?q=${encodeURIComponent(item.title)}`}
-                    className="bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors hover:bg-teal-500/20"
+                    className="bg-brand-teal/10 text-brand-teal-light border border-brand-teal/20 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors hover:bg-brand-teal/20"
                   >
                     Match found! →
                   </Link>

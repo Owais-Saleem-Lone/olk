@@ -119,11 +119,11 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-slate-900 border border-white/10 rounded-xl shadow-2xl shadow-black/40 overflow-hidden z-50">
+        <div className="absolute right-0 top-full mt-2 w-80 bg-brand-slate border border-white/10 rounded-xl shadow-2xl shadow-black/40 overflow-hidden z-50">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
             <h3 className="text-sm font-semibold text-white">Notifications</h3>
             {unreadCount > 0 && (
-              <button onClick={markAllRead} className="text-xs text-teal-400 hover:text-teal-300 transition-colors">
+              <button onClick={markAllRead} className="text-xs text-brand-teal-light hover:text-teal-300 transition-colors">
                 Mark all read
               </button>
             )}
@@ -145,7 +145,7 @@ export default function NotificationBell() {
                       setUnreadCount(prev => Math.max(0, prev - 1))
                     }
                   }}
-                  className={`block px-4 py-3 hover:bg-white/[0.04] transition-colors border-b border-white/[0.03] last:border-b-0 ${!n.read ? 'bg-teal-500/[0.04]' : ''}`}
+                  className={`block px-4 py-3 hover:bg-white/[0.04] transition-colors border-b border-white/[0.03] last:border-b-0 ${!n.read ? 'bg-brand-teal/[0.04]' : ''}`}
                 >
                   <div className="flex gap-3">
                     <span className="text-base flex-shrink-0 mt-0.5">{ICONS[n.type] || '🔔'}</span>
@@ -154,9 +154,9 @@ export default function NotificationBell() {
                         {n.title}
                       </p>
                       {n.body && <p className="text-xs text-slate-600 truncate mt-0.5">{n.body}</p>}
-                      <p className="text-xs text-slate-700 mt-1">{timeAgo(n.created_at)}</p>
+                      <p className="text-xs text-brand-slate-muted mt-1">{timeAgo(n.created_at)}</p>
                     </div>
-                    {!n.read && <div className="w-2 h-2 rounded-full bg-teal-400 flex-shrink-0 mt-1.5" />}
+                    {!n.read && <div className="w-2 h-2 rounded-full bg-brand-teal-light flex-shrink-0 mt-1.5" />}
                   </div>
                 </Link>
               ))

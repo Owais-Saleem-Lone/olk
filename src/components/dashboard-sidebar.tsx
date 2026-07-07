@@ -40,7 +40,7 @@ export default function DashboardSidebar({
   return (
     <aside className="w-64 h-full border-r border-white/5 p-6 flex flex-col">
       <Link href="/" className="flex items-center gap-2 mb-10">
-        <div className="w-9 h-9 rounded-lg bg-teal-500 flex items-center justify-center font-bold text-sm">OLK</div>
+        <div className="w-9 h-9 rounded-lg bg-brand-teal flex items-center justify-center font-bold text-sm">OLK</div>
         <span className="text-lg font-semibold tracking-tight">OLK</span>
       </Link>
 

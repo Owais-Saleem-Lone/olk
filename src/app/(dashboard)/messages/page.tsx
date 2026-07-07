@@ -155,10 +155,10 @@ export default function MessagesPage() {
               <Link
                 key={conv.requestId}
                 href={`/messages/${conv.requestId}`}
-                className="flex items-center gap-4 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-teal-500/20 rounded-2xl p-4 transition-colors group"
+                className="flex items-center gap-4 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-brand-teal/20 rounded-2xl p-4 transition-colors group"
               >
                 {/* Avatar */}
-                <div className="w-12 h-12 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 font-bold text-lg flex-shrink-0">
+                <div className="w-12 h-12 rounded-full bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-brand-teal-light font-bold text-lg flex-shrink-0">
                   {initials}
                 </div>
 

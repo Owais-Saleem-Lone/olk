@@ -324,14 +324,14 @@ export default function MyBooksPage() {
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Book Title</label>
               <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
                 placeholder="e.g., The Alchemist" />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Author</label>
               <input type="text" value={author} onChange={(e) => setAuthor(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
                 placeholder="e.g., Paulo Coelho" />
             </div>
 
@@ -346,41 +346,41 @@ export default function MyBooksPage() {
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Category</label>
               <select value={genre} onChange={(e) => setGenre(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
-                <optgroup label="Natural Sciences" className="bg-slate-900">
-                  <option value="Physics" className="bg-slate-900">Physics</option>
-                  <option value="Chemistry" className="bg-slate-900">Chemistry</option>
-                  <option value="Biology" className="bg-slate-900">Biology</option>
-                  <option value="Mathematics" className="bg-slate-900">Mathematics</option>
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-brand-teal">
+                <optgroup label="Natural Sciences" className="bg-brand-slate">
+                  <option value="Physics" className="bg-brand-slate">Physics</option>
+                  <option value="Chemistry" className="bg-brand-slate">Chemistry</option>
+                  <option value="Biology" className="bg-brand-slate">Biology</option>
+                  <option value="Mathematics" className="bg-brand-slate">Mathematics</option>
                 </optgroup>
-                <optgroup label="Engineering" className="bg-slate-900">
-                  <option value="Civil Engineering" className="bg-slate-900">Civil Engineering</option>
-                  <option value="Mechanical Engineering" className="bg-slate-900">Mechanical Engineering</option>
-                  <option value="Electrical Engineering" className="bg-slate-900">Electrical Engineering</option>
-                  <option value="IT/Computer Science" className="bg-slate-900">IT/Computer Science</option>
+                <optgroup label="Engineering" className="bg-brand-slate">
+                  <option value="Civil Engineering" className="bg-brand-slate">Civil Engineering</option>
+                  <option value="Mechanical Engineering" className="bg-brand-slate">Mechanical Engineering</option>
+                  <option value="Electrical Engineering" className="bg-brand-slate">Electrical Engineering</option>
+                  <option value="IT/Computer Science" className="bg-brand-slate">IT/Computer Science</option>
                 </optgroup>
-                <optgroup label="Medicine" className="bg-slate-900">
-                  <option value="Anatomy" className="bg-slate-900">Anatomy</option>
-                  <option value="Physiology" className="bg-slate-900">Physiology</option>
-                  <option value="Clinical Medicine" className="bg-slate-900">Clinical Medicine</option>
+                <optgroup label="Medicine" className="bg-brand-slate">
+                  <option value="Anatomy" className="bg-brand-slate">Anatomy</option>
+                  <option value="Physiology" className="bg-brand-slate">Physiology</option>
+                  <option value="Clinical Medicine" className="bg-brand-slate">Clinical Medicine</option>
                 </optgroup>
-                <optgroup label="Social Sciences" className="bg-slate-900">
-                  <option value="History" className="bg-slate-900">History</option>
-                  <option value="Civics" className="bg-slate-900">Civics</option>
-                  <option value="Geography" className="bg-slate-900">Geography</option>
-                  <option value="Psychology" className="bg-slate-900">Psychology</option>
-                  <option value="Philosophy" className="bg-slate-900">Philosophy</option>
+                <optgroup label="Social Sciences" className="bg-brand-slate">
+                  <option value="History" className="bg-brand-slate">History</option>
+                  <option value="Civics" className="bg-brand-slate">Civics</option>
+                  <option value="Geography" className="bg-brand-slate">Geography</option>
+                  <option value="Psychology" className="bg-brand-slate">Psychology</option>
+                  <option value="Philosophy" className="bg-brand-slate">Philosophy</option>
                 </optgroup>
-                <optgroup label="Literature" className="bg-slate-900">
-                  <option value="English Literature" className="bg-slate-900">English Literature</option>
-                  <option value="Urdu Literature" className="bg-slate-900">Urdu Literature</option>
-                  <option value="Hindi Literature" className="bg-slate-900">Hindi Literature</option>
-                  <option value="Persian Literature" className="bg-slate-900">Persian Literature</option>
-                  <option value="Arabic Literature" className="bg-slate-900">Arabic Literature</option>
-                  <option value="Kashmiri Literature" className="bg-slate-900">Kashmiri Literature</option>
+                <optgroup label="Literature" className="bg-brand-slate">
+                  <option value="English Literature" className="bg-brand-slate">English Literature</option>
+                  <option value="Urdu Literature" className="bg-brand-slate">Urdu Literature</option>
+                  <option value="Hindi Literature" className="bg-brand-slate">Hindi Literature</option>
+                  <option value="Persian Literature" className="bg-brand-slate">Persian Literature</option>
+                  <option value="Arabic Literature" className="bg-brand-slate">Arabic Literature</option>
+                  <option value="Kashmiri Literature" className="bg-brand-slate">Kashmiri Literature</option>
                 </optgroup>
-                <optgroup label="Other" className="bg-slate-900">
-                  <option value="General" className="bg-slate-900">General / Other</option>
+                <optgroup label="Other" className="bg-brand-slate">
+                  <option value="General" className="bg-brand-slate">General / Other</option>
                 </optgroup>
               </select>
             </div>
@@ -389,24 +389,24 @@ export default function MyBooksPage() {
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Publication Year <span className="text-slate-500 font-normal">(optional)</span></label>
               <input type="number" min="1000" max="2200" value={publicationYear} onChange={(e) => setPublicationYear(e.target.value)}
                 placeholder="e.g., 2008"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Description <span className="text-slate-500 font-normal">(optional)</span></label>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
                 placeholder="A short blurb about the book..."
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none" />
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none" />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Condition</label>
               <select value={condition} onChange={(e) => setCondition(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
-                <option value="excellent" className="bg-slate-900">Excellent</option>
-                <option value="good" className="bg-slate-900">Good</option>
-                <option value="fair" className="bg-slate-900">Fair</option>
-                <option value="poor" className="bg-slate-900">Poor</option>
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-brand-teal">
+                <option value="excellent" className="bg-brand-slate">Excellent</option>
+                <option value="good" className="bg-brand-slate">Good</option>
+                <option value="fair" className="bg-brand-slate">Fair</option>
+                <option value="poor" className="bg-brand-slate">Poor</option>
               </select>
             </div>
 
@@ -414,11 +414,11 @@ export default function MyBooksPage() {
               <label className="block text-sm font-medium text-slate-300 mb-1.5">I want to</label>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" value="donate" checked={listingType === 'donate'} onChange={(e) => setListingType(e.target.value)} className="accent-teal-500" />
+                  <input type="radio" value="donate" checked={listingType === 'donate'} onChange={(e) => setListingType(e.target.value)} className="accent-brand-teal" />
                   <span className="text-white">Donate</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" value="lend" checked={listingType === 'lend'} onChange={(e) => setListingType(e.target.value)} className="accent-teal-500" />
+                  <input type="radio" value="lend" checked={listingType === 'lend'} onChange={(e) => setListingType(e.target.value)} className="accent-brand-teal" />
                   <span className="text-white">Lend</span>
                 </label>
               </div>
@@ -430,7 +430,7 @@ export default function MyBooksPage() {
                 <div className="flex gap-5">
                   {([1, 2, 3] as const).map(m => (
                     <label key={m} className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" value={m} checked={lendingDuration === m} onChange={() => setLendingDuration(m)} className="accent-teal-500" />
+                      <input type="radio" value={m} checked={lendingDuration === m} onChange={() => setLendingDuration(m)} className="accent-brand-teal" />
                       <span className="text-white text-sm">{m} {m === 1 ? 'month' : 'months'}</span>
                     </label>
                   ))}
@@ -439,12 +439,12 @@ export default function MyBooksPage() {
             )}
 
             <button type="submit" disabled={loading}
-              className="w-full bg-teal-500 hover:bg-teal-400 disabled:opacity-50 text-white font-semibold py-3 rounded-lg transition-colors">
+              className="w-full bg-brand-teal hover:bg-brand-teal-light disabled:opacity-50 text-white font-semibold py-3 rounded-lg transition-colors">
               {loading ? 'Adding...' : 'Add Book'}
             </button>
 
             {message && (
-              <p className={`text-sm text-center ${message.includes('success') ? 'text-teal-400' : 'text-red-400'}`}>
+              <p className={`text-sm text-center ${message.includes('success') ? 'text-brand-teal-light' : 'text-red-400'}`}>
                 {message}
               </p>
             )}
@@ -469,9 +469,9 @@ export default function MyBooksPage() {
                 <div key={book.id}>
                   {/* Book row */}
                   <div className={`bg-white/[0.03] border rounded-xl p-4 flex gap-4 items-center transition-colors ${
-                    editingBookId === book.id ? 'border-teal-500/30' : 'border-white/[0.06]'
+                    editingBookId === book.id ? 'border-brand-teal/30' : 'border-white/[0.06]'
                   }`}>
-                    <div className="relative w-12 h-16 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 border border-white/5">
+                    <div className="relative w-12 h-16 rounded-lg overflow-hidden bg-brand-slate-light flex-shrink-0 border border-white/5">
                       {book.cover_url ? (
                         <Image src={book.cover_url} alt={book.title} fill unoptimized sizes="48px" className="object-cover" />
                       ) : (
@@ -485,7 +485,7 @@ export default function MyBooksPage() {
                       <h3 className="font-semibold text-white truncate">{book.title}</h3>
                       {book.author && <p className="text-sm text-slate-400 truncate">by {book.author}</p>}
                       <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                        {book.genre && <span className="text-xs text-teal-400">{book.genre}</span>}
+                        {book.genre && <span className="text-xs text-brand-teal-light">{book.genre}</span>}
                         {book.acquired_via_donation && (
                           <span className="text-xs text-amber-400/80">· 🔄 In Circulation</span>
                         )}
@@ -542,7 +542,7 @@ export default function MyBooksPage() {
 
                   {/* Inline edit panel */}
                   {editingBookId === book.id && (
-                    <div className="mt-1 bg-white/[0.02] border border-teal-500/20 border-t-0 rounded-b-xl px-5 pb-5 pt-4 space-y-4">
+                    <div className="mt-1 bg-white/[0.02] border border-brand-teal/20 border-t-0 rounded-b-xl px-5 pb-5 pt-4 space-y-4">
                       {book.acquired_via_donation && (
                         <p className="text-xs text-amber-400/80 bg-amber-500/5 border border-amber-500/15 rounded-lg px-3 py-2">
                           🔄 This book is in permanent circulation — it can only be donated forward, not deleted.
@@ -552,12 +552,12 @@ export default function MyBooksPage() {
                         <div>
                           <label className="block text-xs font-medium text-slate-400 mb-1">Title</label>
                           <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-slate-400 mb-1">Author</label>
                           <input type="text" value={editAuthor} onChange={(e) => setEditAuthor(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
                         </div>
                       </div>
 
@@ -565,50 +565,50 @@ export default function MyBooksPage() {
                         <div>
                           <label className="block text-xs font-medium text-slate-400 mb-1">Status</label>
                           <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
-                            <option value="available" className="bg-slate-900">Available</option>
-                            <option value="unavailable" className="bg-slate-900">Unavailable</option>
-                            <option value="given" className="bg-slate-900">Given Away</option>
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-teal">
+                            <option value="available" className="bg-brand-slate">Available</option>
+                            <option value="unavailable" className="bg-brand-slate">Unavailable</option>
+                            <option value="given" className="bg-brand-slate">Given Away</option>
                           </select>
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-slate-400 mb-1">Category</label>
                           <select value={editGenre} onChange={(e) => setEditGenre(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
-                            <optgroup label="Natural Sciences" className="bg-slate-900">
-                              <option value="Physics" className="bg-slate-900">Physics</option>
-                              <option value="Chemistry" className="bg-slate-900">Chemistry</option>
-                              <option value="Biology" className="bg-slate-900">Biology</option>
-                              <option value="Mathematics" className="bg-slate-900">Mathematics</option>
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-teal">
+                            <optgroup label="Natural Sciences" className="bg-brand-slate">
+                              <option value="Physics" className="bg-brand-slate">Physics</option>
+                              <option value="Chemistry" className="bg-brand-slate">Chemistry</option>
+                              <option value="Biology" className="bg-brand-slate">Biology</option>
+                              <option value="Mathematics" className="bg-brand-slate">Mathematics</option>
                             </optgroup>
-                            <optgroup label="Engineering" className="bg-slate-900">
-                              <option value="Civil Engineering" className="bg-slate-900">Civil Engineering</option>
-                              <option value="Mechanical Engineering" className="bg-slate-900">Mechanical Engineering</option>
-                              <option value="Electrical Engineering" className="bg-slate-900">Electrical Engineering</option>
-                              <option value="IT/Computer Science" className="bg-slate-900">IT/Computer Science</option>
+                            <optgroup label="Engineering" className="bg-brand-slate">
+                              <option value="Civil Engineering" className="bg-brand-slate">Civil Engineering</option>
+                              <option value="Mechanical Engineering" className="bg-brand-slate">Mechanical Engineering</option>
+                              <option value="Electrical Engineering" className="bg-brand-slate">Electrical Engineering</option>
+                              <option value="IT/Computer Science" className="bg-brand-slate">IT/Computer Science</option>
                             </optgroup>
-                            <optgroup label="Medicine" className="bg-slate-900">
-                              <option value="Anatomy" className="bg-slate-900">Anatomy</option>
-                              <option value="Physiology" className="bg-slate-900">Physiology</option>
-                              <option value="Clinical Medicine" className="bg-slate-900">Clinical Medicine</option>
+                            <optgroup label="Medicine" className="bg-brand-slate">
+                              <option value="Anatomy" className="bg-brand-slate">Anatomy</option>
+                              <option value="Physiology" className="bg-brand-slate">Physiology</option>
+                              <option value="Clinical Medicine" className="bg-brand-slate">Clinical Medicine</option>
                             </optgroup>
-                            <optgroup label="Social Sciences" className="bg-slate-900">
-                              <option value="History" className="bg-slate-900">History</option>
-                              <option value="Civics" className="bg-slate-900">Civics</option>
-                              <option value="Geography" className="bg-slate-900">Geography</option>
-                              <option value="Psychology" className="bg-slate-900">Psychology</option>
-                              <option value="Philosophy" className="bg-slate-900">Philosophy</option>
+                            <optgroup label="Social Sciences" className="bg-brand-slate">
+                              <option value="History" className="bg-brand-slate">History</option>
+                              <option value="Civics" className="bg-brand-slate">Civics</option>
+                              <option value="Geography" className="bg-brand-slate">Geography</option>
+                              <option value="Psychology" className="bg-brand-slate">Psychology</option>
+                              <option value="Philosophy" className="bg-brand-slate">Philosophy</option>
                             </optgroup>
-                            <optgroup label="Literature" className="bg-slate-900">
-                              <option value="English Literature" className="bg-slate-900">English Literature</option>
-                              <option value="Urdu Literature" className="bg-slate-900">Urdu Literature</option>
-                              <option value="Hindi Literature" className="bg-slate-900">Hindi Literature</option>
-                              <option value="Persian Literature" className="bg-slate-900">Persian Literature</option>
-                              <option value="Arabic Literature" className="bg-slate-900">Arabic Literature</option>
-                              <option value="Kashmiri Literature" className="bg-slate-900">Kashmiri Literature</option>
+                            <optgroup label="Literature" className="bg-brand-slate">
+                              <option value="English Literature" className="bg-brand-slate">English Literature</option>
+                              <option value="Urdu Literature" className="bg-brand-slate">Urdu Literature</option>
+                              <option value="Hindi Literature" className="bg-brand-slate">Hindi Literature</option>
+                              <option value="Persian Literature" className="bg-brand-slate">Persian Literature</option>
+                              <option value="Arabic Literature" className="bg-brand-slate">Arabic Literature</option>
+                              <option value="Kashmiri Literature" className="bg-brand-slate">Kashmiri Literature</option>
                             </optgroup>
-                            <optgroup label="Other" className="bg-slate-900">
-                              <option value="General" className="bg-slate-900">General / Other</option>
+                            <optgroup label="Other" className="bg-brand-slate">
+                              <option value="General" className="bg-brand-slate">General / Other</option>
                             </optgroup>
                           </select>
                         </div>
@@ -620,7 +620,7 @@ export default function MyBooksPage() {
                           <div className="flex gap-5">
                             {([1, 2, 3] as const).map(m => (
                               <label key={m} className="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" value={m} checked={editLendingDuration === m} onChange={() => setEditLendingDuration(m)} className="accent-teal-500" />
+                                <input type="radio" value={m} checked={editLendingDuration === m} onChange={() => setEditLendingDuration(m)} className="accent-brand-teal" />
                                 <span className="text-white text-sm">{m} {m === 1 ? 'month' : 'months'}</span>
                               </label>
                             ))}
@@ -643,7 +643,7 @@ export default function MyBooksPage() {
 
                       <div className="flex gap-3 pt-1">
                         <button onClick={() => handleSaveEdit(book.id)} disabled={editLoading}
-                          className="bg-teal-500 hover:bg-teal-400 disabled:opacity-50 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors">
+                          className="bg-brand-teal hover:bg-brand-teal-light disabled:opacity-50 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors">
                           {editLoading ? 'Saving...' : 'Save Changes'}
                         </button>
                         <button onClick={cancelEdit}
@@ -682,7 +682,7 @@ export default function MyBooksPage() {
                   return (
                     <div key={req.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 hover:border-white/[0.10] transition-colors">
                       <div className="flex gap-4">
-                        <div className="relative w-12 h-16 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 border border-white/5">
+                        <div className="relative w-12 h-16 rounded-lg overflow-hidden bg-brand-slate-light flex-shrink-0 border border-white/5">
                           {book.cover_url ? (
                             <Image src={book.cover_url} alt={book.title} fill unoptimized sizes="48px" className="object-cover" />
                           ) : (
@@ -699,7 +699,7 @@ export default function MyBooksPage() {
                           <div className="flex flex-wrap items-center gap-2 mt-1.5">
                             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                               isDonated
-                                ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20'
+                                ? 'bg-brand-teal/10 text-brand-teal-light border border-brand-teal/20'
                                 : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
                             }`}>
                               {isDonated ? 'Donated to you' : 'On Loan'}
@@ -723,16 +723,16 @@ export default function MyBooksPage() {
                                 <input
                                   type="range" min={0} max={100} value={progressDraft}
                                   onChange={e => setProgressDraft(Number(e.target.value))}
-                                  className="flex-1 accent-teal-500"
+                                  className="flex-1 accent-brand-teal"
                                 />
-                                <span className={`text-xs font-semibold w-9 text-right ${isDonated ? 'text-teal-400' : 'text-blue-400'}`}>
+                                <span className={`text-xs font-semibold w-9 text-right ${isDonated ? 'text-brand-teal-light' : 'text-blue-400'}`}>
                                   {progressDraft}%
                                 </span>
                               </div>
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => handleSaveProgress(req.id, req.book_id)}
-                                  className="text-xs bg-teal-500 hover:bg-teal-400 text-white font-medium px-3 py-1.5 rounded-lg transition-colors"
+                                  className="text-xs bg-brand-teal hover:bg-brand-teal-light text-white font-medium px-3 py-1.5 rounded-lg transition-colors"
                                 >
                                   Save
                                 </button>
@@ -750,11 +750,11 @@ export default function MyBooksPage() {
                                 <div className="mb-2">
                                   <div className="flex justify-between text-xs mb-1">
                                     <span className="text-slate-500">Reading progress</span>
-                                    <span className={`font-semibold ${isDonated ? 'text-teal-400' : 'text-blue-400'}`}>{progress}%</span>
+                                    <span className={`font-semibold ${isDonated ? 'text-brand-teal-light' : 'text-blue-400'}`}>{progress}%</span>
                                   </div>
                                   <div className="h-1 bg-white/10 rounded-full overflow-hidden">
                                     <div
-                                      className={`h-full rounded-full transition-all ${isDonated ? 'bg-teal-400' : 'bg-blue-400'}`}
+                                      className={`h-full rounded-full transition-all ${isDonated ? 'bg-brand-teal-light' : 'bg-blue-400'}`}
                                       style={{ width: `${progress}%` }}
                                     />
                                   </div>
@@ -774,7 +774,7 @@ export default function MyBooksPage() {
                                       <button
                                         onClick={() => handlePassItOn(req.id)}
                                         disabled={passingOnId === req.id}
-                                        className="text-xs bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 border border-teal-500/30 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                                        className="text-xs bg-brand-teal/20 text-brand-teal-light hover:bg-brand-teal/30 border border-brand-teal/30 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50"
                                       >
                                         {passingOnId === req.id ? '...' : 'Yes, pass it on'}
                                       </button>
@@ -788,7 +788,7 @@ export default function MyBooksPage() {
                                   ) : (
                                     <button
                                       onClick={() => setConfirmPassOnId(req.id)}
-                                      className="text-xs text-teal-400 hover:text-teal-300 bg-teal-500/10 hover:bg-teal-500/15 border border-teal-500/20 px-3 py-1.5 rounded-lg transition-colors"
+                                      className="text-xs text-brand-teal-light hover:text-teal-300 bg-brand-teal/10 hover:bg-brand-teal/15 border border-brand-teal/20 px-3 py-1.5 rounded-lg transition-colors"
                                     >
                                       Pass It On 🔄
                                     </button>
@@ -870,15 +870,15 @@ function CoverInput({
         className="h-32 rounded-xl object-cover border border-white/10"
         onError={onClear} />
       <button type="button" onClick={onClear}
-        className="absolute -top-2 -right-2 w-6 h-6 bg-slate-700 hover:bg-red-500 border border-white/10 rounded-full text-white text-xs flex items-center justify-center transition-colors">
+        className="absolute -top-2 -right-2 w-6 h-6 bg-brand-slate-muted hover:bg-red-500 border border-white/10 rounded-full text-white text-xs flex items-center justify-center transition-colors">
         ✕
       </button>
     </div>
   ) : (
     <>
-      <label className="flex flex-col items-center gap-2 border-2 border-dashed border-white/10 hover:border-teal-500/40 rounded-xl p-5 cursor-pointer transition-colors group">
+      <label className="flex flex-col items-center gap-2 border-2 border-dashed border-white/10 hover:border-brand-teal/40 rounded-xl p-5 cursor-pointer transition-colors group">
         <input type="file" accept="image/*" onChange={onFileChange} className="hidden" />
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600 group-hover:text-teal-500 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600 group-hover:text-brand-teal transition-colors">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>
         </svg>
@@ -893,7 +893,7 @@ function CoverInput({
       <input type="url" value={urlValue}
         onChange={(e) => { onUrlChange(e.target.value); setUrlError('') }}
         onBlur={handleUrlBlur}
-        className={`w-full bg-white/5 border rounded-lg px-4 py-2.5 text-white placeholder-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 ${urlError ? 'border-red-500/50' : 'border-white/10'}`}
+        className={`w-full bg-white/5 border rounded-lg px-4 py-2.5 text-white placeholder-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal ${urlError ? 'border-red-500/50' : 'border-white/10'}`}
         placeholder="https://..." />
       {validating && <p className="text-xs text-slate-500 mt-1">Validating image...</p>}
       {urlError && <p className="text-xs text-red-400 mt-1">{urlError}</p>}

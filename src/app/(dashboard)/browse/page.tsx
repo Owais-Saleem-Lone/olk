@@ -291,12 +291,12 @@ export default function BrowsePage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by title or author..."
-            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
           />
           <div className="flex gap-3">
             <button
               type="submit"
-              className="flex-1 sm:flex-initial bg-teal-500 hover:bg-teal-400 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
+              className="flex-1 sm:flex-initial bg-brand-teal hover:bg-brand-teal-light text-white font-semibold px-6 py-3 rounded-lg transition-colors"
             >
               Search
             </button>
@@ -326,7 +326,7 @@ export default function BrowsePage() {
           </svg>
           Filters
           {(filterGenre || filterType || filterCondition || filterArea || radiusKm != null) && (
-            <span className="bg-teal-500/20 text-teal-400 text-xs font-bold px-1.5 py-0.5 rounded-full">
+            <span className="bg-brand-teal/20 text-brand-teal-light text-xs font-bold px-1.5 py-0.5 rounded-full">
               {[filterGenre, filterType, filterCondition, filterArea, radiusKm != null ? 'radius' : ''].filter(Boolean).length}
             </span>
           )}
@@ -337,66 +337,66 @@ export default function BrowsePage() {
             <select
               value={filterGenre}
               onChange={(e) => setFilterGenre(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-teal"
             >
-              <option value="" className="bg-slate-900">All Genres</option>
-              <optgroup label="Natural Sciences" className="bg-slate-900">
-                <option value="Physics" className="bg-slate-900">Physics</option>
-                <option value="Chemistry" className="bg-slate-900">Chemistry</option>
-                <option value="Biology" className="bg-slate-900">Biology</option>
-                <option value="Mathematics" className="bg-slate-900">Mathematics</option>
+              <option value="" className="bg-brand-slate">All Genres</option>
+              <optgroup label="Natural Sciences" className="bg-brand-slate">
+                <option value="Physics" className="bg-brand-slate">Physics</option>
+                <option value="Chemistry" className="bg-brand-slate">Chemistry</option>
+                <option value="Biology" className="bg-brand-slate">Biology</option>
+                <option value="Mathematics" className="bg-brand-slate">Mathematics</option>
               </optgroup>
-              <optgroup label="Engineering" className="bg-slate-900">
-                <option value="Civil Engineering" className="bg-slate-900">Civil Engineering</option>
-                <option value="Mechanical Engineering" className="bg-slate-900">Mechanical Engineering</option>
-                <option value="Electrical Engineering" className="bg-slate-900">Electrical Engineering</option>
-                <option value="IT/Computer Science" className="bg-slate-900">IT/Computer Science</option>
+              <optgroup label="Engineering" className="bg-brand-slate">
+                <option value="Civil Engineering" className="bg-brand-slate">Civil Engineering</option>
+                <option value="Mechanical Engineering" className="bg-brand-slate">Mechanical Engineering</option>
+                <option value="Electrical Engineering" className="bg-brand-slate">Electrical Engineering</option>
+                <option value="IT/Computer Science" className="bg-brand-slate">IT/Computer Science</option>
               </optgroup>
-              <optgroup label="Medicine" className="bg-slate-900">
-                <option value="Anatomy" className="bg-slate-900">Anatomy</option>
-                <option value="Physiology" className="bg-slate-900">Physiology</option>
-                <option value="Clinical Medicine" className="bg-slate-900">Clinical Medicine</option>
+              <optgroup label="Medicine" className="bg-brand-slate">
+                <option value="Anatomy" className="bg-brand-slate">Anatomy</option>
+                <option value="Physiology" className="bg-brand-slate">Physiology</option>
+                <option value="Clinical Medicine" className="bg-brand-slate">Clinical Medicine</option>
               </optgroup>
-              <optgroup label="Social Sciences" className="bg-slate-900">
-                <option value="History" className="bg-slate-900">History</option>
-                <option value="Civics" className="bg-slate-900">Civics</option>
-                <option value="Geography" className="bg-slate-900">Geography</option>
-                <option value="Psychology" className="bg-slate-900">Psychology</option>
-                <option value="Philosophy" className="bg-slate-900">Philosophy</option>
+              <optgroup label="Social Sciences" className="bg-brand-slate">
+                <option value="History" className="bg-brand-slate">History</option>
+                <option value="Civics" className="bg-brand-slate">Civics</option>
+                <option value="Geography" className="bg-brand-slate">Geography</option>
+                <option value="Psychology" className="bg-brand-slate">Psychology</option>
+                <option value="Philosophy" className="bg-brand-slate">Philosophy</option>
               </optgroup>
-              <optgroup label="Literature" className="bg-slate-900">
-                <option value="English Literature" className="bg-slate-900">English Literature</option>
-                <option value="Urdu Literature" className="bg-slate-900">Urdu Literature</option>
-                <option value="Hindi Literature" className="bg-slate-900">Hindi Literature</option>
-                <option value="Persian Literature" className="bg-slate-900">Persian Literature</option>
-                <option value="Arabic Literature" className="bg-slate-900">Arabic Literature</option>
-                <option value="Kashmiri Literature" className="bg-slate-900">Kashmiri Literature</option>
+              <optgroup label="Literature" className="bg-brand-slate">
+                <option value="English Literature" className="bg-brand-slate">English Literature</option>
+                <option value="Urdu Literature" className="bg-brand-slate">Urdu Literature</option>
+                <option value="Hindi Literature" className="bg-brand-slate">Hindi Literature</option>
+                <option value="Persian Literature" className="bg-brand-slate">Persian Literature</option>
+                <option value="Arabic Literature" className="bg-brand-slate">Arabic Literature</option>
+                <option value="Kashmiri Literature" className="bg-brand-slate">Kashmiri Literature</option>
               </optgroup>
-              <optgroup label="Other" className="bg-slate-900">
-                <option value="General" className="bg-slate-900">General / Other</option>
+              <optgroup label="Other" className="bg-brand-slate">
+                <option value="General" className="bg-brand-slate">General / Other</option>
               </optgroup>
             </select>
 
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-teal"
             >
-              <option value="" className="bg-slate-900">All Types</option>
-              <option value="donate" className="bg-slate-900">Donate</option>
-              <option value="lend" className="bg-slate-900">Lend</option>
+              <option value="" className="bg-brand-slate">All Types</option>
+              <option value="donate" className="bg-brand-slate">Donate</option>
+              <option value="lend" className="bg-brand-slate">Lend</option>
             </select>
 
             <select
               value={filterCondition}
               onChange={(e) => setFilterCondition(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-teal"
             >
-              <option value="" className="bg-slate-900">Any Condition</option>
-              <option value="excellent" className="bg-slate-900">Excellent</option>
-              <option value="good" className="bg-slate-900">Good</option>
-              <option value="fair" className="bg-slate-900">Fair</option>
-              <option value="poor" className="bg-slate-900">Poor</option>
+              <option value="" className="bg-brand-slate">Any Condition</option>
+              <option value="excellent" className="bg-brand-slate">Excellent</option>
+              <option value="good" className="bg-brand-slate">Good</option>
+              <option value="fair" className="bg-brand-slate">Fair</option>
+              <option value="poor" className="bg-brand-slate">Poor</option>
             </select>
 
             <input
@@ -404,14 +404,14 @@ export default function BrowsePage() {
               value={filterArea}
               onChange={(e) => setFilterArea(e.target.value)}
               placeholder="Filter by area..."
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
             />
 
             {hasLocation && (
               <div className="sm:col-span-2 lg:col-span-4 bg-white/5 border border-white/10 rounded-lg px-4 py-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-slate-300">Distance</span>
-                  <span className="text-sm text-teal-400 font-medium">
+                  <span className="text-sm text-brand-teal-light font-medium">
                     {radiusKm == null ? 'Any distance' : `Within ${radiusKm}km`}
                   </span>
                 </div>
@@ -422,7 +422,7 @@ export default function BrowsePage() {
                   step={1}
                   value={RADIUS_STEPS.indexOf(radiusKm)}
                   onChange={(e) => setRadiusKm(RADIUS_STEPS[parseInt(e.target.value, 10)])}
-                  className="w-full accent-teal-500 cursor-pointer"
+                  className="w-full accent-brand-teal cursor-pointer"
                 />
                 <div className="flex justify-between text-xs text-slate-500 mt-1">
                   <span>2km</span>
@@ -465,10 +465,10 @@ export default function BrowsePage() {
             return (
               <div
                 key={book.id}
-                className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden hover:border-teal-500/30 transition-colors flex flex-col"
+                className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden hover:border-brand-teal/30 transition-colors flex flex-col"
               >
                 {/* Cover image */}
-                <div className="relative w-full aspect-[2/3] bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden">
+                <div className="relative w-full aspect-[2/3] bg-gradient-to-br from-brand-slate-light to-brand-slate overflow-hidden">
                   {book.cover_url ? (
                     <Image
                       src={book.cover_url}
@@ -481,7 +481,7 @@ export default function BrowsePage() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-700">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-brand-slate-muted">
                         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
                       </svg>
                     </div>
@@ -490,7 +490,7 @@ export default function BrowsePage() {
                   <div className="absolute top-2 left-2">
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm ${
                       book.listing_type === 'donate'
-                        ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                        ? 'bg-brand-teal/20 text-teal-300 border border-brand-teal/30'
                         : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                     }`}>
                       {book.listing_type === 'donate' ? '🎁 Donate' : '🤝 Lend'}
@@ -512,10 +512,10 @@ export default function BrowsePage() {
                         <div className="w-4/5">
                           <div className="flex justify-between text-xs mb-1">
                             <span className="text-slate-400">📖 Being read</span>
-                            <span className="text-teal-400 font-semibold">{bookProgress[book.id]}%</span>
+                            <span className="text-brand-teal-light font-semibold">{bookProgress[book.id]}%</span>
                           </div>
                           <div className="h-1 bg-white/20 rounded-full overflow-hidden">
-                            <div className="h-full bg-teal-400 rounded-full transition-all" style={{ width: `${bookProgress[book.id]}%` }} />
+                            <div className="h-full bg-brand-teal-light rounded-full transition-all" style={{ width: `${bookProgress[book.id]}%` }} />
                           </div>
                         </div>
                       )}
@@ -567,12 +567,12 @@ export default function BrowsePage() {
                 {/* Owner info — only shown to logged-in users */}
                 {currentUserId && owner && (
                   <div className="mt-auto pt-4 border-t border-white/5 mb-4">
-                    <Link href={`/user/${book.owner_id}`} className="text-sm text-slate-300 hover:text-teal-400 transition-colors">
+                    <Link href={`/user/${book.owner_id}`} className="text-sm text-slate-300 hover:text-brand-teal-light transition-colors">
                       👤 {owner.display_name || 'Anonymous'}
                     </Link>
                     <p className="text-xs text-slate-500 mt-0.5">
                       {book.distance_km != null && (
-                        <span className="text-teal-400 font-medium">{formatDistance(book.distance_km)}</span>
+                        <span className="text-brand-teal-light font-medium">{formatDistance(book.distance_km)}</span>
                       )}
                       {book.distance_km != null && owner.area_name && ' · '}
                       {owner.area_name && <span>📍 {owner.area_name}</span>}
@@ -612,7 +612,7 @@ export default function BrowsePage() {
                 ) : isRequested ? (
                   <button
                     disabled
-                    className="w-full bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium py-2 rounded-lg text-sm cursor-not-allowed"
+                    className="w-full bg-brand-teal/10 text-brand-teal-light border border-brand-teal/20 font-medium py-2 rounded-lg text-sm cursor-not-allowed"
                   >
                     Requested ✓
                   </button>
@@ -631,8 +631,8 @@ export default function BrowsePage() {
                         onClick={() => toggleBookmark(book.id)}
                         className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${
                           bookmarkedBooks.has(book.id)
-                            ? 'text-teal-400 bg-teal-500/10 border border-teal-500/20'
-                            : 'text-slate-500 hover:text-teal-400 hover:bg-white/5'
+                            ? 'text-brand-teal-light bg-brand-teal/10 border border-brand-teal/20'
+                            : 'text-slate-500 hover:text-brand-teal-light hover:bg-white/5'
                         }`}
                       >
                         {bookmarkedBooks.has(book.id) ? '🔖 Saved' : '🔖 Save'}
@@ -640,7 +640,7 @@ export default function BrowsePage() {
                     )}
                     <button
                       onClick={() => setNotesBook({ id: book.id, title: book.title })}
-                      className="flex-1 text-xs py-1.5 rounded-lg text-slate-500 hover:text-teal-400 hover:bg-white/5 transition-colors"
+                      className="flex-1 text-xs py-1.5 rounded-lg text-slate-500 hover:text-brand-teal-light hover:bg-white/5 transition-colors"
                     >
                       💬 Notes
                     </button>

@@ -125,7 +125,7 @@ export default function CreateClubPage() {
         <h1 className="text-2xl font-bold mb-3">Not eligible to create a club yet</h1>
         <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 text-left space-y-4 mb-6">
           <div className="flex items-center gap-3">
-            <span className={`text-lg ${exchangeCount >= 5 ? 'text-teal-400' : 'text-slate-600'}`}>
+            <span className={`text-lg ${exchangeCount >= 5 ? 'text-brand-teal-light' : 'text-slate-600'}`}>
               {exchangeCount >= 5 ? '✓' : '✗'}
             </span>
             <div>
@@ -134,7 +134,7 @@ export default function CreateClubPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className={`text-lg ${!hasReports ? 'text-teal-400' : 'text-red-400'}`}>
+            <span className={`text-lg ${!hasReports ? 'text-brand-teal-light' : 'text-red-400'}`}>
               {!hasReports ? '✓' : '✗'}
             </span>
             <div>
@@ -146,7 +146,7 @@ export default function CreateClubPage() {
         <p className="text-sm text-slate-400 mb-6">
           Keep sharing books and building trust — you&apos;ll be eligible soon!
         </p>
-        <Link href="/clubs" className="text-sm text-teal-400 hover:text-teal-300">← Back to Clubs</Link>
+        <Link href="/clubs" className="text-sm text-brand-teal-light hover:text-teal-300">← Back to Clubs</Link>
       </div>
     )
   }
@@ -161,29 +161,29 @@ export default function CreateClubPage() {
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1.5">Club Name</label>
             <input type="text" required value={name} onChange={e => setName(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
               placeholder="e.g., English Fiction Club Anantnag" />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1.5">Description</label>
             <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none"
               placeholder="What's your club about? Who should join?" />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1.5">Interest / Category</label>
             <select value={interest} onChange={e => setInterest(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500">
-              {INTERESTS.map(i => <option key={i} value={i} className="bg-slate-900">{i}</option>)}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-brand-teal">
+              {INTERESTS.map(i => <option key={i} value={i} className="bg-brand-slate">{i}</option>)}
             </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1.5">Location</label>
             <input type="text" value={areaName} onChange={e => setAreaName(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
               placeholder="e.g., Anantnag" />
             <p className="text-xs text-slate-500 mt-1">
               {latitude ? 'GPS location will be used from your profile for nearby discovery.' : 'Set your location in Profile to enable nearby discovery.'}
@@ -191,7 +191,7 @@ export default function CreateClubPage() {
           </div>
 
           <button type="submit" disabled={creating || !name.trim()}
-            className="w-full bg-teal-500 hover:bg-teal-400 disabled:opacity-50 text-white font-semibold py-3 rounded-lg transition-colors">
+            className="w-full bg-brand-teal hover:bg-brand-teal-light disabled:opacity-50 text-white font-semibold py-3 rounded-lg transition-colors">
             {creating ? 'Creating...' : 'Create Club'}
           </button>
         </form>

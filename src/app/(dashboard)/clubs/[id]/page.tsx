@@ -193,7 +193,7 @@ export default function ClubDetailPage() {
       <div className="text-center py-20">
         <div className="text-5xl mb-4">🏘️</div>
         <h2 className="text-xl font-semibold mb-2">Club not found</h2>
-        <Link href="/clubs" className="text-teal-400 hover:text-teal-300 text-sm">← Back to Clubs</Link>
+        <Link href="/clubs" className="text-brand-teal-light hover:text-teal-300 text-sm">← Back to Clubs</Link>
       </div>
     )
   }
@@ -215,11 +215,11 @@ export default function ClubDetailPage() {
               {editing ? (
                 <div className="space-y-3 mb-4">
                   <input value={editName} onChange={e => setEditName(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-brand-teal" />
                   <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} rows={3}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none" />
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none" />
                   <div className="flex gap-2">
-                    <button onClick={handleSaveEdit} className="bg-teal-500 hover:bg-teal-400 text-white font-semibold px-4 py-1.5 rounded-lg text-sm transition-colors">Save</button>
+                    <button onClick={handleSaveEdit} className="bg-brand-teal hover:bg-brand-teal-light text-white font-semibold px-4 py-1.5 rounded-lg text-sm transition-colors">Save</button>
                     <button onClick={() => setEditing(false)} className="text-sm text-slate-400 hover:text-white px-3 py-1.5">Cancel</button>
                   </div>
                 </div>
@@ -235,7 +235,7 @@ export default function ClubDetailPage() {
                 )}
                 {club?.area_name && <span>📍 {club.area_name}</span>}
                 <span>Founded {joinDate}</span>
-                <span>by <Link href={`/user/${club?.creator_id}`} className="text-teal-400 hover:text-teal-300">{creatorName}</Link></span>
+                <span>by <Link href={`/user/${club?.creator_id}`} className="text-brand-teal-light hover:text-teal-300">{creatorName}</Link></span>
               </div>
             </div>
 
@@ -257,7 +257,7 @@ export default function ClubDetailPage() {
                   Leave Club
                 </button>
               ) : (
-                <button onClick={handleJoin} className="bg-teal-500 hover:bg-teal-400 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors">
+                <button onClick={handleJoin} className="bg-brand-teal hover:bg-brand-teal-light text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors">
                   Join Club
                 </button>
               )}
@@ -271,7 +271,7 @@ export default function ClubDetailPage() {
               <p className="text-xs text-slate-500 mt-1">Members</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-teal-400">{posts.length}</p>
+              <p className="text-2xl font-bold text-brand-teal-light">{posts.length}</p>
               <p className="text-xs text-slate-500 mt-1">Announcements</p>
             </div>
             <div className="text-center">
@@ -294,12 +294,12 @@ export default function ClubDetailPage() {
                 onChange={e => setNewPost(e.target.value)}
                 placeholder="Write an announcement for your club..."
                 rows={3}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none mb-3"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-3"
               />
               <button
                 onClick={handlePost}
                 disabled={!newPost.trim() || posting}
-                className="bg-teal-500 hover:bg-teal-400 disabled:opacity-40 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors"
+                className="bg-brand-teal hover:bg-brand-teal-light disabled:opacity-40 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors"
               >
                 {posting ? 'Posting...' : 'Post Announcement'}
               </button>
@@ -342,9 +342,9 @@ export default function ClubDetailPage() {
                 <Link
                   key={m.user_id}
                   href={`/user/${m.user_id}`}
-                  className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 hover:border-teal-500/20 transition-colors"
+                  className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 hover:border-brand-teal/20 transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 font-bold text-sm flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-brand-teal-light font-bold text-sm flex-shrink-0">
                     {(m.profiles?.display_name || '?')[0].toUpperCase()}
                   </div>
                   <div>
@@ -364,7 +364,7 @@ export default function ClubDetailPage() {
       </div>
 
       <div className="mt-8">
-        <Link href="/clubs" className="text-sm text-slate-400 hover:text-teal-400 transition-colors">← Back to Clubs</Link>
+        <Link href="/clubs" className="text-sm text-slate-400 hover:text-brand-teal-light transition-colors">← Back to Clubs</Link>
       </div>
 
       {confirmingDelete && (

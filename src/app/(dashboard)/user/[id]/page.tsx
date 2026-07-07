@@ -101,7 +101,7 @@ export default function UserProfilePage() {
         <div className="text-5xl mb-4">👤</div>
         <h2 className="text-xl font-semibold mb-2">User not found</h2>
         <p className="text-slate-400 mb-6">This profile doesn&apos;t exist or has been removed.</p>
-        <Link href="/browse" className="text-teal-400 hover:text-teal-300 text-sm">
+        <Link href="/browse" className="text-brand-teal-light hover:text-teal-300 text-sm">
           ← Back to Browse
         </Link>
       </div>
@@ -119,7 +119,7 @@ export default function UserProfilePage() {
       {/* Profile Header */}
       <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8 mb-8">
         <div className="flex items-start gap-5">
-          <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 font-bold text-2xl flex-shrink-0">
+          <div className="w-16 h-16 rounded-full bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-brand-teal-light font-bold text-2xl flex-shrink-0">
             {(profile?.display_name || '?')[0].toUpperCase()}
           </div>
           <div className="flex-1">
@@ -163,7 +163,7 @@ export default function UserProfilePage() {
             <p className="text-xs text-slate-500 mt-1">Books Listed</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-teal-400">{stats.availableBooks}</p>
+            <p className="text-2xl font-bold text-brand-teal-light">{stats.availableBooks}</p>
             <p className="text-xs text-slate-500 mt-1">Available Now</p>
           </div>
           <div className="text-center">
@@ -187,9 +187,9 @@ export default function UserProfilePage() {
               <Link
                 key={book.id}
                 href={`/browse?q=${encodeURIComponent(book.title)}`}
-                className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden hover:border-teal-500/30 transition-colors group"
+                className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden hover:border-brand-teal/30 transition-colors group"
               >
-                <div className="relative w-full aspect-[2/3] bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden">
+                <div className="relative w-full aspect-[2/3] bg-gradient-to-br from-brand-slate-light to-brand-slate overflow-hidden">
                   {book.cover_url ? (
                     <Image
                       src={book.cover_url}
@@ -209,7 +209,7 @@ export default function UserProfilePage() {
                   <div className="absolute top-2 left-2">
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm ${
                       book.listing_type === 'donate'
-                        ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                        ? 'bg-brand-teal/20 text-teal-300 border border-brand-teal/30'
                         : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                     }`}>
                       {book.listing_type === 'donate' ? 'Free' : 'Lend'}
@@ -217,7 +217,7 @@ export default function UserProfilePage() {
                   </div>
                 </div>
                 <div className="p-3">
-                  <h3 className="text-sm font-semibold leading-snug mb-0.5 group-hover:text-teal-400 transition-colors line-clamp-2">{book.title}</h3>
+                  <h3 className="text-sm font-semibold leading-snug mb-0.5 group-hover:text-brand-teal-light transition-colors line-clamp-2">{book.title}</h3>
                   {book.author && <p className="text-xs text-slate-500 truncate">by {book.author}</p>}
                   {book.genre && (
                     <span className="inline-block bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-medium px-2 py-0.5 rounded-full mt-2">{book.genre}</span>
@@ -229,7 +229,7 @@ export default function UserProfilePage() {
         )}
       </div>
 
-      <Link href="/browse" className="text-sm text-slate-400 hover:text-teal-400 transition-colors">
+      <Link href="/browse" className="text-sm text-slate-400 hover:text-brand-teal-light transition-colors">
         ← Back to Browse
       </Link>
     </div>

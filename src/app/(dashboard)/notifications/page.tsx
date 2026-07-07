@@ -76,7 +76,7 @@ export default function NotificationsPage() {
         {unread > 0 && (
           <button
             onClick={markAllRead}
-            className="text-sm text-teal-400 hover:text-teal-300 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/20 px-4 py-2 rounded-lg transition-colors self-start"
+            className="text-sm text-brand-teal-light hover:text-teal-300 bg-brand-teal/10 hover:bg-brand-teal/20 border border-brand-teal/20 px-4 py-2 rounded-lg transition-colors self-start"
           >
             Mark all as read
           </button>
@@ -100,7 +100,7 @@ export default function NotificationsPage() {
               onClick={() => { if (!n.read) markRead(n.id) }}
               className={`flex items-start gap-4 p-4 rounded-xl border transition-colors ${
                 !n.read
-                  ? 'bg-teal-500/[0.04] border-teal-500/10 hover:border-teal-500/20'
+                  ? 'bg-brand-teal/[0.04] border-brand-teal/10 hover:border-brand-teal/20'
                   : 'bg-white/[0.02] border-white/[0.06] hover:border-white/10'
               }`}
             >
@@ -112,7 +112,7 @@ export default function NotificationsPage() {
                 {n.body && <p className="text-xs text-slate-500 mt-1">{n.body}</p>}
                 <p className="text-xs text-slate-600 mt-2">{timeAgo(n.created_at)}</p>
               </div>
-              {!n.read && <div className="w-2 h-2 rounded-full bg-teal-400 flex-shrink-0 mt-2" />}
+              {!n.read && <div className="w-2 h-2 rounded-full bg-brand-teal-light flex-shrink-0 mt-2" />}
             </Link>
           ))}
         </div>

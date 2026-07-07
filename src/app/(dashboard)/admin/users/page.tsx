@@ -185,9 +185,9 @@ export default function AdminUsersPage() {
   return (
     <div>
       {actionMsg && (
-        <div className="mb-4 bg-teal-500/10 border border-teal-500/20 text-teal-400 text-sm px-4 py-2 rounded-lg flex justify-between">
+        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-light text-sm px-4 py-2 rounded-lg flex justify-between">
           {actionMsg}
-          <button onClick={() => setActionMsg('')} className="text-teal-400/50 hover:text-teal-400">×</button>
+          <button onClick={() => setActionMsg('')} className="text-brand-teal-light/50 hover:text-brand-teal-light">×</button>
         </div>
       )}
 
@@ -197,7 +197,7 @@ export default function AdminUsersPage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search by name, area, or ID..."
-          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
         />
         <div className="flex gap-1">
           {(['all', 'banned', 'admin', 'warned'] as const).map(f => (
@@ -227,7 +227,7 @@ export default function AdminUsersPage() {
                 key={u.id}
                 onClick={() => selectUser(u)}
                 className={`w-full text-left bg-white/[0.03] border rounded-xl p-3 transition-colors ${
-                  selected?.id === u.id ? 'border-teal-500/30 bg-teal-500/5' : 'border-white/[0.06] hover:bg-white/[0.05]'
+                  selected?.id === u.id ? 'border-brand-teal/30 bg-brand-teal/5' : 'border-white/[0.06] hover:bg-white/[0.05]'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -346,7 +346,7 @@ export default function AdminUsersPage() {
       {/* Ban Modal */}
       {modal === 'ban' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setModal(null)}>
-          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-white mb-4">Ban User</h3>
             <p className="text-sm text-slate-400 mb-4">Banning: {selected?.display_name}</p>
             <textarea
@@ -385,7 +385,7 @@ export default function AdminUsersPage() {
       {/* Warn Modal */}
       {modal === 'warn' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setModal(null)}>
-          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-white mb-4">Warn User</h3>
             <p className="text-sm text-slate-400 mb-4">Warning: {selected?.display_name}</p>
             <textarea
@@ -408,7 +408,7 @@ export default function AdminUsersPage() {
       {/* Role Modal */}
       {modal === 'role' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setModal(null)}>
-          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-white mb-4">Set Admin Role</h3>
             <p className="text-sm text-slate-400 mb-4">User: {selected?.display_name}</p>
             <select

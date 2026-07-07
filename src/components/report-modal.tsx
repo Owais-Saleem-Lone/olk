@@ -52,7 +52,7 @@ export default function ReportModal({
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
       <div
-        className="relative bg-slate-900 border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl"
+        className="relative bg-brand-slate border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         {submitted ? (
@@ -60,7 +60,7 @@ export default function ReportModal({
             <div className="text-4xl mb-3">✅</div>
             <h3 className="text-lg font-semibold text-white mb-2">Report Submitted</h3>
             <p className="text-sm text-slate-400 mb-6">Thank you. We&apos;ll review this shortly.</p>
-            <button onClick={onClose} className="text-sm text-teal-400 hover:text-teal-300 transition-colors">
+            <button onClick={onClose} className="text-sm text-brand-teal-light hover:text-teal-300 transition-colors">
               Close
             </button>
           </div>
@@ -84,7 +84,7 @@ export default function ReportModal({
                     value={r}
                     checked={reason === r}
                     onChange={() => setReason(r)}
-                    className="accent-teal-500"
+                    className="accent-brand-teal"
                   />
                   <span className={`text-sm ${reason === r ? 'text-white' : 'text-slate-400 group-hover:text-slate-300'} transition-colors`}>
                     {r}
@@ -98,7 +98,7 @@ export default function ReportModal({
               onChange={e => setDetails(e.target.value)}
               placeholder="Add any additional details (optional)..."
               rows={3}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none mb-5"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-5"
             />
 
             <div className="flex gap-3">

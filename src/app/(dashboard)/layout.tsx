@@ -19,7 +19,7 @@ export default async function DashboardLayout({
         <header className="sticky top-0 z-50 border-b border-white/[0.06] backdrop-blur-md bg-slate-950/80">
           <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 max-w-7xl mx-auto">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-teal-500 flex items-center justify-center font-bold text-sm">OLK</div>
+              <div className="w-8 h-8 rounded-lg bg-brand-teal flex items-center justify-center font-bold text-sm">OLK</div>
               <span className="font-semibold tracking-tight text-sm md:text-base">Open Library Kashmir</span>
             </Link>
             <div className="flex items-center gap-2">
@@ -31,7 +31,7 @@ export default async function DashboardLayout({
               </Link>
               <Link
                 href="/register"
-                className="text-sm font-semibold bg-teal-500 hover:bg-teal-400 text-white px-3 md:px-4 py-2 rounded-lg transition-all shadow-lg shadow-teal-500/20"
+                className="text-sm font-semibold bg-brand-teal hover:bg-brand-teal-light text-white px-3 md:px-4 py-2 rounded-lg transition-all shadow-lg shadow-brand-teal/20"
               >
                 Join Now
               </Link>

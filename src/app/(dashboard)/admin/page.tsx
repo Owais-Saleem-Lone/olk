@@ -78,7 +78,7 @@ export default function AdminOverview() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {[
           { label: 'Users', value: stats.users, icon: '👥', color: 'text-blue-400' },
-          { label: 'Books', value: stats.books, icon: '📚', color: 'text-teal-400' },
+          { label: 'Books', value: stats.books, icon: '📚', color: 'text-brand-teal-light' },
           { label: 'Requests', value: stats.requests, icon: '📩', color: 'text-purple-400' },
           { label: 'Reports', value: stats.reports, icon: '🚩', color: 'text-red-400' },
           { label: 'Clubs', value: stats.clubs, icon: '🏘️', color: 'text-amber-400' },
@@ -95,7 +95,7 @@ export default function AdminOverview() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {[
           { title: 'New Users (30d)', key: 'new_users' as keyof DailyStat, color: 'bg-blue-400' },
-          { title: 'New Books (30d)', key: 'new_books' as keyof DailyStat, color: 'bg-teal-400' },
+          { title: 'New Books (30d)', key: 'new_books' as keyof DailyStat, color: 'bg-brand-teal-light' },
           { title: 'Requests (30d)', key: 'new_requests' as keyof DailyStat, color: 'bg-purple-400' },
           { title: 'Completed Exchanges (30d)', key: 'completed_exchanges' as keyof DailyStat, color: 'bg-green-400' },
         ].map(chart => {
@@ -118,7 +118,7 @@ export default function AdminOverview() {
           <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
             <p className="text-sm font-medium text-slate-300 mb-4">Exchange Health</p>
             <div className="text-center mb-4">
-              <p className="text-4xl font-bold text-teal-400">{exchangeStats.success_rate}%</p>
+              <p className="text-4xl font-bold text-brand-teal-light">{exchangeStats.success_rate}%</p>
               <p className="text-xs text-slate-500">Success Rate</p>
             </div>
             <div className="grid grid-cols-2 gap-2 text-center">
@@ -205,7 +205,7 @@ export default function AdminOverview() {
                       {c.display_name || 'Unknown'}
                     </td>
                     <td className="py-2 text-slate-400">{c.area_name || '—'}</td>
-                    <td className="py-2 text-center text-teal-400">{c.books_listed}</td>
+                    <td className="py-2 text-center text-brand-teal-light">{c.books_listed}</td>
                     <td className="py-2 text-center text-green-400">{c.books_donated}</td>
                     <td className="py-2 text-center text-blue-400">{c.books_lent}</td>
                     <td className="py-2 text-center text-amber-400">{c.avg_rating > 0 ? `${c.avg_rating} ★` : '—'}</td>

@@ -16,7 +16,7 @@ export default function RequestStepper({ status, listingType }: { status: string
     return (
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-teal-500" />
+          <span className="w-2 h-2 rounded-full bg-brand-teal" />
           <span className="text-xs text-slate-400">Requested</span>
         </div>
         <span className="w-4 h-px bg-red-500/40" />
@@ -42,17 +42,17 @@ export default function RequestStepper({ status, listingType }: { status: string
             <div className="flex flex-col items-center gap-1">
               <span
                 className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                  done ? 'bg-teal-500' : current ? 'bg-teal-400 ring-4 ring-teal-500/20' : 'bg-white/10'
+                  done ? 'bg-brand-teal' : current ? 'bg-brand-teal-light ring-4 ring-brand-teal/20' : 'bg-white/10'
                 }`}
               />
               <span className={`text-[10px] whitespace-nowrap ${
-                current ? 'text-teal-400 font-semibold' : done ? 'text-slate-400' : 'text-slate-600'
+                current ? 'text-brand-teal-light font-semibold' : done ? 'text-slate-400' : 'text-slate-600'
               }`}>
                 {step.label}
               </span>
             </div>
             {i < steps.length - 1 && (
-              <span className={`flex-1 h-px mx-1.5 -mt-4 ${done ? 'bg-teal-500/50' : 'bg-white/10'}`} />
+              <span className={`flex-1 h-px mx-1.5 -mt-4 ${done ? 'bg-brand-teal/50' : 'bg-white/10'}`} />
             )}
           </div>
         )

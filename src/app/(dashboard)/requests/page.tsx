@@ -281,7 +281,7 @@ export default function RequestsPage() {
                       <>
                         <button
                           onClick={() => handleUpdateStatus(req.id, 'accepted')}
-                          className="bg-teal-500/10 text-teal-400 border border-teal-500/20 hover:bg-teal-500/20 font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+                          className="bg-brand-teal/10 text-brand-teal-light border border-brand-teal/20 hover:bg-brand-teal/20 font-medium px-4 py-2 rounded-lg text-sm transition-colors"
                         >
                           Accept
                         </button>
@@ -425,7 +425,7 @@ export default function RequestsPage() {
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-xs text-slate-400">📖 Reading progress</span>
-                          <span className="text-xs text-teal-400 font-semibold tabular-nums">
+                          <span className="text-xs text-brand-teal-light font-semibold tabular-nums">
                             {progressInputs[req.id] ?? 0}%
                           </span>
                         </div>
@@ -438,12 +438,12 @@ export default function RequestsPage() {
                             onChange={e =>
                               setProgressInputs(prev => ({ ...prev, [req.id]: parseInt(e.target.value) }))
                             }
-                            className="flex-1 accent-teal-500 cursor-pointer"
+                            className="flex-1 accent-brand-teal cursor-pointer"
                           />
                           <button
                             onClick={() => handleUpdateProgress(req.id, req.book_id)}
                             disabled={progressSaving === req.id}
-                            className="text-xs bg-teal-500/10 text-teal-400 border border-teal-500/20 hover:bg-teal-500/20 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                            className="text-xs bg-brand-teal/10 text-brand-teal-light border border-brand-teal/20 hover:bg-brand-teal/20 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
                           >
                             {progressSaving === req.id ? 'Saving...' : 'Save'}
                           </button>
@@ -455,7 +455,7 @@ export default function RequestsPage() {
 
                       {/* Completion actions — appear only at 100% */}
                       {progressInputs[req.id] === 100 && req.books?.listing_type === 'donate' && (
-                        <div className="bg-teal-500/[0.05] border border-teal-500/20 rounded-xl px-4 py-3">
+                        <div className="bg-brand-teal/[0.05] border border-brand-teal/20 rounded-xl px-4 py-3">
                           {confirmComplete === req.id ? (
                             <div className="flex flex-wrap items-center gap-3">
                               <p className="text-xs text-slate-300 flex-1">
@@ -464,7 +464,7 @@ export default function RequestsPage() {
                               <button
                                 onClick={() => handleCompleteReading(req.id)}
                                 disabled={completingRequest === req.id}
-                                className="text-xs bg-teal-500 hover:bg-teal-400 disabled:opacity-50 text-white font-semibold px-4 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                                className="text-xs bg-brand-teal hover:bg-brand-teal-light disabled:opacity-50 text-white font-semibold px-4 py-1.5 rounded-lg transition-colors whitespace-nowrap"
                               >
                                 {completingRequest === req.id ? 'Processing...' : 'Yes, pass it on'}
                               </button>
@@ -482,7 +482,7 @@ export default function RequestsPage() {
                               </p>
                               <button
                                 onClick={() => setConfirmComplete(req.id)}
-                                className="text-xs bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/30 font-semibold px-4 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                                className="text-xs bg-brand-teal/20 hover:bg-brand-teal/30 text-teal-300 border border-brand-teal/30 font-semibold px-4 py-1.5 rounded-lg transition-colors whitespace-nowrap"
                               >
                                 Complete Reading
                               </button>

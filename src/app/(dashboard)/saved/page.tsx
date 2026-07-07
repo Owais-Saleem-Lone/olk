@@ -59,7 +59,7 @@ export default function SavedBooksPage() {
         <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-10 text-center">
           <div className="text-4xl mb-3">🔖</div>
           <p className="text-slate-500 mb-4">No saved books yet</p>
-          <Link href="/browse" className="text-sm text-teal-400 hover:text-teal-300">
+          <Link href="/browse" className="text-sm text-brand-teal-light hover:text-teal-300">
             Browse books to save some →
           </Link>
         </div>
@@ -71,7 +71,7 @@ export default function SavedBooksPage() {
             return (
               <div key={item.id} className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden flex flex-col">
                 <Link href={`/browse?q=${encodeURIComponent(book.title)}`}>
-                  <div className="relative w-full aspect-[2/3] bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden">
+                  <div className="relative w-full aspect-[2/3] bg-gradient-to-br from-brand-slate-light to-brand-slate overflow-hidden">
                     {book.cover_url ? (
                       <Image src={book.cover_url} alt={book.title} fill unoptimized sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-cover" referrerPolicy="no-referrer" />
                     ) : (
@@ -83,7 +83,7 @@ export default function SavedBooksPage() {
                     <div className="absolute top-2 left-2">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm ${
                         book.listing_type === 'donate'
-                          ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                          ? 'bg-brand-teal/20 text-teal-300 border border-brand-teal/30'
                           : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                       }`}>
                         {book.listing_type === 'donate' ? 'Free' : 'Lend'}

@@ -86,8 +86,8 @@ export default function AdminNotificationsPage() {
   return (
     <div>
       {msg && (
-        <div className="mb-4 bg-teal-500/10 border border-teal-500/20 text-teal-400 text-sm px-4 py-2 rounded-lg flex justify-between">
-          {msg}<button onClick={() => setMsg('')} className="text-teal-400/50 hover:text-teal-400">×</button>
+        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-light text-sm px-4 py-2 rounded-lg flex justify-between">
+          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-light/50 hover:text-brand-teal-light">×</button>
         </div>
       )}
 
@@ -110,18 +110,18 @@ export default function AdminNotificationsPage() {
             <h3 className="text-sm font-medium text-slate-300 mb-4">Send Broadcast Notification</h3>
             {userCount !== null && (
               <p className="text-xs text-slate-500 mb-4">
-                Will be sent to <span className="text-teal-400 font-semibold">{userCount}</span> {bArea ? `users in ${bArea}` : 'users'}
+                Will be sent to <span className="text-brand-teal-light font-semibold">{userCount}</span> {bArea ? `users in ${bArea}` : 'users'}
               </p>
             )}
             <div className="space-y-3">
-              <input type="text" value={bTitle} onChange={e => setBTitle(e.target.value)} placeholder="Notification title" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
-              <textarea value={bBody} onChange={e => setBBody(e.target.value)} placeholder="Body (optional)" rows={3} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none" />
-              <input type="text" value={bLink} onChange={e => setBLink(e.target.value)} placeholder="Link (optional, e.g. /browse)" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
-              <select value={bArea} onChange={e => setBArea(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500">
+              <input type="text" value={bTitle} onChange={e => setBTitle(e.target.value)} placeholder="Notification title" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+              <textarea value={bBody} onChange={e => setBBody(e.target.value)} placeholder="Body (optional)" rows={3} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none" />
+              <input type="text" value={bLink} onChange={e => setBLink(e.target.value)} placeholder="Link (optional, e.g. /browse)" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+              <select value={bArea} onChange={e => setBArea(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-teal">
                 <option value="">All areas</option>
                 {areas.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
-              <button onClick={handleBroadcast} disabled={!bTitle.trim() || acting} className="w-full bg-teal-500 hover:bg-teal-400 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50">
+              <button onClick={handleBroadcast} disabled={!bTitle.trim() || acting} className="w-full bg-brand-teal hover:bg-brand-teal-light text-white font-semibold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50">
                 {acting ? 'Sending...' : 'Send Broadcast'}
               </button>
             </div>
@@ -141,10 +141,10 @@ export default function AdminNotificationsPage() {
                   value={dUserSearch}
                   onChange={e => searchUsers(e.target.value)}
                   placeholder="Search user by name..."
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
                 />
                 {userResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-slate-900 border border-white/10 rounded-lg overflow-hidden z-10 max-h-48 overflow-y-auto">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-brand-slate border border-white/10 rounded-lg overflow-hidden z-10 max-h-48 overflow-y-auto">
                     {userResults.map(u => (
                       <button
                         key={u.id}
@@ -157,10 +157,10 @@ export default function AdminNotificationsPage() {
                   </div>
                 )}
               </div>
-              {dUserId && <p className="text-xs text-teal-400">Selected: {dUserId.slice(0, 12)}...</p>}
-              <input type="text" value={dTitle} onChange={e => setDTitle(e.target.value)} placeholder="Notification title" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500" />
-              <textarea value={dBody} onChange={e => setDBody(e.target.value)} placeholder="Body (optional)" rows={3} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none" />
-              <button onClick={handleDirect} disabled={!dUserId || !dTitle.trim() || acting} className="w-full bg-teal-500 hover:bg-teal-400 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50">
+              {dUserId && <p className="text-xs text-brand-teal-light">Selected: {dUserId.slice(0, 12)}...</p>}
+              <input type="text" value={dTitle} onChange={e => setDTitle(e.target.value)} placeholder="Notification title" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+              <textarea value={dBody} onChange={e => setDBody(e.target.value)} placeholder="Body (optional)" rows={3} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none" />
+              <button onClick={handleDirect} disabled={!dUserId || !dTitle.trim() || acting} className="w-full bg-brand-teal hover:bg-brand-teal-light text-white font-semibold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50">
                 {acting ? 'Sending...' : 'Send Notification'}
               </button>
             </div>
@@ -181,7 +181,7 @@ export default function AdminNotificationsPage() {
                   <p className="text-xs text-slate-500">{t.name}</p>
                   {t.body && <p className="text-xs text-slate-400 mt-1 truncate">{t.body}</p>}
                 </div>
-                <button onClick={() => applyTemplate(t)} className="text-xs bg-teal-500/10 text-teal-400 border border-teal-500/20 hover:bg-teal-500/20 px-3 py-1.5 rounded-lg transition-colors ml-3">Use</button>
+                <button onClick={() => applyTemplate(t)} className="text-xs bg-brand-teal/10 text-brand-teal-light border border-brand-teal/20 hover:bg-brand-teal/20 px-3 py-1.5 rounded-lg transition-colors ml-3">Use</button>
               </div>
             ))
           )}

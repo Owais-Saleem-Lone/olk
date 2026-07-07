@@ -45,7 +45,7 @@ export default function DashboardShell({
       {/* ── Mobile top bar (hidden on desktop) ── */}
       <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-slate-950/95 backdrop-blur-sm border-b border-white/5">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-teal-500 flex items-center justify-center font-bold text-xs">OLK</div>
+          <div className="w-8 h-8 rounded-lg bg-brand-teal flex items-center justify-center font-bold text-xs">OLK</div>
           <span className="font-semibold tracking-tight text-sm">Open Library Kashmir</span>
         </Link>
         <div className="flex items-center gap-1">

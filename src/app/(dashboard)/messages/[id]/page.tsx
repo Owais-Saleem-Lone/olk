@@ -181,12 +181,12 @@ export default function ChatPage() {
         <Link href="/messages" className="text-slate-400 hover:text-white transition-colors text-xl leading-none">
           ←
         </Link>
-        <Link href={otherUserId ? `/user/${otherUserId}` : '#'} className="w-10 h-10 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 font-bold flex-shrink-0 hover:bg-teal-500/20 transition-colors">
+        <Link href={otherUserId ? `/user/${otherUserId}` : '#'} className="w-10 h-10 rounded-full bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-brand-teal-light font-bold flex-shrink-0 hover:bg-brand-teal/20 transition-colors">
           {(otherUser?.display_name || '?')[0].toUpperCase()}
         </Link>
         <div>
           <h1 className="text-base font-semibold leading-tight">
-            <Link href={otherUserId ? `/user/${otherUserId}` : '#'} className="hover:text-teal-400 transition-colors">
+            <Link href={otherUserId ? `/user/${otherUserId}` : '#'} className="hover:text-brand-teal-light transition-colors">
               {otherUser?.display_name || 'Anonymous'}
             </Link>
           </h1>
@@ -223,7 +223,7 @@ export default function ChatPage() {
             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} mb-1`}>
               <div className={`max-w-xs lg:max-w-md rounded-2xl px-4 py-2.5 ${
                 isMe
-                  ? 'bg-teal-500 text-white rounded-br-sm'
+                  ? 'bg-brand-teal text-white rounded-br-sm'
                   : 'bg-white/[0.06] text-white rounded-bl-sm'
               }`}>
                 <p className="text-sm leading-relaxed">{msg.content}</p>
@@ -244,12 +244,12 @@ export default function ChatPage() {
           value={content}
           onChange={e => setContent(e.target.value)}
           placeholder="Type a message..."
-          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
         />
         <button
           type="submit"
           disabled={!content.trim() || sending}
-          className="bg-teal-500 hover:bg-teal-400 disabled:opacity-40 text-white font-semibold px-5 py-3 rounded-xl transition-colors flex items-center gap-2 text-sm"
+          className="bg-brand-teal hover:bg-brand-teal-light disabled:opacity-40 text-white font-semibold px-5 py-3 rounded-xl transition-colors flex items-center gap-2 text-sm"
         >
           Send
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

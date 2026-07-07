@@ -49,7 +49,7 @@ export default function AboutModal() {
 
           {/* Ambient glows — fixed so they stay while scrolling */}
           <div className="pointer-events-none fixed inset-0">
-            <div className="absolute top-[5%] left-1/4 w-[500px] h-[500px] bg-teal-600/[0.06] rounded-full blur-[120px]" />
+            <div className="absolute top-[5%] left-1/4 w-[500px] h-[500px] bg-brand-teal-dark/[0.06] rounded-full blur-[120px]" />
             <div className="absolute top-[45%] right-[8%] w-[400px] h-[400px] bg-amber-500/[0.04] rounded-full blur-[100px]" />
             <div className="absolute bottom-[8%] left-[12%] w-[350px] h-[350px] bg-violet-600/[0.04] rounded-full blur-[90px]" />
           </div>
@@ -70,7 +70,7 @@ export default function AboutModal() {
 
             {/* ── Header ── */}
             <div className="text-center mb-20">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center font-bold text-sm shadow-xl shadow-teal-500/30 mx-auto mb-5">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-teal-light to-brand-teal-dark flex items-center justify-center font-bold text-sm shadow-xl shadow-brand-teal/30 mx-auto mb-5">
                 OLK
               </div>
               <h1 className="text-4xl md:text-5xl font-bold mb-3 tracking-tight">About Us</h1>
@@ -104,13 +104,13 @@ export default function AboutModal() {
             {/* ── II. This Platform ── */}
             <section className="mb-24">
               <div className="flex items-center gap-5 mb-10">
-                <span className="text-4xl font-thin text-teal-500/25 select-none leading-none">II</span>
-                <div className="flex-1 h-px bg-gradient-to-r from-teal-500/20 to-transparent" />
+                <span className="text-4xl font-thin text-brand-teal/25 select-none leading-none">II</span>
+                <div className="flex-1 h-px bg-gradient-to-r from-brand-teal/20 to-transparent" />
               </div>
 
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-8 tracking-tight">This Platform</h2>
 
-              <div className="border-l-2 border-teal-400/40 pl-6 mb-10">
+              <div className="border-l-2 border-brand-teal-light/40 pl-6 mb-10">
                 <p className="text-lg text-white/90 font-medium leading-relaxed italic">
                   Where books travel, and minds open.
                 </p>
@@ -122,8 +122,8 @@ export default function AboutModal() {
                 <p>Just people. And the passion that connects them.</p>
               </div>
 
-              <div className="bg-teal-500/[0.04] border border-teal-500/[0.12] rounded-2xl p-7">
-                <h3 className="text-sm font-bold text-teal-400 uppercase tracking-widest mb-4">Join the Community</h3>
+              <div className="bg-brand-teal/[0.04] border border-brand-teal/[0.12] rounded-2xl p-7">
+                <h3 className="text-sm font-bold text-brand-teal-light uppercase tracking-widest mb-4">Join the Community</h3>
                 <div className="space-y-4 text-[15px] text-slate-400 leading-relaxed">
                   <p>This is a space where we actively support the dreamer who wants to write, the traveler who wants to document, and the student who wants to understand <em>why</em> before they learn <em>how</em>.</p>
                   <p className="text-slate-200 font-medium">OLK is not just a library. It is a living ecosystem of enlightenment.</p>
@@ -147,7 +147,7 @@ export default function AboutModal() {
                     className="bg-white/[0.02] border border-white/[0.06] hover:border-white/10 rounded-2xl p-6 transition-colors"
                   >
                     <div className="flex gap-5 items-start">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-white/10 flex items-center justify-center text-white/70 font-semibold text-sm flex-shrink-0">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-slate-muted to-brand-slate-light border border-white/10 flex items-center justify-center text-white/70 font-semibold text-sm flex-shrink-0">
                         {member.initials}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -155,14 +155,14 @@ export default function AboutModal() {
                         <p className="text-xs text-slate-500 mt-0.5 mb-4">{member.role}</p>
                         {member.bio
                           ? <p className="text-sm text-slate-400 leading-relaxed">{member.bio}</p>
-                          : <p className="text-xs text-slate-700 italic">Biography coming soon.</p>
+                          : <p className="text-xs text-brand-slate-muted italic">Biography coming soon.</p>
                         }
                         {member.website && (
                           <a
                             href={member.website}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs text-teal-500 hover:text-teal-400 mt-4 transition-colors"
+                            className="inline-flex items-center gap-1.5 text-xs text-brand-teal hover:text-brand-teal-light mt-4 transition-colors"
                           >
                             Visit website
                             <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -179,7 +179,7 @@ export default function AboutModal() {
 
             {/* ── Footer ── */}
             <div className="text-center mt-24 pb-4">
-              <p className="text-slate-800 text-xs">Built with ❤️ for the people of Kashmir</p>
+              <p className="text-brand-slate-light text-xs">Built with ❤️ for the people of Kashmir</p>
             </div>
 
           </div>

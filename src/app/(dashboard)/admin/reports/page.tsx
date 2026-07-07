@@ -159,8 +159,8 @@ export default function AdminReportsPage() {
   return (
     <div>
       {msg && (
-        <div className="mb-4 bg-teal-500/10 border border-teal-500/20 text-teal-400 text-sm px-4 py-2 rounded-lg flex justify-between">
-          {msg}<button onClick={() => setMsg('')} className="text-teal-400/50 hover:text-teal-400">×</button>
+        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-light text-sm px-4 py-2 rounded-lg flex justify-between">
+          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-light/50 hover:text-brand-teal-light">×</button>
         </div>
       )}
 
@@ -181,7 +181,7 @@ export default function AdminReportsPage() {
         <select
           value={filterCat}
           onChange={e => setFilterCat(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
+          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-teal"
         >
           <option value="">All Categories</option>
           {CATEGORIES.map(c => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
@@ -201,7 +201,7 @@ export default function AdminReportsPage() {
                 key={r.id}
                 onClick={() => selectReport(r)}
                 className={`w-full text-left bg-white/[0.03] border rounded-xl p-4 transition-colors ${
-                  selected?.id === r.id ? 'border-teal-500/30 bg-teal-500/5' : 'border-white/[0.06] hover:bg-white/[0.05]'
+                  selected?.id === r.id ? 'border-brand-teal/30 bg-brand-teal/5' : 'border-white/[0.06] hover:bg-white/[0.05]'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -251,7 +251,7 @@ export default function AdminReportsPage() {
                       key={c}
                       onClick={() => handleCategory(c)}
                       className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${
-                        selected.category === c ? 'bg-teal-500/10 text-teal-400 border-teal-500/20' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
+                        selected.category === c ? 'bg-brand-teal/10 text-brand-teal-light border-brand-teal/20' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
                       }`}
                     >
                       {c.replace('_', ' ')}
@@ -314,10 +314,10 @@ export default function AdminReportsPage() {
                   value={newNote}
                   onChange={e => setNewNote(e.target.value)}
                   placeholder="Add internal note..."
-                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
                   onKeyDown={e => e.key === 'Enter' && handleAddNote()}
                 />
-                <button onClick={handleAddNote} disabled={!newNote.trim() || acting} className="bg-teal-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-teal-400 disabled:opacity-50 transition-colors">Add</button>
+                <button onClick={handleAddNote} disabled={!newNote.trim() || acting} className="bg-brand-teal text-white px-4 py-2 rounded-lg text-sm hover:bg-brand-teal-light disabled:opacity-50 transition-colors">Add</button>
               </div>
             </div>
           </div>
@@ -327,7 +327,7 @@ export default function AdminReportsPage() {
       {/* Quick Action Modal */}
       {quickAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setQuickAction(null)}>
-          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-white mb-4">
               {quickAction === 'ban' ? 'Ban User' : quickAction === 'warn' ? 'Warn User' : 'Hide Book'}
             </h3>
@@ -336,7 +336,7 @@ export default function AdminReportsPage() {
               onChange={e => setQuickReason(e.target.value)}
               placeholder="Reason..."
               rows={3}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none mb-4"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-4"
             />
             {quickAction === 'ban' && (
               <div className="mb-4">
@@ -346,7 +346,7 @@ export default function AdminReportsPage() {
                   value={quickBanDays}
                   onChange={e => setQuickBanDays(Number(e.target.value))}
                   min={1}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-brand-teal"
                 />
               </div>
             )}

@@ -46,7 +46,7 @@ export default function BookOfMonthCard({ book }: { book: BookOfMonth }) {
             {book.cover_url ? (
               <Image src={book.cover_url} alt={book.title} fill unoptimized sizes="144px" className="object-cover" />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-amber-900/40 to-slate-900 flex items-center justify-center">
+              <div className="w-full h-full bg-gradient-to-br from-amber-900/40 to-brand-slate flex items-center justify-center">
                 <BookIcon />
               </div>
             )}
@@ -122,7 +122,7 @@ export default function BookOfMonthCard({ book }: { book: BookOfMonth }) {
                   {book.cover_url ? (
                     <Image src={book.cover_url} alt={book.title} fill unoptimized sizes="112px" className="object-cover" />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-amber-900/40 to-slate-900 flex items-center justify-center">
+                    <div className="w-full h-full bg-gradient-to-br from-amber-900/40 to-brand-slate flex items-center justify-center">
                       <BookIcon />
                     </div>
                   )}

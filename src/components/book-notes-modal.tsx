@@ -101,7 +101,7 @@ export default function BookNotesModal({
       onClick={onClose}
     >
       <div
-        className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-lg max-h-[80vh] flex flex-col"
+        className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-lg max-h-[80vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -133,7 +133,7 @@ export default function BookNotesModal({
               key={n.id}
               className={`rounded-xl p-4 border ${
                 n.user_id === currentUserId
-                  ? 'bg-teal-500/[0.05] border-teal-500/20'
+                  ? 'bg-brand-teal/[0.05] border-brand-teal/20'
                   : 'bg-white/[0.03] border-white/[0.06]'
               }`}
             >
@@ -142,7 +142,7 @@ export default function BookNotesModal({
                 <span className="text-xs text-slate-500">
                   {n.profiles?.display_name || 'Reader'}
                   {n.user_id === currentUserId && (
-                    <span className="ml-1.5 text-teal-500 font-medium">(you)</span>
+                    <span className="ml-1.5 text-brand-teal font-medium">(you)</span>
                   )}
                 </span>
                 <span className="text-xs text-slate-600">
@@ -170,7 +170,7 @@ export default function BookNotesModal({
             onChange={e => { setMyNote(e.target.value); setMessage('') }}
             placeholder="Share your personal experience with this book..."
             rows={3}
-            className={`w-full bg-white/5 border rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none mb-3 ${
+            className={`w-full bg-white/5 border rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-3 ${
               overLimit ? 'border-red-500/50' : 'border-white/10'
             }`}
           />
@@ -178,7 +178,7 @@ export default function BookNotesModal({
             <p className={`text-xs mb-3 ${
               message.startsWith('Error') || message.includes('already has') || message.includes('Please')
                 ? 'text-red-400'
-                : 'text-teal-400'
+                : 'text-brand-teal-light'
             }`}>
               {message}
             </p>
@@ -187,7 +187,7 @@ export default function BookNotesModal({
             <button
               onClick={handleSave}
               disabled={saving || overLimit || !myNote.trim()}
-              className="flex-1 bg-teal-500 hover:bg-teal-400 disabled:opacity-40 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
+              className="flex-1 bg-brand-teal hover:bg-brand-teal-light disabled:opacity-40 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
             >
               {saving ? 'Saving...' : hasMyNote ? 'Update Note' : 'Add Note'}
             </button>

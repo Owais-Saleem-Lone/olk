@@ -70,9 +70,9 @@ export default async function Home() {
 
       {/* Ambient background glow — decorative only */}
       <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-teal-500/[0.07] rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-brand-teal/[0.07] rounded-full blur-[120px]" />
         <div className="absolute top-[40%] left-[10%] w-[400px] h-[400px] bg-cyan-600/[0.04] rounded-full blur-[100px]" />
-        <div className="absolute top-[60%] right-[5%] w-[350px] h-[350px] bg-teal-400/[0.04] rounded-full blur-[90px]" />
+        <div className="absolute top-[60%] right-[5%] w-[350px] h-[350px] bg-brand-teal-light/[0.04] rounded-full blur-[90px]" />
       </div>
 
       {/* ── Navbar ── */}
@@ -80,7 +80,7 @@ export default async function Home() {
         <div className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center font-bold text-xs shadow-lg shadow-teal-500/30">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-teal-light to-brand-teal-dark flex items-center justify-center font-bold text-xs shadow-lg shadow-brand-teal/30">
                 OLK
               </div>
               <span className="font-semibold tracking-tight">Open Library Kashmir</span>
@@ -97,7 +97,7 @@ export default async function Home() {
             {user ? (
               <Link
                 href="/browse"
-                className="text-sm font-semibold bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 rounded-lg transition-all shadow-lg shadow-teal-500/20 hover:shadow-teal-500/30"
+                className="text-sm font-semibold bg-brand-teal hover:bg-brand-teal-light text-white px-4 py-2 rounded-lg transition-all shadow-lg shadow-brand-teal/20 hover:shadow-brand-teal/30"
               >
                 👤 {displayName || user.email}
               </Link>
@@ -111,7 +111,7 @@ export default async function Home() {
                 </Link>
                 <Link
                   href="/register"
-                  className="text-sm font-semibold bg-teal-500 hover:bg-teal-400 text-white px-4 py-2 rounded-lg transition-all shadow-lg shadow-teal-500/20 hover:shadow-teal-500/30"
+                  className="text-sm font-semibold bg-brand-teal hover:bg-brand-teal-light text-white px-4 py-2 rounded-lg transition-all shadow-lg shadow-brand-teal/20 hover:shadow-brand-teal/30"
                 >
                   Join Now
                 </Link>
@@ -130,8 +130,8 @@ export default async function Home() {
       <section className="relative z-10 max-w-4xl mx-auto px-6 pt-24 pb-20 text-center">
 
         {/* Badge */}
-        <div className="inline-flex items-center gap-2 bg-teal-500/10 border border-teal-500/20 rounded-full px-4 py-1.5 mb-6">
-          <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
+        <div className="inline-flex items-center gap-2 bg-brand-teal/10 border border-brand-teal/20 rounded-full px-4 py-1.5 mb-6">
+          <span className="w-1.5 h-1.5 rounded-full bg-brand-teal-light animate-pulse" />
           <span className="text-teal-300 text-sm font-medium">Free • Open Source • Privacy-First</span>
         </div>
 
@@ -149,12 +149,12 @@ export default async function Home() {
               name="q"
               type="text"
               placeholder="Search a book or author"
-              className="w-full bg-white/[0.06] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/60 focus:border-teal-500/40 transition-all"
+              className="w-full bg-white/[0.06] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal/60 focus:border-brand-teal/40 transition-all"
             />
           </div>
           <button
             type="submit"
-            className="bg-teal-500 hover:bg-teal-400 text-white font-semibold px-5 py-3 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap shadow-lg shadow-teal-500/20"
+            className="bg-brand-teal hover:bg-brand-teal-light text-white font-semibold px-5 py-3 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap shadow-lg shadow-brand-teal/20"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
@@ -170,7 +170,7 @@ export default async function Home() {
         <h1 className="text-6xl md:text-8xl font-bold tracking-tight leading-[1.05] mb-6">
           Share a book.
           <br />
-          <span className="bg-gradient-to-r from-teal-400 via-cyan-300 to-teal-400 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-brand-teal-light via-cyan-300 to-brand-teal-light bg-clip-text text-transparent">
             Change a life.
           </span>
         </h1>
@@ -182,7 +182,7 @@ export default async function Home() {
 
         <Link
           href={user ? "/my-books" : "/register"}
-          className="inline-flex items-center gap-2 bg-teal-500 hover:bg-teal-400 text-white font-semibold px-8 py-3.5 rounded-xl text-base transition-all shadow-xl shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-px"
+          className="inline-flex items-center gap-2 bg-brand-teal hover:bg-brand-teal-light text-white font-semibold px-8 py-3.5 rounded-xl text-base transition-all shadow-xl shadow-brand-teal/25 hover:shadow-brand-teal/40 hover:-translate-y-px"
         >
           Start Sharing Books →
         </Link>
@@ -191,7 +191,7 @@ export default async function Home() {
         {(totalBooks > 0 || totalUsers > 0 || completedExchanges > 0) ? (
           <div className="grid grid-cols-3 gap-5 mt-16 max-w-xl mx-auto">
             {[
-              { value: totalBooks ?? 0, label: 'Books Shared', color: 'text-teal-400' },
+              { value: totalBooks ?? 0, label: 'Books Shared', color: 'text-brand-teal-light' },
               { value: totalUsers ?? 0, label: 'Readers Joined', color: 'text-cyan-400' },
               { value: completedExchanges ?? 0, label: 'Exchanges Made', color: 'text-emerald-400' },
             ].map((stat) => (
@@ -214,7 +214,7 @@ export default async function Home() {
       {/* ── How it works ── */}
       <section className="relative z-10 max-w-5xl mx-auto px-6 pb-28">
         <div className="text-center mb-14">
-          <p className="text-teal-400 text-sm font-semibold uppercase tracking-widest mb-3">How it works</p>
+          <p className="text-brand-teal-light text-sm font-semibold uppercase tracking-widest mb-3">How it works</p>
           <h2 className="text-3xl md:text-4xl font-bold">Simple. Local. Free.</h2>
         </div>
 
@@ -238,14 +238,14 @@ export default async function Home() {
           ].map((item) => (
             <div
               key={item.step}
-              className="relative bg-white/[0.02] border border-white/[0.06] rounded-2xl p-8 hover:border-teal-500/20 transition-colors group overflow-hidden"
+              className="relative bg-white/[0.02] border border-white/[0.06] rounded-2xl p-8 hover:border-brand-teal/20 transition-colors group overflow-hidden"
             >
               {/* Large step number in background */}
-              <div className="absolute top-4 right-5 text-7xl font-black text-white/[0.03] group-hover:text-teal-500/[0.06] transition-colors select-none font-mono">
+              <div className="absolute top-4 right-5 text-7xl font-black text-white/[0.03] group-hover:text-brand-teal/[0.06] transition-colors select-none font-mono">
                 {item.step}
               </div>
               <div className="relative">
-                <span className="inline-block text-teal-400 text-xs font-bold uppercase tracking-widest mb-4">{item.step}</span>
+                <span className="inline-block text-brand-teal-light text-xs font-bold uppercase tracking-widest mb-4">{item.step}</span>
                 <h3 className="text-lg font-semibold mb-3">{item.title}</h3>
                 <p className="text-sm text-slate-400 leading-relaxed">{item.desc}</p>
               </div>
@@ -258,7 +258,7 @@ export default async function Home() {
       {recentActivity && recentActivity.length > 0 && (
         <section className="relative z-10 max-w-5xl mx-auto px-6 pb-28">
           <div className="text-center mb-10">
-            <p className="text-teal-400 text-sm font-semibold uppercase tracking-widest mb-3">Live Activity</p>
+            <p className="text-brand-teal-light text-sm font-semibold uppercase tracking-widest mb-3">Live Activity</p>
             <h2 className="text-3xl md:text-4xl font-bold">Happening right now</h2>
           </div>
           <div className="space-y-3 max-w-2xl mx-auto">
@@ -271,7 +271,7 @@ export default async function Home() {
                 <div key={i} className="flex items-center gap-4 bg-white/[0.02] border border-white/[0.06] rounded-xl px-5 py-3.5">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                     item.listing_type === 'donate'
-                      ? 'bg-teal-500/10 text-teal-400'
+                      ? 'bg-brand-teal/10 text-brand-teal-light'
                       : 'bg-blue-500/10 text-blue-400'
                   }`}>
                     {item.listing_type === 'donate' ? '🎁' : '🤝'}
@@ -279,7 +279,7 @@ export default async function Home() {
                   <p className="text-sm text-slate-300 flex-1">
                     <span className="text-white font-medium">{name}</span>
                     {' '}{item.listing_type === 'donate' ? 'donated' : 'listed'}{' '}
-                    <span className="text-teal-400 font-medium">{item.title}</span>
+                    <span className="text-brand-teal-light font-medium">{item.title}</span>
                     {area && <span className="text-slate-500"> in {area}</span>}
                   </p>
                   <span className="text-xs text-slate-600 flex-shrink-0">{ago}</span>
@@ -294,12 +294,12 @@ export default async function Home() {
       <section className="relative z-10 max-w-5xl mx-auto px-6 pb-28">
         <div className="flex items-end justify-between mb-8">
           <div>
-            <p className="text-teal-400 text-sm font-semibold uppercase tracking-widest mb-1">From the Community</p>
+            <p className="text-brand-teal-light text-sm font-semibold uppercase tracking-widest mb-1">From the Community</p>
             <h2 className="text-2xl md:text-3xl font-bold">Recently Added</h2>
           </div>
           <Link
             href="/browse"
-            className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-teal-400 transition-colors group"
+            className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-brand-teal-light transition-colors group"
           >
             See all books
             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-0.5 transition-transform">
@@ -313,7 +313,7 @@ export default async function Home() {
             {featuredBooks.map((book) => (
               <Link href={`/browse?q=${encodeURIComponent(book.title)}`} key={book.id} className="group">
                 {/* Cover */}
-                <div className="aspect-[2/3] rounded-xl overflow-hidden mb-3 border border-white/[0.06] bg-gradient-to-br from-slate-800 to-slate-900 relative">
+                <div className="aspect-[2/3] rounded-xl overflow-hidden mb-3 border border-white/[0.06] bg-gradient-to-br from-brand-slate-light to-brand-slate relative">
                   {book.cover_url ? (
                     <Image
                       src={book.cover_url}
@@ -336,7 +336,7 @@ export default async function Home() {
                   <div className="absolute top-2 left-2">
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm ${
                       book.listing_type === 'donate'
-                        ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
+                        ? 'bg-brand-teal/20 text-teal-300 border border-brand-teal/30'
                         : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                     }`}>
                       {book.listing_type === 'donate' ? 'Free' : 'Lend'}
@@ -351,7 +351,7 @@ export default async function Home() {
                   )}
                 </div>
                 {/* Info */}
-                <h3 className="font-semibold text-sm leading-snug mb-0.5 group-hover:text-teal-400 transition-colors line-clamp-2">
+                <h3 className="font-semibold text-sm leading-snug mb-0.5 group-hover:text-brand-teal-light transition-colors line-clamp-2">
                   {book.title}
                 </h3>
                 {book.author && (
@@ -363,7 +363,7 @@ export default async function Home() {
         ) : (
           <div className="border border-dashed border-white/[0.08] rounded-2xl py-16 text-center text-slate-600">
             <p>Books will appear here once the community starts sharing.</p>
-            <Link href="/register" className="inline-block mt-4 text-sm text-teal-500 hover:text-teal-400">
+            <Link href="/register" className="inline-block mt-4 text-sm text-brand-teal hover:text-brand-teal-light">
               Be the first to add one →
             </Link>
           </div>
@@ -375,12 +375,12 @@ export default async function Home() {
         <section className="relative z-10 max-w-5xl mx-auto px-6 pb-28">
           <div className="flex items-end justify-between mb-8">
             <div>
-              <p className="text-teal-400 text-sm font-semibold uppercase tracking-widest mb-1">Community</p>
+              <p className="text-brand-teal-light text-sm font-semibold uppercase tracking-widest mb-1">Community</p>
               <h2 className="text-2xl md:text-3xl font-bold">Local Clubs</h2>
             </div>
             <Link
               href={user ? "/clubs" : "/login"}
-              className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-teal-400 transition-colors group"
+              className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-brand-teal-light transition-colors group"
             >
               {user ? 'Browse all clubs' : 'Join to explore'}
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-0.5 transition-transform">
@@ -394,13 +394,13 @@ export default async function Home() {
               <Link
                 key={club.id}
                 href={user ? `/clubs/${club.id}` : "/login"}
-                className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5 hover:border-teal-500/20 transition-colors group"
+                className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5 hover:border-brand-teal/20 transition-colors group"
               >
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-lg flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-lg flex-shrink-0">
                     🏘️
                   </div>
-                  <h3 className="font-semibold text-sm text-white group-hover:text-teal-400 transition-colors leading-snug">
+                  <h3 className="font-semibold text-sm text-white group-hover:text-brand-teal-light transition-colors leading-snug">
                     {club.name}
                   </h3>
                 </div>
@@ -420,7 +420,7 @@ export default async function Home() {
 
       {/* ── Final CTA ── */}
       <section className="relative z-10 max-w-5xl mx-auto px-6 pb-28">
-        <div className="relative rounded-3xl overflow-hidden border border-teal-500/20 bg-gradient-to-br from-teal-500/10 via-cyan-500/5 to-transparent p-14 text-center">
+        <div className="relative rounded-3xl overflow-hidden border border-brand-teal/20 bg-gradient-to-br from-brand-teal/10 via-cyan-500/5 to-transparent p-14 text-center">
           {/* inner glow */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#020817] via-transparent to-transparent pointer-events-none" />
           <div className="relative">
@@ -432,7 +432,7 @@ export default async function Home() {
             </p>
             <Link
               href={user ? "/my-books" : "/register"}
-              className="inline-flex items-center gap-2 bg-teal-500 hover:bg-teal-400 text-white font-semibold px-8 py-3.5 rounded-xl transition-all shadow-xl shadow-teal-500/25 hover:shadow-teal-500/40 hover:-translate-y-px"
+              className="inline-flex items-center gap-2 bg-brand-teal hover:bg-brand-teal-light text-white font-semibold px-8 py-3.5 rounded-xl transition-all shadow-xl shadow-brand-teal/25 hover:shadow-brand-teal/40 hover:-translate-y-px"
             >
               {user ? 'Start Sharing Books →' : 'Get Started — It\'s Free →'}
             </Link>
@@ -444,7 +444,7 @@ export default async function Home() {
       <footer className="relative z-10 border-t border-white/[0.05] py-10 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center font-bold text-xs">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-teal-light to-brand-teal-dark flex items-center justify-center font-bold text-xs">
               OLK
             </div>
             <span className="text-sm text-slate-400 font-medium">Open Library Kashmir</span>

@@ -162,9 +162,9 @@ export default function AdminBooksPage() {
   return (
     <div>
       {msg && (
-        <div className="mb-4 bg-teal-500/10 border border-teal-500/20 text-teal-400 text-sm px-4 py-2 rounded-lg flex justify-between">
+        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-light text-sm px-4 py-2 rounded-lg flex justify-between">
           {msg}
-          <button onClick={() => setMsg('')} className="text-teal-400/50 hover:text-teal-400">×</button>
+          <button onClick={() => setMsg('')} className="text-brand-teal-light/50 hover:text-brand-teal-light">×</button>
         </div>
       )}
 
@@ -174,12 +174,12 @@ export default function AdminBooksPage() {
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(0) }}
           placeholder="Search books or owners..."
-          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
+          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
         />
         <select
           value={filterGenre}
           onChange={e => { setFilterGenre(e.target.value); setPage(0) }}
-          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500"
+          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-teal"
         >
           <option value="">All Genres</option>
           {genres.map(g => <option key={g} value={g}>{g}</option>)}
@@ -278,7 +278,7 @@ export default function AdminBooksPage() {
       {/* Hide Modal */}
       {hideModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setHideModal(null)}>
-          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-white mb-4">Hide Book</h3>
             <textarea
               value={hideReason}
@@ -300,7 +300,7 @@ export default function AdminBooksPage() {
       {/* Bulk Hide Modal */}
       {bulkModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setBulkModal(false)}>
-          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-white mb-4">Bulk Hide {selected.size} Books</h3>
             <textarea
               value={bulkHideReason}
@@ -322,20 +322,20 @@ export default function AdminBooksPage() {
       {/* Edit Modal */}
       {editingBook && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setEditingBook(null)}>
-          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-white mb-4">Edit Book</h3>
             <div className="space-y-3 mb-4">
               <div>
                 <label className="text-sm text-slate-400">Title</label>
-                <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
               </div>
               <div>
                 <label className="text-sm text-slate-400">Author</label>
-                <input type="text" value={editAuthor} onChange={e => setEditAuthor(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                <input type="text" value={editAuthor} onChange={e => setEditAuthor(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
               </div>
               <div>
                 <label className="text-sm text-slate-400">Genre</label>
-                <select value={editGenre} onChange={e => setEditGenre(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <select value={editGenre} onChange={e => setEditGenre(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-brand-teal">
                   <option value="">Select Genre</option>
                   {genres.map(g => <option key={g} value={g}>{g}</option>)}
                 </select>
@@ -343,7 +343,7 @@ export default function AdminBooksPage() {
             </div>
             <div className="flex gap-2">
               <button onClick={() => setEditingBook(null)} className="flex-1 bg-white/5 text-slate-400 py-2 rounded-lg text-sm hover:bg-white/10">Cancel</button>
-              <button onClick={handleEdit} disabled={acting} className="flex-1 bg-teal-500 text-white py-2 rounded-lg text-sm hover:bg-teal-400 disabled:opacity-50">
+              <button onClick={handleEdit} disabled={acting} className="flex-1 bg-brand-teal text-white py-2 rounded-lg text-sm hover:bg-brand-teal-light disabled:opacity-50">
                 {acting ? 'Saving...' : 'Save Changes'}
               </button>
             </div>

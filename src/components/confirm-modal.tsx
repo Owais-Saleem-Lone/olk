@@ -19,7 +19,7 @@ export default function ConfirmModal({
 }) {
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4" onClick={onCancel}>
-      <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+      <div className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
         <h3 className="text-lg font-semibold mb-1">{title}</h3>
         <p className="text-sm text-slate-400 mb-5">{message}</p>
 
@@ -27,7 +27,7 @@ export default function ConfirmModal({
           <button
             onClick={onConfirm}
             className={`flex-1 font-semibold py-2.5 rounded-lg text-sm transition-colors text-white ${
-              danger ? 'bg-red-500 hover:bg-red-400' : 'bg-teal-500 hover:bg-teal-400'
+              danger ? 'bg-red-500 hover:bg-red-400' : 'bg-brand-teal hover:bg-brand-teal-light'
             }`}
           >
             {confirmLabel}
