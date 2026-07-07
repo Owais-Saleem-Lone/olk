@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { deactivateClub, reactivateClub, removeClubMember, transferClubOwnership } from '@/lib/admin-actions'
 
@@ -35,7 +35,7 @@ export default function AdminClubsPage() {
   const [transferModal, setTransferModal] = useState(false)
   const [transferUserId, setTransferUserId] = useState('')
 
-  async function loadClubs() {
+  const loadClubs = useCallback(async () => {
     setLoading(true)
     let query = supabase
       .from('clubs')
@@ -48,9 +48,9 @@ export default function AdminClubsPage() {
     const { data } = await query
     setClubs((data || []) as unknown as Club[])
     setLoading(false)
-  }
+  }, [supabase, filter])
 
-  useEffect(() => { queueMicrotask(() => loadClubs()) }, [filter])
+  useEffect(() => { queueMicrotask(() => loadClubs()) }, [loadClubs])
 
   async function selectClub(club: Club) {
     setSelected(club)

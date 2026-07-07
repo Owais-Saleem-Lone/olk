@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { updateReportStatus, addAdminNote, updateReportCategory, banUser, warnUser, hideBook } from '@/lib/admin-actions'
 
@@ -46,7 +46,7 @@ export default function AdminReportsPage() {
   const [quickReason, setQuickReason] = useState('')
   const [quickBanDays, setQuickBanDays] = useState(7)
 
-  async function loadReports() {
+  const loadReports = useCallback(async () => {
     setLoading(true)
     let query = supabase
       .from('reports')
@@ -83,9 +83,9 @@ export default function AdminReportsPage() {
       resolved_by_name: r.resolved_by ? profileMap.get(r.resolved_by) || null : null,
     })))
     setLoading(false)
-  }
+  }, [supabase, filter, filterCat])
 
-  useEffect(() => { queueMicrotask(() => loadReports()) }, [filter, filterCat])
+  useEffect(() => { queueMicrotask(() => loadReports()) }, [loadReports])
 
   async function selectReport(r: Report) {
     setSelected(r)

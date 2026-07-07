@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function ProfilePage() {
@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const [locating, setLocating] = useState(false)
   const [locationError, setLocationError] = useState('')
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -38,11 +38,11 @@ export default function ProfilePage() {
       }
     }
     setLoading(false)
-  }
+  }, [supabase])
 
   useEffect(() => {
     queueMicrotask(() => fetchProfile())
-  }, [])
+  }, [fetchProfile])
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {

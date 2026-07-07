@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { createNotification } from '@/lib/notifications'
 import { formatDistance } from '@/lib/geo'
 import Link from 'next/link'
+import Image from 'next/image'
 import ReportModal from '@/components/report-modal'
 
 function sanitizeSearchQuery(input: string): string {
@@ -196,11 +197,16 @@ export default function BrowsePage() {
 
   useEffect(() => {
     queueMicrotask(() => fetchBooks(searchQuery))
+    // Intentionally run once on mount with the initial searchQuery; typing updates
+    // searchQuery on every keystroke and search is otherwise triggered explicitly via handleSearch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
     if (!mounted.current) { mounted.current = true; return }
     queueMicrotask(() => fetchBooks(searchQuery))
+    // searchQuery is deliberately excluded here too — only filter changes should auto-refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterGenre, filterType, filterCondition])
 
   const toggleBookmark = async (bookId: string) => {
@@ -464,10 +470,13 @@ export default function BrowsePage() {
                 {/* Cover image */}
                 <div className="relative w-full aspect-[2/3] bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden">
                   {book.cover_url ? (
-                    <img
+                    <Image
                       src={book.cover_url}
                       alt={book.title}
-                      className="w-full h-full object-cover"
+                      fill
+                      unoptimized
+                      sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      className="object-cover"
                       referrerPolicy="no-referrer"
                     />
                   ) : (

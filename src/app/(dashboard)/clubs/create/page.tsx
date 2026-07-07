@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -27,7 +27,7 @@ export default function CreateClubPage() {
   const [longitude, setLongitude] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
 
-  const checkEligibility = async () => {
+  const checkEligibility = useCallback(async () => {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
@@ -80,9 +80,9 @@ export default function CreateClubPage() {
     setHasReports(userHasReports)
     setEligible(completedCount >= 5 && !userHasReports)
     setLoading(false)
-  }
+  }, [supabase])
 
-  useEffect(() => { queueMicrotask(() => checkEligibility()) }, [])
+  useEffect(() => { queueMicrotask(() => checkEligibility()) }, [checkEligibility])
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()

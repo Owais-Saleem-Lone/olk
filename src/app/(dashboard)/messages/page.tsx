@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
@@ -40,7 +40,7 @@ export default function MessagesPage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
 
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
 
@@ -128,9 +128,9 @@ export default function MessagesPage() {
 
     setConversations(convs)
     setLoading(false)
-  }
+  }, [supabase])
 
-  useEffect(() => { queueMicrotask(() => fetchConversations()) }, [])
+  useEffect(() => { queueMicrotask(() => fetchConversations()) }, [fetchConversations])
 
   if (loading) return <p className="text-slate-400">Loading messages...</p>
 

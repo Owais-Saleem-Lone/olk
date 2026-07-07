@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import Image from 'next/image'
 
 type SavedBook = {
   id: string
@@ -25,7 +26,7 @@ export default function SavedBooksPage() {
   const [savedBooks, setSavedBooks] = useState<SavedBook[]>([])
   const [loading, setLoading] = useState(true)
 
-  const fetchSaved = async () => {
+  const fetchSaved = useCallback(async () => {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -38,9 +39,9 @@ export default function SavedBooksPage() {
 
     if (data) setSavedBooks(data as unknown as SavedBook[])
     setLoading(false)
-  }
+  }, [supabase])
 
-  useEffect(() => { queueMicrotask(() => fetchSaved()) }, [])
+  useEffect(() => { queueMicrotask(() => fetchSaved()) }, [fetchSaved])
 
   const handleRemove = async (bookmarkId: string) => {
     await supabase.from('bookmarks').delete().eq('id', bookmarkId)
@@ -72,7 +73,7 @@ export default function SavedBooksPage() {
                 <Link href={`/browse?q=${encodeURIComponent(book.title)}`}>
                   <div className="relative w-full aspect-[2/3] bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden">
                     {book.cover_url ? (
-                      <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <Image src={book.cover_url} alt={book.title} fill unoptimized sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-cover" referrerPolicy="no-referrer" />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-4">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>

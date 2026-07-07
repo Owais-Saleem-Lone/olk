@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { createNotification } from '@/lib/notifications'
 import { useParams } from 'next/navigation'
@@ -47,7 +47,7 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const fetchChat = async () => {
+  const fetchChat = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     setCurrentUserId(user.id)
@@ -84,7 +84,7 @@ export default function ChatPage() {
 
     if (data) setMessages(data)
     setLoading(false)
-  }
+  }, [supabase, requestId])
 
   useEffect(() => {
     queueMicrotask(() => fetchChat())
@@ -104,7 +104,7 @@ export default function ChatPage() {
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [requestId])
+  }, [requestId, fetchChat, supabase])
 
   const handleSend = async () => {
     if (!content.trim() || !currentUserId || sending) return

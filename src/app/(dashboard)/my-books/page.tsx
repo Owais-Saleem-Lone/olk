@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { compressImage, validateImageUrl } from '@/lib/image-utils'
 import { createNotification } from '@/lib/notifications'
@@ -89,16 +90,16 @@ export default function MyBooksPage() {
   // ── Delete state ──
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
-  const fetchMyBooks = async () => {
+  const fetchMyBooks = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     const { data, error } = await supabase
       .from('books').select('*').eq('owner_id', user.id)
       .order('created_at', { ascending: false })
     if (!error && data) setMyBooks(data)
-  }
+  }, [supabase])
 
-  const fetchReceivedBooks = async () => {
+  const fetchReceivedBooks = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     const { data, error } = await supabase
@@ -122,9 +123,9 @@ export default function MyBooksPage() {
       prog.forEach((p: { book_id: string; progress_pct: number }) => { pm[p.book_id] = p.progress_pct })
       setReceivedProgress(pm)
     }
-  }
+  }, [supabase])
 
-  useEffect(() => { queueMicrotask(() => { fetchMyBooks(); fetchReceivedBooks() }) }, [])
+  useEffect(() => { queueMicrotask(() => { fetchMyBooks(); fetchReceivedBooks() }) }, [fetchMyBooks, fetchReceivedBooks])
 
   // ── Cover helpers ──
   const makeFileHandler = (
@@ -470,9 +471,9 @@ export default function MyBooksPage() {
                   <div className={`bg-white/[0.03] border rounded-xl p-4 flex gap-4 items-center transition-colors ${
                     editingBookId === book.id ? 'border-teal-500/30' : 'border-white/[0.06]'
                   }`}>
-                    <div className="w-12 h-16 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 border border-white/5">
+                    <div className="relative w-12 h-16 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 border border-white/5">
                       {book.cover_url ? (
-                        <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
+                        <Image src={book.cover_url} alt={book.title} fill unoptimized sizes="48px" className="object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-slate-600 text-lg font-bold">
                           {book.title[0]?.toUpperCase()}
@@ -681,9 +682,9 @@ export default function MyBooksPage() {
                   return (
                     <div key={req.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 hover:border-white/[0.10] transition-colors">
                       <div className="flex gap-4">
-                        <div className="w-12 h-16 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 border border-white/5">
+                        <div className="relative w-12 h-16 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0 border border-white/5">
                           {book.cover_url ? (
-                            <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
+                            <Image src={book.cover_url} alt={book.title} fill unoptimized sizes="48px" className="object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-slate-600 text-lg font-bold">
                               {book.title[0]?.toUpperCase()}
@@ -862,6 +863,9 @@ function CoverInput({
 
   return preview ? (
     <div className="relative inline-block">
+      {/* next/image can't handle this: preview is a data: URL (local file), a blob,
+          or an arbitrary pasted/ISBN-scan URL with no known host or intrinsic size. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={preview} alt="Cover preview"
         className="h-32 rounded-xl object-cover border border-white/10"
         onError={onClear} />

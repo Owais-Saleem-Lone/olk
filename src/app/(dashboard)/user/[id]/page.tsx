@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 
 type Profile = {
   display_name: string | null
@@ -41,7 +42,7 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = useCallback(async () => {
     setLoading(true)
 
     const { data: profileData } = await supabase
@@ -84,11 +85,11 @@ export default function UserProfilePage() {
     }
 
     setLoading(false)
-  }
+  }, [supabase, userId])
 
   useEffect(() => {
     queueMicrotask(() => fetchUserProfile())
-  }, [userId])
+  }, [fetchUserProfile])
 
   if (loading) {
     return <p className="text-slate-400 text-center py-20">Loading profile...</p>
@@ -190,10 +191,13 @@ export default function UserProfilePage() {
               >
                 <div className="relative w-full aspect-[2/3] bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden">
                   {book.cover_url ? (
-                    <img
+                    <Image
                       src={book.cover_url}
                       alt={book.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      fill
+                      unoptimized
+                      sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
                       referrerPolicy="no-referrer"
                     />
                   ) : (

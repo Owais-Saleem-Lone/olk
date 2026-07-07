@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
@@ -23,7 +23,7 @@ export default function WishlistPage() {
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
 
-  const fetchWishlist = async () => {
+  const fetchWishlist = useCallback(async () => {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -36,9 +36,9 @@ export default function WishlistPage() {
 
     if (data) setItems(data)
     setLoading(false)
-  }
+  }, [supabase])
 
-  useEffect(() => { queueMicrotask(() => fetchWishlist()) }, [])
+  useEffect(() => { queueMicrotask(() => fetchWishlist()) }, [fetchWishlist])
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()

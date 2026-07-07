@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import BookOfMonthCard from '@/components/book-of-month'
 import AboutModal from '@/components/about-modal'
@@ -314,10 +315,13 @@ export default async function Home() {
                 {/* Cover */}
                 <div className="aspect-[2/3] rounded-xl overflow-hidden mb-3 border border-white/[0.06] bg-gradient-to-br from-slate-800 to-slate-900 relative">
                   {book.cover_url ? (
-                    <img
+                    <Image
                       src={book.cover_url}
                       alt={book.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      fill
+                      unoptimized
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
                       referrerPolicy="no-referrer"
                     />
                   ) : (

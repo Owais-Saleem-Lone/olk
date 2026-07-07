@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { createPortal } from 'react-dom'
 
 type BookOfMonth = {
@@ -41,9 +42,9 @@ export default function BookOfMonthCard({ book }: { book: BookOfMonth }) {
 
         <div className="relative flex gap-8 items-start">
           {/* Cover */}
-          <div className="flex-shrink-0 w-36 aspect-[2/3] rounded-xl overflow-hidden border border-white/10 shadow-2xl shadow-black/40">
+          <div className="relative flex-shrink-0 w-36 aspect-[2/3] rounded-xl overflow-hidden border border-white/10 shadow-2xl shadow-black/40">
             {book.cover_url ? (
-              <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
+              <Image src={book.cover_url} alt={book.title} fill unoptimized sizes="144px" className="object-cover" />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-amber-900/40 to-slate-900 flex items-center justify-center">
                 <BookIcon />
@@ -117,9 +118,9 @@ export default function BookOfMonthCard({ book }: { book: BookOfMonth }) {
 
               {/* Cover + title row */}
               <div className="relative flex gap-6 mb-6">
-                <div className="flex-shrink-0 w-28 aspect-[2/3] rounded-xl overflow-hidden border border-amber-500/20 shadow-xl shadow-black/60">
+                <div className="relative flex-shrink-0 w-28 aspect-[2/3] rounded-xl overflow-hidden border border-amber-500/20 shadow-xl shadow-black/60">
                   {book.cover_url ? (
-                    <img src={book.cover_url} alt={book.title} className="w-full h-full object-cover" />
+                    <Image src={book.cover_url} alt={book.title} fill unoptimized sizes="112px" className="object-cover" />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-amber-900/40 to-slate-900 flex items-center justify-center">
                       <BookIcon />

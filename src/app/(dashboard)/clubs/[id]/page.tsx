@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { createNotification } from '@/lib/notifications'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import ConfirmModal from '@/components/confirm-modal'
 
 type Club = {
@@ -58,7 +59,7 @@ export default function ClubDetailPage() {
   const [editDesc, setEditDesc] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
-  const fetchClub = async () => {
+  const fetchClub = useCallback(async () => {
     setLoading(true)
 
     const { data: clubData } = await supabase
@@ -109,9 +110,9 @@ export default function ClubDetailPage() {
     if (membersData) setMembers(membersData as unknown as Member[])
 
     setLoading(false)
-  }
+  }, [supabase, clubId])
 
-  useEffect(() => { queueMicrotask(() => fetchClub()) }, [clubId])
+  useEffect(() => { queueMicrotask(() => fetchClub()) }, [fetchClub])
 
   const handleJoin = async () => {
     if (!currentUserId || !club) return
@@ -204,8 +205,8 @@ export default function ClubDetailPage() {
       {/* Header */}
       <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden mb-8">
         {club?.cover_url && (
-          <div className="w-full h-40 overflow-hidden">
-            <img src={club.cover_url} alt={club.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+          <div className="relative w-full h-40 overflow-hidden">
+            <Image src={club.cover_url} alt={club.name} fill unoptimized sizes="100vw" className="object-cover" referrerPolicy="no-referrer" />
           </div>
         )}
         <div className="p-6">

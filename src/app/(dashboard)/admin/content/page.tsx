@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { createAnnouncement, deleteAnnouncement, manageGenre, manageArea, saveBotm } from '@/lib/admin-actions'
 
@@ -40,29 +40,22 @@ export default function AdminContentPage() {
   const [botmCover, setBotmCover] = useState('')
   const [botmLabel, setBotmLabel] = useState('')
 
-  useEffect(() => {
-    if (tab === 'announcements') loadAnnouncements()
-    if (tab === 'genres') loadGenres()
-    if (tab === 'areas') loadAreas()
-    if (tab === 'botm') loadBotm()
-  }, [tab])
-
-  async function loadAnnouncements() {
+  const loadAnnouncements = useCallback(async () => {
     const { data } = await supabase.from('announcements').select('*').order('created_at', { ascending: false }).limit(50)
     setAnnouncements(data || [])
-  }
+  }, [supabase])
 
-  async function loadGenres() {
+  const loadGenres = useCallback(async () => {
     const { data } = await supabase.from('genres').select('*').order('display_order')
     setGenres(data || [])
-  }
+  }, [supabase])
 
-  async function loadAreas() {
+  const loadAreas = useCallback(async () => {
     const { data } = await supabase.from('areas').select('*').order('district, name')
     setAreas(data || [])
-  }
+  }, [supabase])
 
-  async function loadBotm() {
+  const loadBotm = useCallback(async () => {
     const { data } = await supabase.from('book_of_month').select('*').eq('active', true).order('created_at', { ascending: false }).limit(1).maybeSingle()
     if (data) {
       setBotm(data)
@@ -72,7 +65,16 @@ export default function AdminContentPage() {
       setBotmCover(data.cover_url || '')
       setBotmLabel(data.month_label || '')
     }
-  }
+  }, [supabase])
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      if (tab === 'announcements') loadAnnouncements()
+      if (tab === 'genres') loadGenres()
+      if (tab === 'areas') loadAreas()
+      if (tab === 'botm') loadBotm()
+    })
+  }, [tab, loadAnnouncements, loadGenres, loadAreas, loadBotm])
 
   async function handleCreateAnnouncement() {
     if (!annTitle.trim()) return

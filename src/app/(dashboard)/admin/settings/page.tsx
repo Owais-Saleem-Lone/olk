@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { updatePlatformSetting } from '@/lib/admin-actions'
 
@@ -28,17 +28,12 @@ export default function AdminSettingsPage() {
   const [auditPage, setAuditPage] = useState(0)
   const PAGE_SIZE = 50
 
-  useEffect(() => {
-    if (tab === 'settings') loadSettings()
-    else loadAudit()
-  }, [tab, auditPage])
-
-  async function loadSettings() {
+  const loadSettings = useCallback(async () => {
     const { data } = await supabase.from('platform_settings').select('*').order('key')
     if (data) setSettings(data.map(s => ({ ...s, value: typeof s.value === 'string' ? s.value : JSON.stringify(s.value) })))
-  }
+  }, [supabase])
 
-  async function loadAudit() {
+  const loadAudit = useCallback(async () => {
     let query = supabase
       .from('admin_audit_log')
       .select('id, action, target_type, target_id, details, created_at, admin:admin_id(display_name)')
@@ -48,7 +43,11 @@ export default function AdminSettingsPage() {
     if (auditFilter) query = query.eq('action', auditFilter)
     const { data } = await query
     setAudit((data || []) as unknown as AuditEntry[])
-  }
+  }, [supabase, auditPage, auditFilter])
+
+  useEffect(() => {
+    queueMicrotask(() => { if (tab === 'settings') loadSettings(); else loadAudit() })
+  }, [tab, loadSettings, loadAudit])
 
   async function handleSaveSetting(key: string) {
     setActing(true)

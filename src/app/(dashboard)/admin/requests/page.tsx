@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { cancelRequest, forceReturnBook } from '@/lib/admin-actions'
 
@@ -42,12 +42,7 @@ export default function AdminRequestsPage() {
   const [page, setPage] = useState(0)
   const PAGE_SIZE = 50
 
-  useEffect(() => {
-    if (tab === 'all') loadRequests()
-    else loadOverdue()
-  }, [tab, filter, page])
-
-  async function loadRequests() {
+  const loadRequests = useCallback(async () => {
     setLoading(true)
     let query = supabase
       .from('book_requests')
@@ -85,14 +80,18 @@ export default function AdminRequestsPage() {
       }
     }))
     setLoading(false)
-  }
+  }, [supabase, filter, page])
 
-  async function loadOverdue() {
+  const loadOverdue = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase.rpc('admin_get_overdue_books', { threshold_days: 14 })
     setOverdue((data || []) as unknown as Overdue[])
     setLoading(false)
-  }
+  }, [supabase])
+
+  useEffect(() => {
+    queueMicrotask(() => { if (tab === 'all') loadRequests(); else loadOverdue() })
+  }, [tab, loadRequests, loadOverdue])
 
   async function handleCancel(requestId: string) {
     if (!cancelReason.trim()) return

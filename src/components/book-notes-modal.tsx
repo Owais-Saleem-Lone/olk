@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { wordCount } from '@/lib/text-limits'
 
@@ -30,7 +30,7 @@ export default function BookNotesModal({
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
 
-  const fetchNotes = async () => {
+  const fetchNotes = useCallback(async () => {
     setLoading(true)
     const supabase = createClient()
     const { data } = await supabase
@@ -49,9 +49,9 @@ export default function BookNotesModal({
       }
     }
     setLoading(false)
-  }
+  }, [bookId, currentUserId])
 
-  useEffect(() => { queueMicrotask(() => fetchNotes()) }, [])
+  useEffect(() => { queueMicrotask(() => fetchNotes()) }, [fetchNotes])
 
   const otherNotesCount = notes.filter(n => n.user_id !== currentUserId).length
   const hasMyNote = myNoteId !== null

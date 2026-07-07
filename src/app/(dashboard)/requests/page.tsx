@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { createNotification } from '@/lib/notifications'
 import { useRouter } from 'next/navigation'
@@ -40,7 +40,7 @@ export default function RequestsPage() {
     requestId: string; raterId: string; ratedUserId: string; ratedUserName: string; bookTitle: string
   } | null>(null)
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     setLoading(true)
     await supabase.auth.getSession()
     const { data: { user } } = await supabase.auth.getUser()
@@ -129,11 +129,11 @@ export default function RequestsPage() {
     }
 
     setLoading(false)
-  }
+  }, [supabase])
 
   useEffect(() => {
     queueMicrotask(() => fetchRequests())
-  }, [])
+  }, [fetchRequests])
 
   const handleUpdateStatus = async (requestId: string, newStatus: string) => {
     const { error } = await supabase

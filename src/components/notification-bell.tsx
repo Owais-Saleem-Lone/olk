@@ -82,7 +82,7 @@ export default function NotificationBell() {
       aborted = true
       if (channel) supabase.removeChannel(channel)
     }
-  }, [])
+  }, [supabase])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {

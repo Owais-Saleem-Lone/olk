@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatDistance } from '@/lib/geo'
 import Link from 'next/link'
+import Image from 'next/image'
 
 type Club = {
   id: string
@@ -108,11 +109,18 @@ export default function ClubsPage() {
     setLoading(false)
   }
 
-  useEffect(() => { queueMicrotask(() => fetchClubs()) }, [])
+  useEffect(() => {
+    queueMicrotask(() => fetchClubs())
+    // Intentionally run once on mount; searchQuery updates on every keystroke and
+    // search is otherwise triggered explicitly via handleSearch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (!mounted.current) { mounted.current = true; return }
     queueMicrotask(() => fetchClubs())
+    // searchQuery is deliberately excluded here too — only filterInterest should auto-refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterInterest])
 
   const handleJoin = async (clubId: string) => {
@@ -197,7 +205,7 @@ export default function ClubsPage() {
               {/* Cover */}
               <div className="w-full h-32 bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden relative">
                 {club.cover_url ? (
-                  <img src={club.cover_url} alt={club.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  <Image src={club.cover_url} alt={club.name} fill unoptimized sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-4xl opacity-20">🏘️</div>
                 )}

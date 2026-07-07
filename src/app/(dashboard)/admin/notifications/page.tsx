@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { sendBroadcastNotification, sendDirectNotification } from '@/lib/admin-actions'
 
@@ -30,19 +30,19 @@ export default function AdminNotificationsPage() {
   // Templates
   const [templates, setTemplates] = useState<Template[]>([])
 
-  async function loadAreas() {
+  const loadAreas = useCallback(async () => {
     const { data } = await supabase.from('areas').select('name').eq('active', true).order('name')
     setAreas(data?.map(a => a.name) || [])
-  }
+  }, [supabase])
 
-  async function loadTemplates() {
+  const loadTemplates = useCallback(async () => {
     const { data } = await supabase.from('notification_templates').select('*').order('name')
     setTemplates(data || [])
-  }
+  }, [supabase])
 
   useEffect(() => {
     queueMicrotask(() => { loadAreas(); loadTemplates() })
-  }, [])
+  }, [loadAreas, loadTemplates])
 
   useEffect(() => {
     if (bArea) {
@@ -50,7 +50,7 @@ export default function AdminNotificationsPage() {
     } else {
       supabase.from('profiles').select('id', { count: 'exact', head: true }).then(({ count }) => setUserCount(count ?? 0))
     }
-  }, [bArea])
+  }, [bArea, supabase])
 
   async function searchUsers(query: string) {
     setDUserSearch(query)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { hideBook, unhideBook, editBook, bulkHideBooks } from '@/lib/admin-actions'
 
@@ -42,18 +42,18 @@ export default function AdminBooksPage() {
   const [page, setPage] = useState(0)
   const PAGE_SIZE = 50
 
-  useEffect(() => { loadGenres() }, [])
+  const loadGenres = useCallback(async () => {
+    const { data } = await supabase.from('genres').select('name').eq('active', true).order('display_order')
+    if (data) setGenres(data.map(g => g.name))
+  }, [supabase])
+
+  useEffect(() => { queueMicrotask(() => loadGenres()) }, [loadGenres])
 
   useEffect(() => {
     const t = setTimeout(() => { loadBooks() }, 300)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, filterGenre, search, page])
-
-  async function loadGenres() {
-    const { data } = await supabase.from('genres').select('name').eq('active', true).order('display_order')
-    if (data) setGenres(data.map(g => g.name))
-  }
 
   async function loadBooks() {
     setLoading(true)

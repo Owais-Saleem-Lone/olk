@@ -66,7 +66,7 @@ export default function AdminOverview() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [supabase])
 
   if (loading) return <div className="text-slate-400 py-12 text-center">Loading dashboard...</div>
 
