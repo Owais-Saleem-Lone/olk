@@ -80,9 +80,14 @@ export default async function Home() {
         <div className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-teal-light to-brand-teal-dark flex items-center justify-center font-bold text-xs shadow-lg shadow-brand-teal/30">
-                OLK
-              </div>
+              <Image
+                src="/olk-logo.svg"
+                alt="OLK logo"
+                width={32}
+                height={32}
+                unoptimized
+                className="rounded-full shadow-lg shadow-brand-teal/30"
+              />
               <span className="font-semibold tracking-tight">Open Library Kashmir</span>
             </div>
             <AboutModal />
@@ -444,9 +449,14 @@ export default async function Home() {
       <footer className="relative z-10 border-t border-white/[0.05] py-10 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-teal-light to-brand-teal-dark flex items-center justify-center font-bold text-xs">
-              OLK
-            </div>
+            <Image
+              src="/olk-logo.svg"
+              alt="OLK logo"
+              width={28}
+              height={28}
+              unoptimized
+              className="rounded-full"
+            />
             <span className="text-sm text-slate-400 font-medium">Open Library Kashmir</span>
           </div>
 
