@@ -1,0 +1,65 @@
+\chapter{Tech Stack at a Glance}
+\label{ch:techstack}
+
+\section{The stack, top to bottom}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}l l Y@{}}
+\toprule
+\textbf{Layer} & \textbf{Technology} & \textbf{Role in OLK} \\
+\midrule
+Hosting & Vercel & Builds and serves the Next.js app; will run the weekly digest via a scheduled call to \pathcell{/api/digest} (Chapter~\ref{ch:vercel}). \\
+Framework & Next.js 16.2.6 (App Router) & Routing, Server Components, Server Actions, the Route Handler under \pathcell{src/app/api}. \textbf{Not} the Next.js of most tutorials — see Chapter~\ref{ch:welcome}'s warning. \\
+UI runtime & React 19.2.4 & Server/Client Component model; no separate state-management library is used anywhere in the codebase. \\
+Language & TypeScript 5 (strict mode) & All application code; \pathcell{tsconfig.json} has \codecell{"strict": true}. \\
+Styling & Tailwind CSS v4 (\codecell{@tailwindcss/postcss}) & Utility classes throughout; no component library (no MUI/Chakra/shadcn) — every button, modal, and card is hand-built. \\
+Backend platform & Supabase (self-hostable) & Postgres, Auth (GoTrue), PostgREST, Realtime, Storage — all consumed through \codecell{@supabase/supabase-js} and \codecell{@supabase/ssr}. \\
+Local backend runtime & Docker (via the Supabase CLI) & Runs the entire Supabase stack as containers on a developer's machine — the same images that would run self-hosted in production one day. \\
+Transactional email & Resend (\codecell{resend} npm package) & Notification emails and the weekly digest, both sent from server-only code. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Full dependency manifest}
+
+\pathname{package.json} is intentionally small. There is no state management library, no data-fetching cache library (no React Query / SWR), no UI kit, no charting library, no form library, and only a minimal Vitest setup (Chapter~\ref{ch:workflow}) rather than full test coverage. Every one of those things that exists in the app was hand-rolled — the admin dashboard's growth charts are CSS bars, the ISBN scanner drives the browser's native \code{BarcodeDetector} API directly, and every form is plain controlled React state with a raw Supabase call.
+
+\begin{lstlisting}[caption={\pathname{package.json} — dependencies}]
+"dependencies": {
+  "@supabase/ssr": "^0.10.3",
+  "@supabase/supabase-js": "^2.106.2",
+  "next": "16.2.6",
+  "react": "19.2.4",
+  "react-dom": "19.2.4",
+  "resend": "^6.14.0",
+  "server-only": "^0.0.1"
+},
+"devDependencies": {
+  "@tailwindcss/postcss": "^4",
+  "@types/node": "^20",
+  "@types/react": "^19",
+  "@types/react-dom": "^19",
+  "eslint": "^9",
+  "eslint-config-next": "16.2.6",
+  "tailwindcss": "^4",
+  "typescript": "^5",
+  "vitest": "^4.1.9"
+}
+\end{lstlisting}
+
+\begin{itemize}
+  \item \textbf{\code{@supabase/ssr}} — the cookie-aware Supabase client factory used in both \pathname{src/lib/supabase/client.ts} (browser) and \pathname{src/lib/supabase/server.ts} (Server Components/Actions). This is the package that makes auth sessions work correctly across Next.js's server/client boundary; do not replace calls to it with the plain \code{@supabase/supabase-js} client inside anything that runs on the server and needs the logged-in user's session.
+  \item \textbf{\code{@supabase/supabase-js}} — the underlying client. Used directly (without \code{ssr}) in two specific places that intentionally act with elevated, non-session privileges: \pathname{src/lib/send-notification-email.ts} and \pathname{src/app/api/digest/route.ts}, both of which construct a client with the \textbf{service role key} to look up any user's email address regardless of who is logged in.
+  \item \textbf{\code{resend}} — a thin wrapper around Resend's transactional email API. Both the per-notification email and the digest cron degrade gracefully (silently no-op) if \code{RESEND\_API\_KEY} is unset, which is exactly what happens by default in local development.
+  \item \textbf{\code{server-only}} — a zero-runtime marker package; importing it into a file makes Next.js throw a build error if that file is ever accidentally imported into client-side code. Used in \pathname{send-notification-email.ts} to guarantee the service-role key can never end up in a browser bundle.
+\end{itemize}
+
+\begin{olktip}
+There is no ORM (no Prisma, no Drizzle). Every database interaction goes through the Supabase JS client's query builder (\code{.from('table').select(...)}) or a raw Postgres function call (\code{.rpc('function\_name', \{...\})}). If you are used to an ORM's autocompletion, lean on the schema reference in Chapter~\ref{ch:schema} instead — table and column names are not statically checked anywhere in this codebase.
+\end{olktip}
+
+\section{Why this stack, in brief}
+
+Next.js + Supabase is a deliberately low-operational-overhead pairing for a small team: Supabase gives you a production Postgres database, authentication, file storage, and realtime subscriptions without writing a backend service, and Next.js's App Router lets server-side code (Server Components, Server Actions) talk to that database directly without a separate API layer for most operations — the one exception being \pathname{src/app/api/digest/route.ts}, a genuine Route Handler, because it needs to be triggered by an external cron caller rather than a page render.
+
+The absence of an ORM and of a component library is a scope choice, not an oversight: for a project this size, hand-writing queries and UI keeps the dependency surface small enough for two or three interns to hold the whole thing in their heads — which is precisely the audience this manual is for.

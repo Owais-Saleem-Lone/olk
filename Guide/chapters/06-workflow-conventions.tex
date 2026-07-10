@@ -1,0 +1,68 @@
+\chapter{Development Workflow \& Conventions}
+\label{ch:workflow}
+
+\section{Migrations: the one hard rule}
+
+\textbf{Never hand-create a file inside \pathname{supabase/migrations}.} Always use the CLI:
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Correct way to start a new migration}]
+npx supabase migration new add_some_feature
+\end{lstlisting}
+
+This produces a correctly-timestamped file (\pathname{YYYYMMDDHHMMSS\_add\_some\_feature.sql}) in the exact chronological ordering the CLI expects. Migrations in this project are applied strictly in filename order — the timestamp \emph{is} the dependency graph. A hand-created file with a wrong or duplicate timestamp can silently apply out of order, or collide with a timestamp another migration already used, and either failure mode is much harder to debug than the two seconds it costs to run the command above.
+
+\begin{olknote}
+Look at the existing migration history in Chapter~\ref{ch:schema} for the house style: every non-trivial migration in this project opens with a plain-English comment block explaining \emph{why}, not just what — see \pathname{20260701182526\_rate\_limit\_messages\_and\_requests.sql} or \pathname{20260701182527\_wishlist\_fuzzy\_match\_and\_unique.sql} for examples worth imitating. A migration titled only with what it does (\emph{"add column bio"}) is worth a fraction of one that also records why it was needed.
+\end{olknote}
+
+\section{Keeping \pathname{schema.sql} honest}
+
+\pathname{supabase/schema.sql} is a full point-in-time dump of the database, intended as a single-file, greppable reference. It is \textbf{not} automatically regenerated — it once drifted five migrations stale before being caught and regenerated (Chapter~\ref{ch:schema} tells that story). Nothing about the tooling prevents it happening again: regenerate it deliberately after a batch of migrations, with:
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Regenerating the schema dump against the local database}]
+npx supabase db dump --local --schema public > supabase/schema.sql
+\end{lstlisting}
+
+\begin{olkwarn}
+Do not treat \pathname{schema.sql} as the source of truth if it disagrees with \pathname{supabase/migrations} — the migrations directory always wins, because it is what actually gets applied. Chapter~\ref{ch:schema}'s reference tables are built from the migrations, not from the dump, for exactly this reason. CI (below) does not check whether the dump is current — regenerating it after a batch of migrations is still a manual habit, not an enforced one.
+\end{olkwarn}
+
+\section{Linting and CI}
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Running the linter}]
+npm run lint
+\end{lstlisting}
+
+The config (\pathname{eslint.config.mjs}) is Next.js's flat-config defaults (\code{core-web-vitals} + \code{typescript}) with no project-specific rules added. \pathname{.github/workflows/ci.yml} runs \code{npm run lint} and \code{npm test} on every push and pull request against \code{main}, and both pass cleanly.
+
+\begin{olknote}
+\code{eslint-config-next}'s React-Compiler-era rules (\code{react-hooks/immutability}, \code{react-hooks/purity}, \code{react-hooks/set-state-in-effect}, among others) are stricter than what most of this codebase's pages were originally written against — a large number of pages used the ordinary \code{useEffect(() => \{ loadX() \}, [deps])} pattern with \code{loadX} declared below the effect, which several of these newer rules flag. Wiring up CI surfaced this pre-existing lint debt (roughly 70 errors across some twenty files); it has since been fixed, mechanically, file by file:
+
+\begin{itemize}
+  \item \textbf{"accessed before declared" (\code{react-hooks/immutability})} — the data-fetching function is now declared \emph{before} the \code{useEffect} that calls it, everywhere. The function's own hoisting doesn't matter to this rule; only textual order does.
+  \item \textbf{"setState synchronously within an effect" (\code{react-hooks/set-state-in-effect})} — once a function is reachable from the effect (per the reordering above), the linter traces into it and flags any setState call reachable without an intervening callback boundary — including the extremely common \code{setLoading(true)} as an async function's first line. Wrapping the effect's call site in \code{queueMicrotask(() => fn())} (or, where one already existed, a \code{setTimeout}) breaks that trace without changing observable behavior — the callback still runs effectively immediately, before the next paint. Genuine "derive state from a changed prop" cases (\pathname{dashboard-shell.tsx}'s sidebar-close-on-navigation) were instead rewritten to adjust state directly during render, comparing against a tracked previous value — the pattern react.dev itself recommends over an effect for that specific shape.
+  \item \textbf{"impure function during render" (\code{react-hooks/purity})} — \code{Date.now()}/\code{Math.random()} calls are flagged wherever they appear \emph{lexically inside} a component or hook body, regardless of whether that code path actually runs during render (e.g. inside an upload handler) — but \emph{not} inside a plain function declared outside the component and merely called from within it. The fix already used elsewhere in this codebase (\pathname{requests/page.tsx}'s top-level \code{dueDaysLeft} helper, now shared via \pathname{src/lib/date-utils.ts}) generalizes: extract the impure call into a small top-level helper.
+  \item \textbf{A false-positive \code{react-hooks/rules-of-hooks}} fired on \pathname{admin/notifications/page.tsx}'s \code{useTemplate} function, because its name merely \emph{started with} "use" — it was an ordinary function, not a hook. Renamed to \code{applyTemplate}.
+\end{itemize}
+
+The remaining lint output — 37 warnings, \code{react-hooks/exhaustive-deps} and \code{@next/next/no-img-element} — has since been closed out too; \code{npm run lint} is now silent (Chapter~\ref{ch:known-issues}).
+\end{olknote}
+
+\section{Automated tests: a minimal but real foundation}
+
+\pathname{vitest.config.ts} configures Vitest with the same \code{@/*} alias as \pathname{tsconfig.json}; \code{npm test} runs every \pathname{src/**/*.test.ts} file. Coverage today is intentionally narrow — pure, isolable logic only (\pathname{html-escape.test.ts}, \pathname{text-limits.test.ts}, \pathname{geo.test.ts}) — not component tests, integration tests, or anything that touches Supabase. There is no Playwright or similar end-to-end runner. Until that changes, the practical discipline for anything not covered by a unit test is unchanged:
+
+\begin{itemize}
+  \item Run \code{npm run dev} against the \emph{local} Supabase stack, never the hosted one, while iterating.
+  \item After any schema change, run \code{supabase db reset} and re-exercise the affected page end to end before considering the change done.
+  \item After any RLS or admin-role change, test as more than one role — a regular user \emph{and} at least a \code{moderator} account — since RLS bugs are invisible if you only ever test as a \code{super\_admin}.
+  \item When you add a new pure function (a formatter, a validator, a small parser), add a test file next to it rather than only exercising it by hand — that's how the three files above got there, and it's the cheapest way to grow real coverage incrementally.
+\end{itemize}
+
+\section{Git conventions}
+
+Recent commit history is the best guide to house style — short, imperative, present-tense summaries of user-visible change (\emph{"Redesign the requests page as clear per-exchange cards,"} \emph{"Add distance radius filter to Browse"}). Match that tone: describe the outcome, not the mechanism. There is no enforced branch-naming or PR-template convention as of this edition.
+
+\begin{olktask}
+Create a migration with \code{npx supabase migration new my\_test\_migration} that adds a throwaway column to a table you don't care about (e.g. a \code{test\_note text} column on \code{genres}), run \code{supabase db reset}, confirm the column exists via Studio, then write and run a second migration that drops it again. This is the full round-trip you'll use for every real schema change from here on.
+\end{olktask}

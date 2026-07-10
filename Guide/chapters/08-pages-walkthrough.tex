@@ -1,0 +1,136 @@
+\chapter{Pages Walkthrough}
+\label{ch:pages}
+
+Chapter~\ref{ch:project-structure} gave you the one-line-per-file index. This chapter goes deeper on the pages worth understanding in detail — the ones with real logic, real gotchas, or patterns you'll reuse elsewhere. Purely presentational pages (\pathname{saved}, \pathname{report-modal}-style CRUD) are not repeated here.
+
+\section{The landing page — \pathname{app/page.tsx}}
+
+A Server Component, and one of the few pages in the whole app that is. It fetches, in parallel, community stats via the \code{get\_community\_stats()} RPC, the active Book of the Month, a handful of recent public activity rows from \code{books}, and nearby active clubs — all before any HTML reaches the browser, so the landing page has real content for search engines and for users before any JavaScript runs.
+
+\begin{lstlisting}[caption={Disambiguating a foreign-key embed — app/page.tsx}]
+const { data: recentActivity } = await supabase
+  .from('books')
+  .select('id, title, cover_url, created_at, profiles!books_owner_id_fkey(display_name, area_name)')
+  .in('status', ['available', 'given'])
+  .order('created_at', { ascending: false })
+  .limit(6)
+\end{lstlisting}
+
+The \code{profiles!books\_owner\_id\_fkey(...)} syntax is PostgREST's way of naming \emph{which} foreign key to embed through, when a table could otherwise be reached by more than one path. You'll see this pattern again — and its absence causing real bugs — in Chapter~\ref{ch:lifecycle}.
+
+\section{Browse — \pathname{app/(dashboard)/browse/page.tsx}}
+
+The main discovery surface: search, genre/type/condition/area filters, a distance radius slider, request/bookmark actions, and entry points into the notes and report modals. It calls the \code{get\_books\_nearby} RPC (Chapter~\ref{ch:functions}) when the viewer has a location set, and falls back to a plain ordered query otherwise.
+
+\begin{lstlisting}[caption={Sanitising free-text search before building a PostgREST .or() filter}]
+function sanitizeSearchQuery(query: string): string {
+  return query.replace(/[%_\\,().]/g, '\\$&')
+}
+// ...
+const { data } = await supabase
+  .from('books')
+  .select('*')
+  .or(`title.ilike.%${sanitizeSearchQuery(term)}%,author.ilike.%${sanitizeSearchQuery(term)}%`)
+\end{lstlisting}
+
+\begin{olknote}
+This is a genuinely good, easy-to-miss defensive pattern worth understanding rather than copy-pasting blindly. Supabase's \code{.or()} takes a small filter-expression DSL as a \emph{string} — commas separate conditions, parentheses can nest, and \code{\%}/\code{\_} are \code{ilike} wildcards. If you interpolate raw user input into that string, a search for \code{"a,is\_admin.eq.true"} could inject an unintended additional filter condition. Escaping the DSL's special characters before interpolating is the same category of defence as parameterising SQL — it just isn't automatic here the way it is for column value bindings, because the whole point of \code{.or()} is that its argument \emph{is} a tiny query language.
+\end{olknote}
+
+\section{My Books — \pathname{app/(dashboard)/my-books/page.tsx}}
+
+Add/edit/delete your own listings, the ISBN scanner integration (Chapter~\ref{ch:components}), and — for books currently out on loan or donation — a "books in your possession" panel with a reading-progress slider and a "Pass It On" flow that calls the \code{complete\_donated\_book\_reading} RPC (Chapter~\ref{ch:functions}).
+
+\begin{olknote}
+This page used to guess the id of a just-inserted book by re-querying \code{books} filtered by \code{owner\_id} and the just-typed \code{title}, ordered by \code{created\_at desc limit 1} — a rapid double-submission of a book with the same title could have matched the wrong row. It now uses \code{.insert(...).select('id').single()} and passes the returned id directly to \code{match\_wishlists\_for\_book}.
+\end{olknote}
+
+\section{Requests — \pathname{app/(dashboard)/requests/page.tsx}}
+\label{sec:requests-page}
+
+Incoming and outgoing request management: accept/decline, mark handed-over, mark returned, reading-progress, "Complete Reading" for donations, and triggering the rating modal on completion. This file carries the single best piece of institutional memory in the whole frontend, left as an inline comment:
+
+\begin{lstlisting}[caption={app/(dashboard)/requests/page.tsx — a bug fix explained in-place}]
+if (outgoingData) {
+  setOutgoingRequests(outgoingData as any)
+
+  // profiles(display_name, area_name) above resolves via requester_id, i.e. ME --
+  // useless for outgoing cards. books.owner_id has no FK to profiles (only to
+  // auth.users), so PostgREST can't embed it; batch-fetch owner profiles instead.
+  const ownerIds = [...new Set((outgoingData as any[]).map(r => r.books?.owner_id).filter(Boolean))]
+  if (ownerIds.length > 0) {
+    const { data: ownerProfileData } = await supabase
+      .from('profiles')
+      .select('id, display_name, area_name')
+      .in('id', ownerIds)
+    // ... merged into outgoingRequests by id
+  }
+}
+\end{lstlisting}
+
+The underlying fact worth internalising: \code{books.owner\_id} is a foreign key to \code{auth.users(id)}, \emph{not} to \code{public.profiles(id)} (Chapter~\ref{ch:schema}). PostgREST can only auto-embed a related table across an actual foreign-key edge that its schema cache knows about, and it does not reach across \code{auth.users} into \code{public.profiles} for you — even though every \code{profiles.id} \emph{is} an \code{auth.users.id} by construction (Chapter~\ref{ch:functions}'s \code{handle\_new\_user} trigger guarantees the pairing exists). Whenever you need "the book owner's profile" rather than "the requester's profile" (whose FK to \code{profiles} does exist and embeds fine), you need a second, manual, batched query like the one above — never a per-row query in a loop.
+
+\section{Messages — list and detail}
+
+The conversation list (\pathname{messages/page.tsx}) has no dedicated "conversations" table — it derives conversations from accepted \code{book\_requests} rows and, for each, looks up the latest \code{messages} row. It does this as one batched query (\code{.in('request\_id', allRequestIds)}) rather than one query per conversation, a deliberate N+1 avoidance worth imitating any time you're about to write a loop containing a query.
+
+The detail page (\pathname{messages/[id]/page.tsx}) is realtime:
+
+\begin{lstlisting}[caption={app/(dashboard)/messages/[id]/page.tsx — realtime subscription with de-duplication}]
+const channel = supabase
+  .channel(`chat:${requestId}`)
+  .on(
+    'postgres_changes',
+    { event: 'INSERT', schema: 'public', table: 'messages', filter: `request_id=eq.${requestId}` },
+    (payload) => {
+      const incoming = payload.new as Message
+      setMessages(prev =>
+        prev.some(m => m.id === incoming.id) ? prev : [...prev, incoming]
+      )
+    }
+  )
+  .subscribe()
+\end{lstlisting}
+
+The \code{prev.some(m => m.id === incoming.id)} guard matters because the sender's own optimistic local insert and the realtime echo of that same row arriving back over the wire are two separate code paths that both want to add the message to state — without the guard, the sender would see their own message twice.
+
+\begin{olknote}
+This page also throttles "new message" notification emails to one per conversation per 15 minutes, by querying existing \code{notifications} rows before inserting a new one, rather than notifying on every single message. Combined with the database-level rate limit on the \code{messages} table itself (\code{trg\_enforce\_message\_rate\_limit}, Chapter~\ref{ch:functions}), a chat conversation is protected against spam at two independent layers: the client throttles notification noise, the database throttles the underlying inserts.
+\end{olknote}
+
+\section{Clubs — directory, creation, and detail}
+
+Club creation (\pathname{clubs/create/page.tsx}) gates on the creator having 5 or more completed exchanges and no reports against them — computed live, client-side, from two count queries.
+
+\begin{olknote}
+This eligibility check used to be enforced only in this page's React code — nothing stopped a signed-in user from calling \code{supabase.from('clubs').insert(...)} directly, bypassing the UI. A \code{BEFORE INSERT} trigger on \code{clubs} (\code{check\_club\_creation\_eligibility}, Chapter~\ref{ch:functions}) now mirrors the same 5-completed-exchanges-and-no-reports rule at the database layer, so the frontend check is now a UX nicety rather than the only gate.
+\end{olknote}
+
+Club detail (\pathname{clubs/[id]/page.tsx}) fans out a notification to every member when a new post is created, routed one at a time through the \code{createNotification} server action (rather than a bulk client-side \code{.insert(notifications[])}, now that direct cross-user notification inserts are blocked by RLS — Chapter~\ref{ch:rls}). Its "delete club" is a soft-delete (\code{active: false}), confirmed through the shared \code{ConfirmModal} component like the rest of the app's destructive actions.
+
+\section{The admin section}
+
+Chapter~\ref{ch:admin} is a full end-to-end treatment of the admin/moderation subsystem; this section is a quick map of the nine admin pages so you know where to look.
+
+\begin{center}
+\begin{longtable}{@{}p{3.6cm} p{11.8cm}@{}}
+\toprule
+\textbf{Page} & \textbf{What it's for} \\
+\midrule
+\endhead
+Overview & Ten queries fired in a single \code{Promise.all}: counts, 30-day growth (hand-rolled CSS bar charts, no charting library), exchange health, rating distribution, top areas, top contributors. \\
+Users & Server-side search (name/area/exact id) across all profiles, not just the most recent 200, ban/unban/warn/reset-field/set-role. \\
+Books & Paginated (50/page) table; server-side search across the full \code{books} table (title/author/owner name), not just the current page. hide/unhide/edit/bulk-hide. \\
+Requests & All requests, paginated and filterable, plus a dedicated Overdue tab powered by \code{admin\_get\_overdue\_books}. \\
+Reports & Triage queue: filter, categorise, resolve/dismiss, internal notes, and "quick actions" that ban/warn/hide in one click. \\
+Clubs & Deactivate/reactivate, remove a member, transfer ownership (via a dropdown of current club members, rather than a raw pasted user id). \\
+Content & Tabbed CMS for announcements, genres, areas, and Book of the Month. \\
+Notifications & Broadcast (optionally area-filtered), direct message to one user, and reusable templates. \\
+Settings & Feature-flag toggles, platform settings key/value editor, paginated audit log. \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\begin{olknote}
+\pathname{admin-nav.tsx} used to treat \code{pathname === '/admin/overview'} as an alias for \code{/admin}, but \pathname{src/app/(dashboard)/admin/overview/} was an empty directory with no \pathname{page.tsx} — visiting it 404'd. The dead alias-check and the empty directory have both been removed; \code{/admin} is the only URL for the Overview page shown in the table above.
+\end{olknote}

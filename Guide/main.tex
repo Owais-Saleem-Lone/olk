@@ -1,0 +1,371 @@
+% ============================================================================
+%  OLK — Open Library Kashmir
+%  The Complete Technical Manual
+%  --------------------------------------------------------------------------
+%  Compile with pdflatex (run twice for the table of contents / cross-refs):
+%     pdflatex main.tex && pdflatex main.tex
+%  or simply: latexmk -pdf main.tex
+% ============================================================================
+\documentclass[11pt,oneside]{book}
+
+% ---------------------------------------------------------------------------
+% Fonts & typography
+% ---------------------------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{textcomp}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em plus 0.15em minus 0.1em}
+\setlength{\emergencystretch}{3em}
+\tolerance=1200
+
+% ---------------------------------------------------------------------------
+% Page geometry
+% ---------------------------------------------------------------------------
+\usepackage[a4paper,top=2.6cm,bottom=2.9cm,left=2.4cm,right=2.4cm,headheight=16pt,headsep=12pt]{geometry}
+
+% ---------------------------------------------------------------------------
+% Colour palette — mirrors the OLK product's own teal-on-slate brand
+% (see src/lib/send-notification-email.ts for the same hex values in the app)
+% ---------------------------------------------------------------------------
+\usepackage{xcolor}
+\definecolor{olkSlate}{HTML}{0F172A}
+\definecolor{olkSlateLight}{HTML}{1E293B}
+\definecolor{olkSlateMuted}{HTML}{334155}
+\definecolor{olkTeal}{HTML}{14B8A6}
+\definecolor{olkTealDark}{HTML}{0D9488}
+\definecolor{olkTealLight}{HTML}{2DD4BF}
+\definecolor{olkAmber}{HTML}{B45309}
+\definecolor{olkAmberBg}{HTML}{FEF3C7}
+\definecolor{olkRed}{HTML}{B91C1C}
+\definecolor{olkRedBg}{HTML}{FEE2E2}
+\definecolor{olkGray}{HTML}{64748B}
+\definecolor{olkInk}{HTML}{1E293B}
+\definecolor{olkCodeBg}{HTML}{0B1220}
+\definecolor{olkCodeText}{HTML}{E2E8F0}
+\definecolor{olkCodeComment}{HTML}{5EEAD4}
+\definecolor{olkCodeString}{HTML}{FCD34D}
+\definecolor{olkCodeKeyword}{HTML}{2DD4BF}
+\definecolor{olkCodeNumber}{HTML}{F0ABFC}
+\definecolor{olkCodeFn}{HTML}{93C5FD}
+
+% ---------------------------------------------------------------------------
+% Graphics / diagrams
+% ---------------------------------------------------------------------------
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{calc,decorations.pathmorphing,shadows.blur,arrows.meta,positioning,fit,backgrounds}
+
+% ---------------------------------------------------------------------------
+% Layout helpers
+% ---------------------------------------------------------------------------
+\usepackage{enumitem}
+\setlist{itemsep=0.15em, topsep=0.4em}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{ragged2e}
+\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+\usepackage{needspace}
+\usepackage{multirow}
+\usepackage{seqsplit}
+
+% ---------------------------------------------------------------------------
+% Chapter / section / part styling
+% ---------------------------------------------------------------------------
+\usepackage{titlesec}
+
+\titleformat{\part}[display]
+  {\centering\normalfont}
+  {\textcolor{olkTeal}{\sffamily\Large\MakeUppercase{Part \thepart}}}
+  {8pt}
+  {\sffamily\Huge\bfseries\color{olkSlate}}
+\titlespacing*{\part}{0pt}{60pt}{80pt}
+
+\titleformat{\chapter}[display]
+  {\normalfont}
+  {\sffamily\color{olkGray}\Large\MakeUppercase{\chaptertitlename}\ \textcolor{olkTeal}{\thechapter}}
+  {6pt}
+  {\sffamily\huge\bfseries\color{olkSlate}}
+  [\vspace{4pt}{\color{olkTeal}\rule{\textwidth}{1.4pt}}]
+\titlespacing*{\chapter}{0pt}{10pt}{28pt}
+
+\titleformat{\section}
+  {\sffamily\Large\bfseries\color{olkSlate}}
+  {\textcolor{olkTealDark}{\thesection}}{10pt}{}
+\titlespacing*{\section}{0pt}{22pt}{10pt}
+
+\titleformat{\subsection}
+  {\sffamily\large\bfseries\color{olkSlateLight}}
+  {\textcolor{olkTeal}{\thesubsection}}{8pt}{}
+\titlespacing*{\subsection}{0pt}{16pt}{6pt}
+
+\titleformat{\subsubsection}
+  {\sffamily\bfseries\color{olkSlateLight}}
+  {\textcolor{olkTeal}{\thesubsubsection}}{6pt}{}
+\titlespacing*{\subsubsection}{0pt}{12pt}{4pt}
+
+% ---------------------------------------------------------------------------
+% Headers / footers
+% ---------------------------------------------------------------------------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\chaptermark}[1]{\markboth{#1}{}}
+\renewcommand{\sectionmark}[1]{\markright{#1}{}}
+\fancyhead[L]{\small\sffamily\color{olkGray}\nouppercase{\leftmark}}
+\fancyhead[R]{\small\sffamily\color{olkGray}\thepage}
+\renewcommand{\headrulewidth}{0.6pt}
+\renewcommand{\headrule}{{\color{olkTeal}\hrule height\headrulewidth width\headwidth}\vskip-\headrulewidth}
+\renewcommand{\footrulewidth}{0pt}
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyfoot[C]{\small\sffamily\color{olkGray}\thepage}%
+  \renewcommand{\headrulewidth}{0pt}%
+}
+
+% ---------------------------------------------------------------------------
+% Callout boxes (tcolorbox) — the manual's recurring pedagogical devices
+% ---------------------------------------------------------------------------
+\usepackage[most]{tcolorbox}
+\tcbuselibrary{skins,breakable}
+
+\newtcolorbox{olknote}{%
+  breakable, enhanced, sharp corners, boxrule=0pt,
+  colback=olkTeal!6, colframe=olkTeal,
+  leftrule=2.6pt, toprule=0pt, bottomrule=0pt, rightrule=0pt,
+  left=10pt, right=10pt, top=7pt, bottom=7pt,
+  title={NOTE}, attach title to upper={:\quad},
+  coltitle=olkTealDark, fonttitle=\sffamily\bfseries\small
+}
+
+\newtcolorbox{olktip}{%
+  breakable, enhanced, sharp corners, boxrule=0pt,
+  colback=olkTealLight!10, colframe=olkTealDark,
+  leftrule=2.6pt, toprule=0pt, bottomrule=0pt, rightrule=0pt,
+  left=10pt, right=10pt, top=7pt, bottom=7pt,
+  title={PRO TIP}, attach title to upper={:\quad},
+  coltitle=olkTealDark, fonttitle=\sffamily\bfseries\small
+}
+
+\newtcolorbox{olkwarn}{%
+  breakable, enhanced, sharp corners, boxrule=0pt,
+  colback=olkAmberBg, colframe=olkAmber,
+  leftrule=2.6pt, toprule=0pt, bottomrule=0pt, rightrule=0pt,
+  left=10pt, right=10pt, top=7pt, bottom=7pt,
+  title={WARNING}, attach title to upper={:\quad},
+  coltitle=olkAmber, fonttitle=\sffamily\bfseries\small
+}
+
+\newtcolorbox{olkgotcha}{%
+  breakable, enhanced, sharp corners, boxrule=0pt,
+  colback=olkRedBg, colframe=olkRed,
+  leftrule=2.6pt, toprule=0pt, bottomrule=0pt, rightrule=0pt,
+  left=10pt, right=10pt, top=7pt, bottom=7pt,
+  title={KNOWN ISSUE}, attach title to upper={:\quad},
+  coltitle=olkRed, fonttitle=\sffamily\bfseries\small
+}
+
+\newtcolorbox{olktask}{%
+  breakable, enhanced, boxrule=1pt, arc=1mm,
+  colback=olkSlate!4, colframe=olkSlate,
+  colbacktitle=olkSlate, coltitle=white,
+  title={\textcolor{olkTealLight}{\raisebox{-0.1ex}{\rule[-0.15em]{0.5em}{0.5em}}}\ \ INTERN EXERCISE},
+  fonttitle=\sffamily\bfseries\small,
+  left=10pt, right=10pt, top=6pt, bottom=8pt,
+}
+
+% "How to change this" — a worked, concrete example of editing a real value:
+% file, line, what to type. The pedagogical device this manual leans on to
+% turn reference material into something an intern can actually act on.
+\newtcolorbox{olkhowto}{%
+  breakable, enhanced, boxrule=1pt, arc=1mm,
+  colback=olkTeal!4, colframe=olkTealDark,
+  colbacktitle=olkTealDark, coltitle=white,
+  title={\textcolor{white}{\raisebox{-0.1ex}{$\rightarrow$}}\ \ HOW TO CHANGE THIS},
+  fonttitle=\sffamily\bfseries\small,
+  left=10pt, right=10pt, top=6pt, bottom=8pt,
+}
+
+% ---------------------------------------------------------------------------
+% Code listings
+% ---------------------------------------------------------------------------
+\usepackage{listings}
+\usepackage{caption}
+\captionsetup[lstlisting]{font=small, labelfont={sf,bf,color=olkTealDark}, singlelinecheck=false, margin=0pt}
+
+\lstdefinelanguage{TypeScript}{
+  keywords={const,let,var,function,async,await,export,default,import,from,interface,type,return,if,else,for,of,in,while,do,switch,case,break,continue,class,extends,implements,public,private,protected,readonly,new,try,catch,finally,throw,null,undefined,true,false,this,super,void,typeof,instanceof,as,enum,namespace,declare,yield,delete,static,get,set},
+  keywordstyle=\color{olkCodeKeyword}\bfseries,
+  ndkeywords={string,number,boolean,any,unknown,never,object,Promise,Array,Record},
+  ndkeywordstyle=\color{olkCodeFn},
+  sensitive=true,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  commentstyle=\color{olkCodeComment}\itshape,
+  string=[b]",
+  morestring=[b]',
+  morestring=[b]`,
+  stringstyle=\color{olkCodeString},
+  morestring=[s]{\{}{\}},
+}
+
+\lstdefinestyle{olkcode}{
+  backgroundcolor=\color{olkCodeBg},
+  basicstyle=\ttfamily\footnotesize\color{olkCodeText},
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  numbers=left,
+  numberstyle=\tiny\color{olkGray},
+  numbersep=8pt,
+  frame=single,
+  framerule=0pt,
+  rulecolor=\color{olkCodeBg},
+  framesep=8pt,
+  xleftmargin=14pt,
+  xrightmargin=4pt,
+  aboveskip=10pt,
+  belowskip=10pt,
+  tabsize=2,
+  literate={├}{{\smash{\raisebox{-2pt}{$\vdash$}}}}1 {─}{{-}}1 {└}{{\smash{\raisebox{-2pt}{$\llcorner$}}}}1 {│}{{|}}1,
+}
+\lstset{style=olkcode, language=TypeScript}
+
+\lstdefinestyle{olkcodesql}{style=olkcode, language=SQL,
+  keywordstyle=\color{olkCodeKeyword}\bfseries,
+  commentstyle=\color{olkCodeComment}\itshape,
+  stringstyle=\color{olkCodeString}}
+
+\lstdefinestyle{olkcodebash}{style=olkcode, language=bash,
+  keywordstyle=\color{olkCodeKeyword}\bfseries,
+  commentstyle=\color{olkCodeComment}\itshape,
+  stringstyle=\color{olkCodeString}}
+
+\lstdefinestyle{olkcodetree}{
+  backgroundcolor=\color{olkCodeBg},
+  basicstyle=\ttfamily\scriptsize\color{olkCodeText},
+  breaklines=false,
+  frame=single,
+  framerule=0pt,
+  rulecolor=\color{olkCodeBg},
+  framesep=8pt,
+  xleftmargin=14pt,
+  aboveskip=10pt,
+  belowskip=10pt,
+}
+
+% quick inline path / code helper
+\newcommand{\code}[1]{\texorpdfstring{\textcolor{olkTealDark}{\texttt{#1}}}{#1}}
+\newcommand{\pathname}[1]{\textcolor{olkSlateLight}{\texttt{\small #1}}}
+% break-friendly variant for narrow table cells ONLY (never inside captions /
+% section titles / other moving arguments -- seqsplit is fragile there):
+% allows a linebreak after every "/" so long paths/URLs wrap instead of
+% overflowing a p{} column.
+\newcommand{\pathcell}[1]{\textcolor{olkSlateLight}{\ttfamily\small\seqsplit{#1}}}
+\newcommand{\codecell}[1]{\textcolor{olkTealDark}{\ttfamily\small\seqsplit{#1}}}
+
+% ---------------------------------------------------------------------------
+% Table-of-contents depth & appearance
+% ---------------------------------------------------------------------------
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{3}
+
+% ---------------------------------------------------------------------------
+% Hyperlinks (load late)
+% ---------------------------------------------------------------------------
+\usepackage[
+  colorlinks=true,
+  linkcolor=olkTealDark,
+  citecolor=olkTealDark,
+  urlcolor=olkTealDark,
+  filecolor=olkTealDark,
+  bookmarksnumbered=true,
+  bookmarksopen=true,
+  pdftitle={OLK — Open Library Kashmir: The Complete Technical Manual},
+  pdfauthor={Open Library Kashmir Engineering},
+  pdfsubject={Engineering onboarding and maintenance manual},
+  breaklinks=true
+]{hyperref}
+\usepackage{bookmark}
+
+% ---------------------------------------------------------------------------
+% Custom title page assets
+% ---------------------------------------------------------------------------
+\newcommand{\olkMountains}[1]{%
+  \begin{tikzpicture}[x=1cm,y=1cm]
+    \fill[olkSlate] (0,0) rectangle (21,10);
+    \fill[olkSlateLight] (-0.2,0) --
+      (2,3.6) -- (4,1.8) -- (6.5,4.6) -- (9,1.6) -- (11.5,4.2) --
+      (14,1.4) -- (16.5,4.8) -- (19,2.0) -- (21.2,3.4) -- (21.2,0) -- cycle;
+    \fill[olkSlateMuted] (-0.2,0) --
+      (1.5,2.1) -- (3.5,0.6) -- (6,2.8) -- (8.5,0.5) -- (11,2.6) --
+      (13.5,0.4) -- (16,2.9) -- (18.5,0.6) -- (21.2,2.0) -- (21.2,0) -- cycle;
+    \foreach \x/\y/\r in {3/7.6/0.42, 15.5/8.3/0.3} {
+      \fill[olkTealLight,opacity=0.85] (\x,\y) circle (\r);
+    }
+    \draw[olkTeal, line width=1.4pt] (0,4.62) -- (21,4.62);
+  \end{tikzpicture}%
+}
+
+% ============================================================================
+\begin{document}
+
+\input{chapters/00-titlepage}
+
+\frontmatter
+\input{chapters/00a-colophon}
+\input{chapters/00b-preface}
+
+\tableofcontents
+
+\mainmatter
+
+\part{Orientation}
+\input{chapters/01-welcome-and-vision}
+\input{chapters/02-tech-stack}
+\input{chapters/03-architecture}
+
+\part{Environment \& Workflow}
+\input{chapters/04-local-environment}
+\input{chapters/05-project-structure}
+\input{chapters/06-workflow-conventions}
+
+\part{The Frontend}
+\input{chapters/07-nextjs-routing-proxy}
+\input{chapters/08-pages-walkthrough}
+\input{chapters/09-components-library}
+\input{chapters/10-styling-system}
+
+\part{The Backend}
+\input{chapters/11-supabase-fundamentals}
+\input{chapters/12-database-schema}
+\input{chapters/13-functions-triggers-rpcs}
+\input{chapters/14-rls-and-roles}
+\input{chapters/15-server-actions-notifications}
+
+\part{Key Workflows End to End}
+\input{chapters/16-book-exchange-lifecycle}
+\input{chapters/17-wishlists-and-clubs}
+\input{chapters/18-admin-subsystem}
+
+\part{Operating in Production}
+\input{chapters/19-deploying-to-vercel}
+\input{chapters/20-environment-variables}
+\input{chapters/21-maintenance-playbook}
+\input{chapters/22-known-issues}
+\input{chapters/23-troubleshooting}
+
+\appendix
+\part{Appendices}
+\input{chapters/A-table-reference}
+\input{chapters/B-command-cheatsheet}
+\input{chapters/C-glossary}
+
+\end{document}

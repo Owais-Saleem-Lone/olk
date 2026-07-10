@@ -1,0 +1,81 @@
+\chapter{The Book Exchange Lifecycle, End to End}
+\label{ch:lifecycle}
+
+Every previous chapter covered one layer — a page, a table, a function. This chapter traces the single most important journey in the product through all of them at once: a book going from someone's shelf to someone else's hands.
+
+\section{The full state machine}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  node distance=1.35cm,
+  st/.style={draw=olkSlateMuted, thick, rounded corners=2pt, fill=olkTeal!8, minimum width=2.6cm, minimum height=0.85cm, font=\sffamily\small, align=center},
+  term/.style={st, fill=olkSlate!6},
+  arr/.style={-Stealth, thick, olkSlateMuted},
+  lbl/.style={font=\scriptsize\sffamily\color{olkGray}}
+]
+  \node[st] (pending) {pending};
+  \node[st, right=2.6cm of pending] (accepted) {accepted};
+  \node[st, right=2.6cm of accepted] (handed) {handed\_over};
+  \node[term, below=1.6cm of handed] (returned) {returned};
+  \node[term, below=1.6cm of pending] (declined) {declined};
+
+  \draw[arr] (pending) -- node[lbl, above]{owner accepts} (accepted);
+  \draw[arr] (pending) -- node[lbl, left]{owner declines} (declined);
+  \draw[arr] (accepted) -- node[lbl, above]{books.status $\to$ unavailable} (handed);
+  \draw[arr] (handed) -- node[lbl, right, align=left]{lend: reader returns\\donate: complete\_donated\_book\_reading} (returned);
+\end{tikzpicture}
+\caption{\code{book\_requests.status}, the spine of every exchange. \code{trg\_increment\_read\_count} fires the instant a row enters \code{returned}, regardless of which arrow got it there.}
+\end{figure}
+
+\section{Step 1 — Listing}
+
+A book starts life in \pathname{my-books/page.tsx} (Chapter~\ref{ch:pages}): title, author, condition, \code{listing\_type} (\code{donate} or \code{lend}, chosen once, up front), optionally enriched via the ISBN scanner (Chapter~\ref{ch:components}). The moment it's inserted, \code{match\_wishlists\_for\_book} (Chapter~\ref{ch:functions}) runs against it — if anyone's wishlist fuzzy-matches the new title, that is the first notification this book will ever cause, before anyone has even requested it (Chapter~\ref{ch:wishlists-clubs}).
+
+\section{Step 2 — Discovery}
+
+\pathname{browse/page.tsx} surfaces it, sorted by distance if the viewer has a location set (\code{get\_books\_nearby}, Chapter~\ref{ch:functions}), filterable by genre/condition/type/area. Both \code{available} and \code{unavailable} books are shown (the latter marked as such) — Chapter~\ref{ch:functions} noted that \code{get\_books\_nearby}'s \code{WHERE} clause deliberately includes \code{unavailable}, so the community can see a book is out on loan rather than it vanishing from view entirely.
+
+\section{Step 3 — Requesting}
+
+A reader requests it: a \code{book\_requests} row is inserted, \code{status = 'pending'}, guarded by \code{trg\_enforce\_request\_rate\_limit} (max 10/day, Chapter~\ref{ch:functions}) and the partial unique index preventing a second concurrent request from the same user on the same book (Chapter~\ref{ch:schema}). The owner sees it appear on their \pathname{requests} page as an \emph{incoming} request; the requester sees it on theirs as \emph{outgoing} — same table, two different query shapes (Chapter~\ref{ch:pages}, \S\ref{sec:requests-page}), and the owner-profile-lookup gotcha documented there.
+
+\section{Step 4 — Accept, decline, or expire into noise}
+
+The owner accepts or declines from their incoming list. There is no automatic expiry — a \code{pending} request with no owner response simply sits there indefinitely; nothing in the schema or a scheduled job currently cleans these up (worth knowing if you're ever asked "why do old pending requests never disappear").
+
+Accepting flips \code{status} to \code{accepted} and (in the UI layer) typically flips the book's own \code{status} to \code{unavailable}, signalling to every other browsing user that this copy is now spoken for.
+
+\section{Step 5 — Handover}
+
+When the two parties actually meet, the owner marks the request \code{handed\_over}, stamping \code{handed\_over\_at}. From this point, \pathname{book\_progress} (Chapter~\ref{ch:schema}) exists for this request — the reader can update a 0--100 reading-progress percentage, visible to the whole community as a piece of ambient activity (nobody else can write it, everybody can see it).
+
+\begin{olknote}
+\code{handed\_over\_at} is also the timestamp \code{admin\_get\_overdue\_books} (Chapter~\ref{ch:functions}) measures against, for \code{lend}-type books only, using the \code{overdue\_days\_threshold} platform setting (default 30). A donation is never "overdue" — there's nothing to give back.
+\end{olknote}
+
+\begin{olkhowto}
+This is the one "threshold" in the whole manual with \emph{three} independent numbers, not two — worth tracing in full before you touch it:
+\begin{enumerate}
+  \item \code{admin\_get\_overdue\_books(threshold\_days integer DEFAULT 30)} in \pathname{supabase/schema.sql} — the SQL function's own default.
+  \item The \code{overdue\_days\_threshold} row in \code{platform\_settings} (also \code{30}), editable at \pathname{/admin/settings}.
+  \item \pathname{src/app/(dashboard)/admin/requests/page.tsx}, line 87 — \code{supabase.rpc('admin\_get\_overdue\_books', \{ threshold\_days: 14 \})} — a hardcoded \code{14}.
+\end{enumerate}
+Because the frontend always passes an explicit argument, \#3 is the \emph{only} value that actually reaches production — \#1 never runs (there's always an argument), and editing \#2 in Settings changes nothing, since nothing ever reads it back for this call. If you're asked to make the overdue threshold admin-configurable, the real fix is changing line 87 to first \code{select()} the \code{overdue\_days\_threshold} row from \code{platform\_settings} (the same plain-query approach \pathname{src/proxy.ts}'s feature flags use, Chapter~\ref{ch:proxy} — not the SQL-only \code{get\_platform\_setting\_int} helper, which only trigger functions can call) and pass \emph{that} value as \code{threshold\_days}, rather than trusting the Settings-page value to already be wired up.
+\end{olkhowto}
+
+\section{Step 6a — Lending: the book comes back}
+
+The owner (or, per RLS, whoever can update the request — Chapter~\ref{ch:rls}) marks it \code{returned}. \code{trg\_increment\_read\_count} fires, \code{books.read\_count} goes up by one, and both parties are prompted to rate each other via \pathname{rating-modal.tsx} (Chapter~\ref{ch:components}) — one rating per \code{(request\_id, rater\_id)} pair, enforced by a unique constraint rather than a pre-check.
+
+\section{Step 6b — Donating: the book changes hands permanently}
+
+For a \code{donate} listing, there is no "return" — instead, once the reader finishes, the frontend calls \code{complete\_donated\_book\_reading(request\_id)} (Chapter~\ref{ch:functions} has the full function body). In one \code{SECURITY DEFINER} transaction: ownership of the \code{books} row transfers to the reader, its \code{status} resets to \code{available} (the new owner can now re-list it, lend it, or donate it onward), \code{acquired\_via\_donation} is forced \code{true} (so it can never quietly become someone's personal lending copy — Chapter~\ref{ch:schema}), the request is marked \code{returned} (which is what actually fires \code{trg\_increment\_read\_count} — donation completion and lending return share that one trigger), and the now-stale \code{book\_progress} row is deleted.
+
+\begin{olknote}
+This is why a book's \code{read\_count} is a genuinely meaningful "how many people has this book reached" metric across both listing types, and why the "Trusted Sharer" badge and admin top-contributor stats (Chapters~\ref{ch:components},~\ref{ch:functions}) can treat donations and completed loans as comparable evidence of community contribution — the schema was deliberately designed so one counter serves both paths.
+\end{olknote}
+
+\begin{olktask}
+Walk this entire lifecycle by hand against your local Docker stack (Chapter~\ref{ch:local-env}): register two test accounts, list a \code{donate} book as account A, request it as account B, accept, hand over, update reading progress, then complete the donation. Confirm in Studio that \code{books.owner\_id} really did change to account B's id, and that \code{books.read\_count} is now 1. This single exercise touches more of this manual — pages, schema, functions, RLS — than any other one thing you could do first.
+\end{olktask}

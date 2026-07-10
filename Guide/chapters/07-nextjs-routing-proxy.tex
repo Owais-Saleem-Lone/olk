@@ -1,0 +1,156 @@
+\chapter{Next.js App Router, Routing \& the Proxy Layer}
+\label{ch:proxy}
+
+\section{App Router conventions used in this project}
+
+Every folder under \pathname{src/app} is a URL segment; a folder becomes a real page only when it contains a \pathname{page.tsx}. Three conventions are used throughout OLK:
+
+\begin{itemize}
+  \item \textbf{Route groups} — \pathname{(dashboard)} wraps most of the app in a shared \pathname{layout.tsx} without adding \code{/dashboard} to any URL. \pathname{/browse} is served by \pathname{src/app/(dashboard)/browse/page.tsx}.
+  \item \textbf{Dynamic segments} — \pathname{[id]} folders (\pathname{messages/[id]}, \pathname{clubs/[id]}, \pathname{user/[id]}) receive the segment value as a route param.
+  \item \textbf{Nested layouts} — \pathname{admin/layout.tsx} wraps every \pathname{admin/*} page a second time, inside the outer \pathname{(dashboard)/layout.tsx}, so an admin page is rendered inside two layouts stacked: dashboard shell, then admin nav.
+\end{itemize}
+
+\section{The Proxy layer — the rename, applied}
+
+\begin{olknote}
+\textbf{Next.js 16 renamed Middleware to Proxy.} From the framework's own documentation (\pathname{node\_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md}):
+
+\begin{quote}
+\emph{"The \texttt{middleware} file convention is deprecated and has been renamed to \texttt{proxy}."}
+\end{quote}
+
+The convention is a \pathname{proxy.ts} file exporting a function named \code{proxy} (or a default export), instead of \pathname{middleware.ts} exporting \code{middleware}. OLK now uses \pathname{src/proxy.ts} — the body of the function is otherwise unchanged from the old \pathname{middleware.ts}, per the official migration guidance (\code{npx @next/codemod@canary middleware-to-proxy .}): only the filename and the exported function's name moved.
+\end{olknote}
+
+\section{What the Proxy actually does, line by line}
+
+\begin{lstlisting}[caption={\pathname{src/proxy.ts} — full file}]
+import { createServerClient } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { NextResponse, type NextRequest } from 'next/server'
+import { FEATURE_FLAG_KEYS, parseFeatureFlags, type FeatureFlags } from '@/lib/platform-settings'
+
+const PROTECTED_ROUTES = ['/my-books', '/messages', '/requests', '/profile', '/user', '/saved', '/wishlist', '/clubs/create', '/admin']
+
+let cachedFlags: { flags: FeatureFlags; expiresAt: number } | null = null
+const FLAGS_TTL_MS = 30_000
+
+async function getFeatureFlags(supabase: SupabaseClient): Promise<FeatureFlags> {
+  const now = Date.now()
+  if (cachedFlags && cachedFlags.expiresAt > now) return cachedFlags.flags
+  const { data } = await supabase.from('platform_settings').select('key, value').in('key', FEATURE_FLAG_KEYS)
+  const flags = parseFeatureFlags(data)
+  cachedFlags = { flags, expiresAt: now + FLAGS_TTL_MS }
+  return flags
+}
+
+export async function proxy(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return request.cookies.getAll() },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const { pathname } = request.nextUrl
+  const isProtected = PROTECTED_ROUTES.some(route => pathname.startsWith(route))
+  const flags = await getFeatureFlags(supabase)
+
+  let profile: { is_banned: boolean; ban_expires_at: string | null; is_admin: boolean; admin_role: string | null } | null = null
+  if (user && (isProtected || flags.maintenance_mode)) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('is_banned, ban_expires_at, is_admin, admin_role')
+      .eq('id', user.id)
+      .single()
+    profile = data
+  }
+
+  if (flags.maintenance_mode && pathname !== '/maintenance' && pathname !== '/login' && !profile?.is_admin) {
+    const maintenanceUrl = request.nextUrl.clone()
+    maintenanceUrl.pathname = '/maintenance'
+    return NextResponse.redirect(maintenanceUrl)
+  }
+
+  if (!flags.feature_clubs && pathname.startsWith('/clubs')) {
+    const browseUrl = request.nextUrl.clone(); browseUrl.pathname = '/browse'; return NextResponse.redirect(browseUrl)
+  }
+  if (!flags.feature_wishlists && pathname.startsWith('/wishlist')) {
+    const browseUrl = request.nextUrl.clone(); browseUrl.pathname = '/browse'; return NextResponse.redirect(browseUrl)
+  }
+  if (!flags.feature_messages && pathname.startsWith('/messages')) {
+    const browseUrl = request.nextUrl.clone(); browseUrl.pathname = '/browse'; return NextResponse.redirect(browseUrl)
+  }
+
+  if (!user && isProtected) {
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = '/login'
+    return NextResponse.redirect(loginUrl)
+  }
+
+  if (user && isProtected) {
+    if (profile?.is_banned) {
+      const expired = profile.ban_expires_at && new Date(profile.ban_expires_at) < new Date()
+      if (!expired && !pathname.startsWith('/profile')) {
+        const bannedUrl = request.nextUrl.clone()
+        bannedUrl.pathname = '/profile'
+        return NextResponse.redirect(bannedUrl)
+      }
+    }
+
+    if (pathname.startsWith('/admin') && !profile?.is_admin) {
+      const browseUrl = request.nextUrl.clone()
+      browseUrl.pathname = '/browse'
+      return NextResponse.redirect(browseUrl)
+    }
+  }
+
+  return supabaseResponse
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+}
+\end{lstlisting}
+
+Five responsibilities, in the order they execute:
+
+\begin{enumerate}
+  \item \textbf{Session refresh} — the \code{cookies.getAll}/\code{setAll} dance exists purely so \code{@supabase/ssr} can rotate the auth token cookies on every request. This runs unconditionally, for \emph{every} request matched by \code{config.matcher} (i.e. everything except static assets), whether or not the route is protected.
+  \item \textbf{Feature flags} — \code{platform\_settings} (Chapter~\ref{ch:admin}) is read once per (cached, 30-second-TTL) window via \pathname{src/lib/platform-settings.ts}, shared with the \pathname{(dashboard)/layout.tsx} server component that hides nav links for disabled features.
+  \item \textbf{Maintenance mode} — if \code{maintenance\_mode} is on, every non-admin visitor (whether logged in or not) is redirected to \pathname{/maintenance}, except \pathname{/login} itself (so an admin can still sign in) and \pathname{/maintenance}.
+  \item \textbf{Per-feature route gates} — \code{feature\_clubs}/\code{feature\_wishlists}/\code{feature\_messages} being off redirects their entire route tree (\pathname{/clubs}, \pathname{/wishlist}, \pathname{/messages}) to \pathname{/browse}, independent of whether the route is otherwise "protected."
+  \item \textbf{Unauthenticated, banned-user, and admin gates} — unchanged from before: redirect a session-less visitor away from \code{PROTECTED\_ROUTES} to \pathname{/login}; for a logged-in user on a protected route, bounce a currently-banned user to \pathname{/profile}, and bounce any non-admin away from \pathname{/admin}.
+\end{enumerate}
+
+\begin{olknote}
+Look again at \code{PROTECTED\_ROUTES}: it does \emph{not} include \pathname{/browse} or \pathname{/notifications} or \pathname{/clubs} (only \pathname{/clubs/create}). This is deliberate — those pages are meant to be at least partially visible to guests — but it means any new page added under \pathname{(dashboard)} that assumes a logged-in \code{user} object without checking for \code{null} itself will crash for anonymous visitors unless it is also added to this list, or unless the page guards \code{auth.getUser()} being null on its own. There is no automatic enforcement tying new routes to this list — it is a manually maintained array. The feature-flag route gates above are a separate, independent set of checks — a route can be flag-gated without being in \code{PROTECTED\_ROUTES}, and vice versa.
+\end{olknote}
+
+\begin{olkhowto}
+Adding a new page that should require login (say \pathname{/my-loans}) means touching three places, none of which reference each other:
+\begin{enumerate}
+  \item \pathname{src/app/(dashboard)/my-loans/page.tsx} — the page itself, inside the \pathname{(dashboard)} route group so it inherits the shared shell.
+  \item \code{PROTECTED\_ROUTES} in \pathname{src/proxy.ts} — add \code{'/my-loans'}, or an anonymous visitor reaches the page and your code has to handle a null \code{user} entirely on its own.
+  \item \code{NAV\_ITEMS} in \pathname{src/components/dashboard-sidebar.tsx} — add \code{\{ href: '/my-loans', label: '...' \}}, or the page exists but nothing in the app links to it.
+\end{enumerate}
+None of these three will error or warn if you forget one — the page will just be unprotected, or unprotected-but-unlisted, or listed-but-crashing for guests. The habit from Chapter~\ref{ch:wishlists-clubs} applies here too: visit your new URL directly, logged out, before considering the page done.
+\end{olkhowto}
+
+\section{The \code{matcher} config}
+
+The exported \code{config.matcher} is a single regex excluding \pathname{\_next/static}, \pathname{\_next/image}, \pathname{favicon.ico}, and common image extensions — meaning the Proxy runs on literally every other request, including API routes and RSC payload fetches, not just page navigations. This is why the session-refresh logic at the top has to be cheap and unconditional: it runs far more often than the redirect logic below it.

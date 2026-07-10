@@ -1,0 +1,35 @@
+\chapter{Glossary}
+\label{ch:glossary}
+
+\begin{center}
+\begin{longtable}{@{}p{3.6cm} p{10.4cm}@{}}
+\toprule
+\textbf{Term} & \textbf{Meaning in this codebase} \\
+\midrule
+\endhead
+App Router & Next.js's file-system-based routing convention rooted at \pathcell{src/app}, used exclusively in this project (Chapter~\ref{ch:proxy}). \\
+Client Component & A React component marked \code{"use client"}; renders once on the server, then hydrates and re-renders in the browser (Chapter~\ref{ch:architecture}). \\
+Server Component & The App Router default; renders only on the server, never ships its own code to the browser (Chapter~\ref{ch:architecture}). \\
+Server Action & A \code{'use server'}-marked function, callable directly from a Client Component as if local, actually executing on the server (Chapter~\ref{ch:server-actions}). \\
+Route Handler & A \pathcell{route.ts} file exporting HTTP verbs (\code{GET}/\code{POST}/...) — a genuine API endpoint, used exactly once in this codebase, for the digest cron (Chapter~\ref{ch:server-actions}). \\
+Proxy & Next.js 16's renaming of Middleware — code that runs before every matched request, in this project's \pathcell{src/proxy.ts} (Chapter~\ref{ch:proxy}). \\
+RLS (Row-Level Security) & Postgres's built-in per-row access control; the entire authorization model for ordinary data access in this app (Chapter~\ref{ch:rls}). \\
+RPC & A call to a Postgres function via \code{supabase.rpc(...)}, as opposed to a query-builder \code{.from().select()} call (Chapter~\ref{ch:supabase-fundamentals}). \\
+\code{SECURITY DEFINER} & A Postgres function attribute making it run with its owner's privileges rather than the caller's — the mechanism used throughout this schema to deliberately bypass RLS for narrow, specific purposes (Chapter~\ref{ch:supabase-fundamentals}). \\
+PostgREST & The Supabase component that auto-generates a REST API from the Postgres schema — what \code{supabase.from(...)} actually talks to (Chapter~\ref{ch:supabase-fundamentals}). \\
+GoTrue & Supabase's authentication service; owns the \code{auth.users} table (Chapter~\ref{ch:supabase-fundamentals}). \\
+Realtime & The Supabase service that streams Postgres row changes to subscribed clients over WebSockets; powers chat and the notification bell (Chapters~\ref{ch:pages},~\ref{ch:components}). \\
+JWT & JSON Web Token; what GoTrue issues on login and what RLS policies evaluate via \code{auth.uid()}/\code{auth.role()} (Chapter~\ref{ch:rls}). \\
+Foreign-key embed & PostgREST's ability to nest a related table's columns inside a query's result by walking an actual foreign-key constraint, e.g. \code{.select('*, profiles(display\_name)')} — only works across FK edges the schema cache actually knows about (Chapters~\ref{ch:pages},~\ref{ch:supabase-fundamentals}). \\
+Migration & A single, chronologically-timestamped SQL file in \pathcell{supabase/migrations}, applied in order; the only correct way to change the schema (Chapter~\ref{ch:workflow}). \\
+Trigger & A Postgres function automatically invoked on a table event (\code{INSERT}/\code{UPDATE}/\code{DELETE}); used in this schema for profile provisioning, read-count increments, club member counting, and rate limiting (Chapter~\ref{ch:functions}). \\
+Haversine formula & The great-circle-distance calculation (\code{6371 * acos(...)}) used by \code{get\_books\_nearby}/\code{get\_clubs\_nearby} to sort by real-world distance (Chapter~\ref{ch:functions}). \\
+\code{pg\_trgm} & A Postgres extension providing trigram-based text similarity (\code{similarity()}); backs the wishlist fuzzy-matching RPC (Chapter~\ref{ch:functions}). \\
+\code{jsonb} & Postgres's binary JSON column type; used for \code{platform\_settings.value} and the two audit/detail \code{details} columns (Chapter~\ref{ch:schema}). \\
+Service role key & A Supabase API key that bypasses RLS entirely; used only in two server-only files in this codebase to resolve email addresses for sending mail (Chapters~\ref{ch:techstack},~\ref{ch:server-actions}). \\
+Anon key & The public, RLS-constrained Supabase API key shipped to the browser; grants nothing RLS doesn't independently allow (Chapter~\ref{ch:envvars}). \\
+Admin role hierarchy & \code{viewer} < \code{moderator} < \code{super\_admin}, the \code{admin\_role} enum gating everything under \pathcell{/admin} (Chapter~\ref{ch:rls}). \\
+N+1 avoidance & Fetching related data for many rows in one batched query (\code{.in('id', allIds)}) instead of one query per row in a loop — a recurring, deliberate pattern across this codebase's frontend (Chapters~\ref{ch:pages},~\ref{ch:wishlists-clubs}). \\
+\bottomrule
+\end{longtable}
+\end{center}

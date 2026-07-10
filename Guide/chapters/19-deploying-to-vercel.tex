@@ -1,0 +1,57 @@
+\chapter{Deploying to Vercel}
+\label{ch:vercel}
+
+\section{The mechanical part}
+
+OLK is a stock Next.js App Router project, which is exactly what Vercel is built to deploy with zero custom configuration:
+
+\begin{enumerate}
+  \item Push the repository to GitHub (or GitLab/Bitbucket).
+  \item In the Vercel dashboard, "Add New Project," import the repository. Vercel auto-detects Next.js and sets the build command (\code{next build}) and output directory automatically — nothing in \pathname{next.config.ts} needs to change for this.
+  \item Add every environment variable from Chapter~\ref{ch:envvars} in the project's \emph{Settings $\to$ Environment Variables} screen, pointed at your \textbf{production/hosted} Supabase project, not the local Docker stack.
+  \item Deploy. Every subsequent push to the connected branch redeploys automatically; pull requests get their own preview deployment with the same environment variables.
+\end{enumerate}
+
+\begin{olkwarn}
+Never put the \textbf{hosted} project's \code{SUPABASE\_SERVICE\_ROLE\_KEY} into a preview-deployment-shared environment variable scope if preview deployments are ever made public or shared with anyone outside the core team — that key bypasses RLS entirely (Chapter~\ref{ch:rls}). Scope service-role-key-dependent variables to Production only unless you have a specific reason to test the digest/email path from a preview deploy.
+\end{olkwarn}
+
+\section{Running the database migrations against production}
+
+Vercel builds the \emph{frontend}; it does not know anything about your Supabase project's schema. Before (or as part of) your first deploy, the hosted database needs every migration in \pathname{supabase/migrations} applied, in order:
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Linking to and migrating the hosted project (run once per new migration batch)}]
+npx supabase login
+npx supabase link --project-ref <your-project-ref>
+npx supabase db push
+\end{lstlisting}
+
+\begin{olknote}
+\code{supabase db push} applies migrations that exist locally but haven't been applied to the linked remote project yet — it does not touch \pathname{schema.sql}, and does not care whether that dump file is stale (Chapter~\ref{ch:workflow}). This is the deploy-time equivalent of \code{supabase db reset} in local development (Chapter~\ref{ch:local-env}), except it applies forward-only against a database that already has real user data, so there is no reset-and-replay safety net — review any new migration carefully before pushing it against production.
+\end{olknote}
+
+\section{The digest cron: wired up}
+
+\pathname{src/app/api/digest/route.ts} is fully implemented (Chapter~\ref{ch:server-actions}) and is now actually triggered in production by a \pathname{vercel.json} at the repository root:
+
+\begin{lstlisting}[caption={vercel.json — schedules the weekly digest}]
+{
+  "crons": [
+    { "path": "/api/digest", "schedule": "0 8 * * 1" }
+  ]
+}
+\end{lstlisting}
+
+\begin{olknote}
+Vercel's built-in Cron Jobs feature calls the path with \code{GET}, not \code{POST}, while \pathname{route.ts} used to only export a \code{POST} handler — a mismatch that would have fired the schedule every week and silently 405'd forever. The route now exports both \code{GET} and \code{POST}, delegating to the same digest logic, so it responds correctly regardless of which method triggers it.
+\end{olknote}
+
+\begin{olkhowto}
+Moving the digest from Monday 8am to, say, Friday 5pm is one line in \pathname{vercel.json} at the repository root: \code{"schedule": "0 8 * * 1"} $\to$ \code{"0 17 * * 5"} (standard 5-field cron — minute, hour, day-of-month, month, day-of-week). Vercel evaluates the schedule in UTC, not your local timezone, so convert first. This file is read only at deploy time, not per-request, so a new schedule takes effect on the \emph{next} deploy — don't expect editing it to change a run that's already scheduled for today.
+\end{olkhowto}
+
+\code{CRON\_SECRET} itself is just a long random string you generate once and set as an environment variable in both Vercel's dashboard and wherever else the digest is triggered from — there is no Supabase-side concept of this secret, it exists purely as a shared value the route handler compares against the incoming \code{Authorization} header.
+
+\section{What Vercel does \emph{not} give you here}
+
+There is no server to SSH into, no long-running process, and — relevant to Chapter~\ref{ch:welcome}'s longer-term goal — no way to run Supabase itself on Vercel. Vercel hosts the Next.js frontend only; the database remains wherever you point \code{NEXT\_PUBLIC\_SUPABASE\_URL}, whether that's Supabase's hosted cloud today or, eventually, a self-hosted instance on a server in Kashmir. Moving the database off Supabase's cloud in the future would change exactly one thing from Vercel's perspective: the environment variables in Chapter~\ref{ch:envvars} would point at a different host. The frontend deployment story described in this chapter does not change at all.

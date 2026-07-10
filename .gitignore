@@ -19,7 +19,6 @@
 
 # production
 /build
-/Guide
 # misc
 .DS_Store
 *.pem

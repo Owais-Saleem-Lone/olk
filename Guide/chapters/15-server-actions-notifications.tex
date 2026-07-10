@@ -1,0 +1,172 @@
+\chapter{Server Actions, Email \& Notifications}
+\label{ch:server-actions}
+
+\section{What a Server Action is, and how OLK uses them}
+
+A file starting with the string \code{'use server'} exports functions that Next.js turns into callable, server-only RPCs from Client Components — the function body only ever executes on Vercel's servers, but a Client Component can \code{await} it as if it were a local async function, with no hand-written \code{fetch} or API route needed. \pathname{src/lib/admin-actions.ts} and \pathname{src/lib/notifications.ts} are the only two \code{'use server'} files in this codebase; every admin page in Chapter~\ref{ch:admin} calls into the former directly.
+
+\section{The admin action pattern: guard, act, log, revalidate}
+
+Every one of the roughly 30 functions in \pathname{admin-actions.ts} follows the identical four-step shape:
+
+\begin{lstlisting}[caption={src/lib/admin-actions.ts — the shared shape, illustrated with banUser}]
+async function guardRole(minRole: AdminRole = 'moderator') {
+  const admin = await checkAdminAPI(minRole)
+  if (!admin) throw new Error('Unauthorized')
+  return admin
+}
+
+export async function banUser(
+  userId: string, reason: string, isPermanent: boolean, durationDays?: number
+): Promise<ActionResult> {
+  try {
+    const admin = await guardRole('moderator')                 // 1. GUARD
+    const supabase = await createClient()
+
+    const expiresAt = !isPermanent && durationDays
+      ? new Date(Date.now() + durationDays * 86400000).toISOString() : null
+
+    await supabase.from('user_bans').insert({ user_id: userId, admin_id: admin.id, reason, is_permanent: isPermanent, expires_at: expiresAt })
+    await supabase.from('profiles').update({ is_banned: true, ban_reason: reason, ban_expires_at: expiresAt }).eq('id', userId)
+    await supabase.from('notifications').insert({ user_id: userId, type: 'admin', title: /* ... */ '', link: '/profile' })  // 2. ACT
+
+    await auditLog(admin.id, 'ban_user', 'user', userId, { reason, isPermanent, durationDays })  // 3. LOG
+    revalidatePath('/admin')                                    // 4. REVALIDATE
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: (e as Error).message }
+  }
+}
+\end{lstlisting}
+
+\begin{enumerate}
+  \item \textbf{Guard} — \code{guardRole(minRole)} calls \code{checkAdminAPI} (Chapter~\ref{ch:rls}) and throws if the caller doesn't meet the role floor. This is a check made on top of RLS, not instead of it — the subsequent Supabase calls in the function body still go through RLS as whatever role the Server Action's own Supabase client authenticates as (the calling user's session, via \pathname{src/lib/supabase/server.ts}), so a bug in \code{guardRole} would still have to also defeat RLS to cause real damage.
+  \item \textbf{Act} — the actual mutation(s): update rows, and near-always insert a \code{notifications} row telling the affected user what just happened to them.
+  \item \textbf{Log} — every action writes exactly one row to \code{admin\_audit\_log} (Chapter~\ref{ch:schema}) recording who did what, to what, with what details, as structured \code{jsonb}. This is not optional or conditional anywhere in the file — it is the mechanism that makes the platform's moderation history fully reconstructable after the fact.
+  \item \textbf{Revalidate} — \code{revalidatePath('/admin')} tells Next.js's cache that server-rendered data under \pathname{/admin} may be stale and should be refetched on next navigation.
+\end{enumerate}
+
+\begin{olktip}
+Every function returns \code{\{ success: boolean, error?: string \}} rather than throwing across the server/client boundary, and every function's entire body is wrapped in \code{try/catch}. When you add a new admin action, match this shape exactly — calling code throughout the admin pages (Chapter~\ref{ch:pages}) uniformly checks \code{result.success} rather than using \code{try/catch} at the call site.
+\end{olktip}
+
+\begin{olkhowto}
+Adding action \#31 to \pathname{admin-actions.ts}? Copy \code{banUser}'s shape exactly rather than starting from a blank function:
+\begin{enumerate}
+  \item Signature returns \code{Promise<ActionResult>}, whole body inside one \code{try/catch}.
+  \item First line inside the \code{try}: \code{const admin = await guardRole('moderator')} (or \code{'super\_admin'} for anything platform-settings-adjacent, per Chapter~\ref{ch:admin}).
+  \item Mutate, then insert a \code{notifications} row for whichever user should be told what just happened.
+  \item \code{await auditLog(admin.id, 'your\_action\_name', 'target\_type', targetId, \{ ...details \})} — never optional, never conditional.
+  \item \code{revalidatePath('/admin')} as the last line before \code{return \{ success: true \}}.
+\end{enumerate}
+Skip step 4 and the action still works end to end, but it becomes invisible to \pathname{admin/settings/page.tsx}'s audit log — the one place a \code{super\_admin} can answer "who did this."
+\end{olkhowto}
+
+\section{Notifications: in-app row first, email best-effort second}
+
+\begin{lstlisting}[caption={src/lib/notifications.ts — in full}]
+export async function createNotification({ userId, type, title, link }: NotificationPayload) {
+  const supabase = await createServerClient()          // the calling user's session
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const supabaseAdmin = createAdminClient(              // service-role client
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+  const { error } = await supabaseAdmin.from('notifications').insert({
+    user_id: userId, type, title, link: link || '/notifications',
+  })
+  if (error) throw error
+
+  try {
+    await sendNotificationEmail({ userId, type, title })
+  } catch (err) {
+    console.error('Email notification failed:', err)
+  }
+}
+\end{lstlisting}
+
+The in-app notification row is written first and its failure is a hard error (thrown, propagated to the caller); the email send is wrapped in its own \code{try/catch} and its failure is only logged. This ordering is deliberate: a user should always see the notification inside the app even if their email is undeliverable or Resend is down — email is a convenience layer on top of a system that must work without it.
+
+\begin{olknote}
+This function used to insert with the calling user's own session client, which worked only because the \code{notifications} INSERT policy was, at the time, wide open to any authenticated user (Chapter~\ref{ch:rls}). Now that policy only allows \code{auth.uid() = user\_id}, and most calls here are inherently cross-user (the \emph{other} party in a request/message/club gets notified, not the caller) — so this action switched to the service-role client, after first confirming the caller has a valid session. It is now the trusted server-side gate for every cross-user notification the app creates outside the admin actions in Chapter~\ref{ch:admin} (which have their own, separate "admins/mods can insert for anyone" policy).
+\end{olknote}
+
+\section{Sending the actual email: a service-role client, on purpose}
+
+\begin{lstlisting}[caption={src/lib/send-notification-email.ts — the privileged lookup}]
+export async function sendNotificationEmail({ userId, type, title }: {...}) {
+  if (!resend) return   // silently no-op if RESEND_API_KEY is unset
+
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,   // NOT the anon key
+  )
+  const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId)
+  const email = authUser?.user?.email
+  if (!email) return
+  // ... resend.emails.send({ ..., html: `... ${escapeHtml(title)} ...` })
+}
+\end{lstlisting}
+
+Resolving \emph{any} user's email address by id is an operation no ordinary RLS policy would ever grant a client — email addresses live in \code{auth.users}, not \code{public.profiles}, and are never exposed through the query builder. This file constructs a second, separate Supabase client using the \textbf{service role key} instead of the anon key specifically to call the privileged \code{auth.admin.getUserById} API, and the file begins with \code{import 'server-only'} (Chapter~\ref{ch:techstack}) so that a build error occurs if this file is ever accidentally reachable from client-side code — the service role key must never reach a browser bundle.
+
+\begin{olkwarn}
+Notice \code{escapeHtml(title)} around the one piece of user-influenced content interpolated into the email's raw HTML string. A notification's \code{title} field can, depending on the notification type, contain text a regular user chose (e.g. a report reason echoed back, or in principle a maliciously crafted book title flowing through some future notification type). Escaping it before string-interpolating into HTML is the only thing standing between that and an HTML/script injection inside an email client. If you add a new notification type, keep any user-influenced text passed through \code{escapeHtml} before it reaches this file.
+\end{olkwarn}
+
+\begin{olkhowto}
+A brand-new notification \code{type} (say \code{'club\_invite'}) touches more than the string you pass to \code{createNotification}:
+\begin{enumerate}
+  \item There is no enum or TypeScript union constraining \code{type} — it's a plain string column (Chapter~\ref{ch:schema}). A typo here doesn't fail at write time; it fails silently at read time, as step 2 below.
+  \item \pathname{src/components/notification-bell.tsx} and \pathname{src/app/(dashboard)/notifications/page.tsx} both index into an \code{ICONS} lookup object keyed by \code{n.type}, falling back to a generic bell emoji when the key is missing — add your new type as a key in \emph{each} file's \code{ICONS} object, or it silently falls back to that generic icon rather than erroring.
+  \item If \code{title} ever includes user-typed text for this new type, route it through \code{escapeHtml} before it can reach \pathname{send-notification-email.ts} (the warning above) — easy to forget for a brand-new call site since nothing enforces it.
+\end{enumerate}
+\end{olkhowto}
+
+\section{The weekly digest: a genuine Route Handler}
+
+\pathname{src/app/api/digest/route.ts} is the one place in this codebase that is a real HTTP endpoint rather than a Server Action, because it needs to be invoked by something outside a page render — an external cron scheduler (Chapter~\ref{ch:vercel}).
+
+\begin{lstlisting}[caption={app/api/digest/route.ts — auth gate and the per-subscriber loop}]
+async function handleDigest(request: Request) {
+  const authHeader = request.headers.get('authorization')
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (!resend) return Response.json({ error: 'Email service not configured' }, { status: 503 })
+
+  const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  const subscribers = /* profiles where email_digest = true */
+  const recentBooks = /* books from the last 7 days, status = available */
+
+  let sent = 0
+  const failures: { userId: string; error: string }[] = []
+  for (const sub of subscribers) {
+    try {
+      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(sub.id)
+      const email = authUser?.user?.email
+      if (!email) continue
+      await resend.emails.send({ /* ... */ })
+      sent++
+    } catch (e) {
+      failures.push({ userId: sub.id, error: (e as Error).message })
+    }
+  }
+  return Response.json({ sent, books: recentBooks.length, failures: failures.length, failureDetails: failures })
+}
+
+export async function GET(request: Request) { return handleDigest(request) }
+export async function POST(request: Request) { return handleDigest(request) }
+\end{lstlisting}
+
+Authorization here is a plain shared-secret Bearer token comparison against \code{CRON\_SECRET} (Chapter~\ref{ch:vercel} covers where that value comes from) — appropriate for a server-to-server cron trigger with no user session involved.
+
+\begin{olknote}
+The per-subscriber loop used to have no \code{try/catch} around \code{resend.emails.send(...)} — a malformed address or a transient Resend error would abort the entire run for every subscriber after that point in iteration order. Each send is now wrapped individually, with failures collected and returned in the response rather than left to abort the run. The route also used to export only \code{POST}, while Vercel's Cron Jobs feature calls with \code{GET} by default (Chapter~\ref{ch:vercel}); it now exports both, delegating to the same \code{handleDigest} logic.
+\end{olknote}
+
+\begin{olktask}
+With \code{RESEND\_API\_KEY} unset (the default in local development, per Chapter~\ref{ch:local-env}), trigger the digest route locally with \code{curl -X POST localhost:3000/api/digest -H "Authorization: Bearer \$CRON\_SECRET"} and confirm you get the \code{503} "Email service not configured" response. Then set a (fake, non-functional) \code{RESEND\_API\_KEY} in \pathname{.env.local}, restart the dev server, and confirm the response changes to an attempted send that now fails differently — this is the fastest way to see the file's two independent failure modes without needing a real Resend account.
+\end{olktask}

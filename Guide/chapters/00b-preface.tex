@@ -1,0 +1,52 @@
+\chapter*{Preface — Read This First}
+\addcontentsline{toc}{chapter}{Preface — Read This First}
+\markboth{Preface}{Preface}
+
+If you are reading this, you are probably one of three people: a new intern who just got access to the OLK repository and needs to become productive fast; a maintainer six months from now who has forgotten why a table is shaped the way it is; or the founder, checking that the platform can survive contact with people who did not write it.
+
+This manual is written for all three. It assumes you can already write TypeScript and SQL, but it assumes \emph{nothing} about this specific project — not its conventions, not its schema, not why the database migrations directory has a file with a two-page comment explaining a bug that was already fixed. Every chapter tries to answer not just \emph{what} the code does, but \emph{why it is built that way}, because the "why" is what goes stale fastest in institutional memory and what a manual is for.
+
+\section*{How this manual is organised}
+\addcontentsline{toc}{section}{How this manual is organised}
+
+\begin{itemize}
+  \item \textbf{Part I — Orientation.} What OLK is, who it is for, and the shape of the system at a glance. Read this even if you only have ten minutes.
+  \item \textbf{Part II — Environment \& Workflow.} How to get the project running on your machine — including the local Docker/Supabase stack — and the conventions the project expects you to follow.
+  \item \textbf{Part III — The Frontend.} Next.js routing, every page, every shared component, and the styling system.
+  \item \textbf{Part IV — The Backend.} Supabase as a concept, then the full database schema, every function and trigger, the row-level security model, and how server-side actions and notifications work.
+  \item \textbf{Part V — Key Workflows End to End.} The same system traced through its three central journeys: exchanging a book, matching a wishlist, and moderating the community — reading top to bottom instead of file to file.
+  \item \textbf{Part VI — Operating in Production.} Deploying to Vercel, the full environment variable reference, a maintenance playbook of "if you need to do X, start here," a candid list of known issues, and a troubleshooting guide.
+  \item \textbf{Appendices.} A compact table reference, a command cheat-sheet, and a glossary.
+\end{itemize}
+
+\section*{Conventions used in this manual}
+\addcontentsline{toc}{section}{Conventions used in this manual}
+
+Four recurring boxes appear throughout. They are not decoration — they are load-bearing:
+
+\begin{olknote}
+Background context or a clarification that helps the surrounding text make sense. Safe to skim on a first read.
+\end{olknote}
+
+\begin{olktip}
+A shortcut, a command, or a habit that will save you time. Worth remembering.
+\end{olktip}
+
+\begin{olkwarn}
+A place where the obvious thing to do is the wrong thing to do. Read these before you touch the related code.
+\end{olkwarn}
+
+\begin{olkgotcha}
+A documented, real, currently-existing bug, gap, or piece of technical debt in the codebase as of this edition — not hypothetical. Each one names the exact file and line. See also Chapter~22, \emph{Known Issues \& Technical Debt}, which collects all of them in one place.
+\end{olkgotcha}
+
+\begin{olktask}
+A hands-on exercise. If you are an intern working through this manual for the first time, do these — reading about a codebase and changing it are different skills, and these are designed to be small enough to finish in under an hour each while touching a real, working part of the system.
+\end{olktask}
+
+Code listings are copied verbatim from the repository and captioned with their file path, so you can always locate the original with a simple search. Where a listing has been trimmed for length, an ellipsis comment (\texttt{// ...}) marks the cut.
+
+\section*{A note on honesty}
+\addcontentsline{toc}{section}{A note on honesty}
+
+This manual documents OLK as it actually is, including the parts that are unfinished, inconsistent, or wrong. A manual that only describes the intended design, while the shipped code disagrees, actively misleads the next person who trusts it. Where the codebase and the "obviously correct" design diverge, this manual says so, in a \textbf{KNOWN ISSUE} box, with the exact location. Fixing those is a great first project for a new engineer — several are flagged in Chapter~22 for exactly that reason.

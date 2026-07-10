@@ -1,0 +1,78 @@
+\chapter{System Architecture}
+\label{ch:architecture}
+
+\section{The system, end to end}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  box/.style={draw=olkSlateMuted, thick, rounded corners=2pt, minimum height=1.1cm, align=center, font=\sffamily\small},
+  svc/.style={box, fill=olkTeal!8},
+  ext/.style={box, fill=olkSlate!5, draw=olkGray},
+  lbl/.style={font=\sffamily\scriptsize\color{olkGray}},
+  arr/.style={-Stealth, thick, color=olkSlateMuted}
+]
+  \node[box, fill=olkSlateLight, text=white, minimum width=3.2cm] (browser) {Browser\\[1pt]\footnotesize (reader in Kashmir)};
+
+  \node[svc, minimum width=6.8cm, minimum height=3.6cm, below=1.4cm of browser, yshift=-0.3cm] (vercel) {};
+  \node[lbl, above right] at (vercel.north west) {\textbf{Vercel} — Next.js App Router};
+
+  \node[box, fill=white, minimum width=2.9cm, minimum height=0.9cm] (rsc) at ($(vercel.center)+(-1.6cm,0.9cm)$) {Server Components\\[-1pt]\footnotesize \& Server Actions};
+  \node[box, fill=white, minimum width=2.6cm, minimum height=0.9cm] (proxy) at ($(vercel.center)+(1.9cm,0.9cm)$) {Proxy\\[-1pt]\footnotesize (\texttt{proxy.ts})};
+  \node[box, fill=white, minimum width=2.9cm, minimum height=0.9cm] (cc) at ($(vercel.center)+(-1.6cm,-0.7cm)$) {Client Components\\[-1pt]\footnotesize (browser JS bundle)};
+  \node[box, fill=white, minimum width=2.6cm, minimum height=0.9cm] (api) at ($(vercel.center)+(1.9cm,-0.7cm)$) {Route Handler\\[-1pt]\footnotesize \pathname{/api/digest}};
+
+  \node[svc, minimum width=6.6cm, minimum height=3.3cm, below=1.6cm of vercel] (supabase) {};
+  \node[lbl, above right] at (supabase.north west) {\textbf{Supabase} (local: Docker; later: self-hosted in Kashmir)};
+
+  \node[box, fill=white, minimum width=2.7cm] (pg) at ($(supabase.center)+(-1.5cm,0.75cm)$) {Postgres\\[-1pt]\footnotesize + Row-Level Security};
+  \node[box, fill=white, minimum width=2.3cm] (auth) at ($(supabase.center)+(1.6cm,0.75cm)$) {GoTrue Auth};
+  \node[box, fill=white, minimum width=2.7cm] (storage) at ($(supabase.center)+(-1.5cm,-0.75cm)$) {Storage\\[-1pt]\footnotesize (\texttt{book-covers})};
+  \node[box, fill=white, minimum width=2.3cm] (rt) at ($(supabase.center)+(1.6cm,-0.75cm)$) {Realtime};
+
+  \node[ext, right=2.3cm of vercel, minimum width=2.6cm] (resend) {Resend\\[-1pt]\footnotesize transactional email};
+  \node[ext, below=0.5cm of resend, minimum width=2.6cm] (olib) {Open Library API\\[-1pt]\footnotesize (ISBN lookups)};
+
+  \draw[arr] (browser) -- (vercel.north);
+  \draw[arr] (vercel) -- (supabase);
+  \draw[arr] (api.east) -- ++(0.7,0) |- (resend.west);
+  \draw[arr] (cc.east) -| ($(olib.west)+(-0.4,0)$) -- (olib.west);
+\end{tikzpicture}
+\caption{OLK's runtime shape. The Client-Component box is the only part of Vercel's box that actually executes in the reader's browser; everything else in that box runs on Vercel's servers. The Supabase box is a single Docker Compose stack in local development and, today, Supabase's hosted cloud in production — the long-term goal (Chapter~\ref{ch:welcome}) is for that same box to be a physical server in Kashmir.}
+\label{fig:architecture}
+\end{figure}
+
+\section{Server Components, Client Components, and where the boundary actually falls}
+
+Every file under \pathname{src/app} is a Server Component by default. A file becomes a Client Component only if its first line is the string \code{"use client"}. This is not a stylistic choice per file — it changes what APIs are available and where the code physically runs:
+
+\begin{itemize}
+  \item \textbf{Server Components} (no directive) render on Vercel's servers, can call \code{await createClient()} from \pathname{src/lib/supabase/server.ts} directly, and never ship their data-fetching code to the browser. \pathname{src/app/page.tsx} (the landing page) and every \pathname{layout.tsx} in this project are Server Components.
+  \item \textbf{Client Components} (\code{"use client"}) render once on the server for the initial HTML, then hydrate and re-render in the browser. They use \pathname{src/lib/supabase/client.ts}'s \code{createClient()}, which talks to Supabase directly over HTTPS from the reader's browser — meaning every query a Client Component makes is subject to Row-Level Security as the logged-in user, never as an elevated role. Nearly every interactive page in the dashboard (\pathname{browse}, \pathname{my-books}, \pathname{requests}, \pathname{messages/[id]}, all of \pathname{admin/*}) is a Client Component, because they need \code{useState}/\code{useEffect} for interactivity.
+\end{itemize}
+
+\begin{olknote}
+This project's most complex pages are almost entirely Client Components, even though a "fetch on the server, render once" Server Component would often be more efficient. That is a real, current characteristic of the codebase, not a recommendation — see Chapter~\ref{ch:pages} for page-by-page detail, and treat "should this be a Server Component instead" as a legitimate refactor to propose, not a rule that's already been decided against.
+\end{olknote}
+
+\section{Where the Proxy sits}
+
+Every request to the app — before any Server Component runs, before any HTML is generated — passes through \pathname{src/proxy.ts}. It refreshes the Supabase auth session cookies (required because \code{@supabase/ssr} needs a chance to rotate tokens on every request), checks \code{platform\_settings} feature flags and maintenance mode, redirects unauthenticated visitors away from a fixed list of protected route prefixes, and redirects banned users or non-admins away from routes they should not reach. Chapter~\ref{ch:proxy} covers this file line by line.
+
+\section{Local development vs. production, side by side}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}l Y Y@{}}
+\toprule
+& \textbf{Local development} & \textbf{Production (today)} \\
+\midrule
+Frontend & \code{next dev} on \code{localhost:3000} & Vercel build of the same repository \\
+Database \& Auth & Docker containers started by \code{supabase start}, at \code{127.0.0.1:54321}/\code{:54322} & Supabase's hosted cloud project \\
+Config source & \pathname{.env.local} pointed at \code{127.0.0.1} & Environment variables set in the Vercel dashboard \\
+Email & Silently disabled (no \code{RESEND\_API\_KEY} set) & Live, via Resend \\
+Migrations & \code{supabase db reset} replays every file in \pathname{supabase/migrations} & Applied once, in order, via \code{supabase db push} or the linked project \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+The two columns are deliberately structured to be as close to identical as possible — the same migrations, the same RLS policies, the same functions — so that "it works locally" is a meaningful, trustworthy signal before you ever touch the hosted database. Chapter~\ref{ch:local-env} is the practical walkthrough of the left column.

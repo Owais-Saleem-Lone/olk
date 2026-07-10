@@ -1,0 +1,86 @@
+\chapter{The Styling System}
+\label{ch:styling}
+
+\section{Tailwind CSS v4 — a CSS-first configuration}
+
+OLK uses Tailwind v4, which is configured very differently from v3: there is no \pathname{tailwind.config.js} anywhere in this repository. Instead, Tailwind is invoked as a PostCSS plugin and configured directly in CSS:
+
+\begin{lstlisting}[caption={postcss.config.mjs — the entire build wiring}]
+const config = {
+  plugins: {
+    "@tailwindcss/postcss": {},
+  },
+};
+export default config;
+\end{lstlisting}
+
+\begin{lstlisting}[caption={src/app/globals.css — in full}]
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-brand-slate: #0f172a;
+  --color-brand-slate-light: #1e293b;
+  --color-brand-slate-muted: #334155;
+  --color-brand-teal: #14b8a6;
+  --color-brand-teal-dark: #0d9488;
+  --color-brand-teal-light: #2dd4bf;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+\end{lstlisting}
+
+The \code{@theme inline} block is Tailwind v4's mechanism for exposing CSS custom properties as Tailwind design tokens (so \code{bg-background} and \code{text-foreground} utility classes become available, backed by the \code{--color-background}/\code{--color-foreground} variables).
+
+\begin{olknote}
+The app's dark slate-and-teal identity used to exist only as repeated, ad hoc Tailwind utility classes (\code{bg-slate-900}, \code{text-teal-400}, and so on, hand-typed independently in dozens of files) and as literal hex values inside \pathname{src/lib/send-notification-email.ts}'s inline email HTML. \pathname{globals.css} now defines named \code{--color-brand-slate}/\code{--color-brand-teal} (plus \code{-light}/\code{-dark} variants) in the \code{@theme} block, which Tailwind v4 automatically turns into \code{bg-brand-teal}/\code{text-brand-slate}-style utilities — matching the exact hex values Tailwind's stock \code{slate-900}/\code{teal-400/500/600} already used, so nothing visually changed. The email HTML (which can't reference CSS custom properties) now pulls the same hex values from a single shared \pathname{src/lib/email-brand.ts} instead of duplicating them across \pathname{send-notification-email.ts} and \pathname{api/digest/route.ts}. Every stock \code{slate-700}/\code{slate-800}/\code{slate-900}/\code{teal-400}/\code{teal-500}/\code{teal-600} call site elsewhere in the app (563 occurrences across 39 files) has since been mechanically migrated to the matching \code{brand-*} utility too — a plain token substitution, since the hex values were already identical, verified by diffing the compiled CSS before and after. Any other shade (\code{slate-300}, \code{teal-700}, etc.) has no \code{brand-*} equivalent and was intentionally left alone.
+\end{olknote}
+
+\section{No component library, no shared design primitives}
+
+There is no button component, no card component, no shared \code{<Modal>} wrapper. Every card, button, badge, and modal is written inline with Tailwind utility classes at its call site, independently, in whichever file needed it. This has a real, visible consequence covered already in Chapters~\ref{ch:pages} and~\ref{ch:components}: modal styling is \emph{almost} entirely consistent (portal-based, dark card, teal accent), with a couple of drift points (\code{alert()}/\code{confirm()} instead of the shared visual style) that stand out precisely because the convention is otherwise so consistent.
+
+\begin{olktip}
+Before writing a new UI element from scratch, search the codebase for something visually similar first (a card, a badge, a status pill) and copy its Tailwind class list rather than inventing a new visual style. It is the only mechanism currently holding visual consistency together, since there is no shared component to import instead.
+\end{olktip}
+
+\begin{olkhowto}
+Swapping the brand teal (\code{\#14b8a6}) for a different accent touches two files, because email HTML can't read CSS custom properties:
+\begin{enumerate}
+  \item \pathname{src/app/globals.css} — the \code{--color-brand-teal}/\code{-dark}/\code{-light} lines inside \code{@theme inline}. Every \code{bg-brand-teal}/\code{text-brand-teal}-style utility across the app picks this up automatically; no per-component edits needed.
+  \item \pathname{src/lib/email-brand.ts} — the \code{teal}/\code{tealGradientFrom}/\code{tealGradientTo} hex strings, consumed by \pathname{send-notification-email.ts} and \pathname{api/digest/route.ts} for transactional email, which is rendered outside Tailwind entirely.
+\end{enumerate}
+Change only \#1 and every screen in the app matches, but every notification email keeps shipping the old color.
+\end{olkhowto}
+
+\section{Fonts}
+
+\pathname{src/app/layout.tsx} loads Geist Sans and Geist Mono via \code{next/font/google}, exposing them as the \code{--font-geist-sans}/\code{--font-geist-mono} CSS variables consumed by the \code{@theme inline} block above. \pathname{globals.css}'s \code{body} rule references \code{font-family: var(--font-sans)} — which resolves to Geist — rather than hard-coding a fallback stack, so the loaded Geist font is now actually the default body font, not just an opt-in Tailwind utility.
+
+\section{Dark mode}
+
+The only dark-mode logic in the entire codebase is the \code{prefers-color-scheme: dark} media query in \pathname{globals.css}, which swaps the two CSS variables above. There is no user-facing toggle, no \code{class="dark"} strategy, and no persisted preference — the app simply follows the OS/browser setting. Given that almost the entire dashboard UI is hand-built with explicit dark-slate Tailwind classes (\code{bg-slate-900} etc.) regardless of \code{prefers-color-scheme}, the practical reality is that the authenticated dashboard \emph{always} looks dark, and only the landing/login/register pages' backgrounds actually respond to the media query.
+
+\begin{olktask}
+Grep the codebase for \code{bg-slate-900} (e.g. \code{grep -rn "bg-slate-900" src/}) — it should return nothing, since the \code{brand-*} migration above covers exactly that shade. Now grep for \code{text-teal-300}: it \emph{will} turn up several files. Explain why one search comes back empty and the other doesn't — the answer is in \pathname{globals.css}'s \code{@theme} block above, not in any special-casing in the migrated files themselves.
+\end{olktask}

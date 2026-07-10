@@ -1,0 +1,48 @@
+\chapter{The Maintenance Playbook}
+\label{ch:playbook}
+
+A cookbook, organised as "if you need to do X, start here." Each entry names the exact files to touch and the chapter with the full background.
+
+\section{"I need to add a new page"}
+\begin{enumerate}
+  \item Create \pathname{src/app/(dashboard)/your-route/page.tsx} (or outside the group if it shouldn't share the dashboard shell — Chapter~\ref{ch:proxy}).
+  \item Decide Server vs. Client Component \emph{first}, based on whether it needs interactivity (Chapter~\ref{ch:architecture}) — don't default to \code{"use client"} out of habit; most new read-only pages should be Server Components even though most existing ones aren't (Chapter~\ref{ch:pages}).
+  \item If it should be reachable only when logged in, add its path prefix to \code{PROTECTED\_ROUTES} in \pathname{src/proxy.ts} (Chapter~\ref{ch:proxy}) — this is a manually maintained array, nothing enforces the addition for you.
+  \item Add a link in \pathname{dashboard-sidebar.tsx} if it belongs in primary nav (Chapter~\ref{ch:components}).
+\end{enumerate}
+
+\section{"I need to change the database schema"}
+\begin{enumerate}
+  \item \code{npx supabase migration new descriptive\_name} (Chapter~\ref{ch:workflow} — never hand-create the file).
+  \item Write the migration with a comment block explaining \emph{why}, following the house style in \pathname{20260701182526\_...} and \pathname{20260701182527\_...} (Chapter~\ref{ch:workflow}).
+  \item \code{npx supabase db reset} locally, and manually re-exercise every page that touches the changed table (Chapter~\ref{ch:workflow} — the test suite is minimal and does not cover page-level flows yet).
+  \item If the change touches \code{books} or \code{clubs}, check whether \code{get\_books\_nearby}/\code{get\_clubs\_nearby} need their \code{RETURNS TABLE} column list updated too (Chapter~\ref{ch:functions} — this has bitten this codebase once already).
+  \item Update Chapter~\ref{ch:schema} of \emph{this manual} in the same pull request.
+\end{enumerate}
+
+\section{"I need to add a new admin action"}
+Add a function to \pathname{src/lib/admin-actions.ts} following the guard/act/log/revalidate shape exactly (Chapter~\ref{ch:server-actions}): \code{guardRole(minRole)} first, the mutation(s), an \code{auditLog(...)} call, \code{revalidatePath('/admin')}, and a \code{try/catch} returning \code{\{success, error?\}}. Pick \code{minRole} deliberately — \code{'moderator'} for anything reversible, \code{'super\_admin'} for anything destructive or that changes another admin's privileges (Chapter~\ref{ch:rls}).
+
+\section{"I need to add a new notification type"}
+\begin{enumerate}
+  \item Call \code{createNotification} (Chapter~\ref{ch:server-actions}) with a new \code{type} string from wherever the triggering event happens.
+  \item If it should also send an email, add an entry to \code{NOTIFICATION\_SUBJECTS} in \pathname{send-notification-email.ts} (Chapter~\ref{ch:server-actions}) — falls back to a generic subject if you skip this, so it degrades gracefully, but do it anyway.
+  \item Add an icon/label for it in \emph{both} places that maintain that mapping independently: \pathname{notifications/page.tsx} and \pathname{notification-bell.tsx} (Chapter~\ref{ch:pages} flags these as already-drifted duplicates — adding a third divergence makes this worse, so consider extracting a shared constant while you're in there).
+  \item Ensure any user-influenced text passed into the notification's \code{title} goes through \code{escapeHtml} before it can reach the email HTML template (Chapter~\ref{ch:server-actions}).
+\end{enumerate}
+
+\section{"I need to change a rate limit or feature flag"}
+Edit the row in \code{platform\_settings} — either through \pathname{admin/settings/page.tsx} directly, or a migration's \code{INSERT ... ON CONFLICT (key) DO UPDATE} if it should ship as a new default (Chapter~\ref{ch:functions}). Remember \code{get\_platform\_setting\_int} expects the stored JSON to be either a JSON string or JSON number — writing raw unquoted text into the \code{value} column outside the app's own read/write path can break the \code{\#>> '\{\}'} unwrap (Chapter~\ref{ch:functions}).
+
+\section{"I need to test something as a banned user / admin / moderator"}
+Register a fresh account locally (Chapter~\ref{ch:local-env}), then flip the relevant \code{profiles} columns directly in Studio's table editor or via SQL — \code{is\_banned = true}, or \code{is\_admin = true, admin\_role = 'moderator'} (both fields, together — Chapter~\ref{ch:rls} explains why one alone grants nothing). This is faster and more reliable than trying to reach the same state through the UI.
+
+\section{"I need to regenerate the schema dump"}
+\code{npx supabase db dump --local --schema public > supabase/schema.sql} (Chapter~\ref{ch:workflow}), after your local database reflects every migration you want captured. Do this deliberately, as its own commit, not as an incidental side effect of an unrelated change.
+
+\section{"Something changed in this codebase and this manual is now wrong"}
+Fix the manual in the same pull request as the code change, in the relevant \pathname{Guide/chapters/*.tex} file. This is not a nice-to-have: Chapter~\ref{ch:schema}'s note about \pathname{schema.sql} having gone five migrations stale is a direct, cautionary illustration of what happens to any documentation artifact that isn't updated as part of the change it describes. Don't let this manual become the next example.
+
+\begin{olktask}
+Pick any one row in this playbook you haven't personally done yet, and do it against your local stack, start to finish, before reading further into this manual. Muscle memory beats reading every time.
+\end{olktask}

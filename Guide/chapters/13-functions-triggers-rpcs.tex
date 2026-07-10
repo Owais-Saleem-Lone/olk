@@ -1,0 +1,226 @@
+\chapter{Functions, Triggers \& RPCs}
+\label{ch:functions}
+
+Every function below lives in the \code{public} schema and is called from the frontend via \code{supabase.rpc('function\_name', \{...\})} unless noted as trigger-only. Recall from Chapter~\ref{ch:supabase-fundamentals} that almost all of them are \code{SECURITY DEFINER} — that is called out per-function only where it is the whole reason the function exists.
+
+\section{Identity \& role helpers}
+
+\begin{lstlisting}[style=olkcodesql, caption={The three functions every admin RLS policy is built from (supabase/schema.sql)}]
+CREATE OR REPLACE FUNCTION public.is_admin() RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND is_admin = true
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_admin_or_mod() RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND is_admin = true
+      AND admin_role IN ('super_admin', 'moderator')
+  );
+$$;
+-- is_super_admin() follows the same shape, requiring admin_role = 'super_admin' exactly.
+\end{lstlisting}
+
+These three are why RLS policies throughout Chapter~\ref{ch:rls} can be as short as \code{USING (public.is\_admin\_or\_mod())} — the role hierarchy check lives in exactly one place, not duplicated across every policy that needs it.
+
+\code{handle\_new\_user()} was already covered in full in Chapter~\ref{ch:supabase-fundamentals} — it is the \code{AFTER INSERT ON auth.users} trigger that provisions a matching \code{profiles} row for every new signup.
+
+\section{Discovery: geography}
+
+\begin{lstlisting}[style=olkcodesql, caption={get\_books\_nearby — haversine distance, nulls last}]
+CREATE OR REPLACE FUNCTION public.get_books_nearby(user_lat double precision, user_lng double precision)
+RETURNS TABLE(id uuid, title varchar, author varchar, condition varchar,
+              listing_type varchar, status varchar, genre varchar, cover_url text,
+              owner_id uuid, created_at timestamptz, distance_km double precision,
+              owner_name varchar, owner_area varchar, read_count int,
+              acquired_via_donation boolean)
+LANGUAGE sql STABLE SECURITY DEFINER AS $$
+  SELECT
+    b.id, b.title, b.author, b.condition, b.listing_type, b.status,
+    b.genre, b.cover_url, b.owner_id, b.created_at,
+    CASE
+      WHEN p.latitude IS NOT NULL AND p.longitude IS NOT NULL THEN
+        6371 * acos(
+          LEAST(1.0, GREATEST(-1.0,
+            cos(radians(user_lat)) * cos(radians(p.latitude)) *
+            cos(radians(p.longitude) - radians(user_lng)) +
+            sin(radians(user_lat)) * sin(radians(p.latitude))
+          ))
+        )
+      ELSE NULL
+    END AS distance_km,
+    p.display_name AS owner_name, p.area_name AS owner_area,
+    b.read_count, b.acquired_via_donation
+  FROM books b
+  JOIN profiles p ON p.id = b.owner_id
+  WHERE b.status IN ('available', 'given', 'unavailable')
+  ORDER BY distance_km ASC NULLS LAST, b.created_at DESC;
+$$;
+\end{lstlisting}
+
+\begin{olknote}
+The \code{6371 * acos(...)} expression is the haversine great-circle-distance formula (6371 = Earth's radius in km). \code{LEAST(1.0, GREATEST(-1.0, ...))} clamps the argument to \code{acos} into $[-1, 1]$ — without it, floating-point rounding on two nearly-identical coordinates (e.g. a user browsing their own listing) can push the argument fractionally outside that range and make \code{acos} return \code{NaN}, since \code{acos} is only defined on $[-1,1]$.
+\end{olknote}
+
+\code{get\_clubs\_nearby(user\_lat, user\_lng)} is the same haversine pattern applied to \code{clubs} (only \code{active = true}), joined to the creator's profile, ordered by distance then by \code{member\_count DESC}.
+
+\begin{olkgotcha}
+Both nearby functions have an explicit column list in \code{RETURNS TABLE(...)}. When \code{books.description} and \code{books.publication\_year} were added, an earlier version of this function briefly shipped \emph{without} them in its return type — silently dropping those two columns from every geo-sorted browse result for any user with a location set, even though the columns existed in the table. A follow-up migration (\pathname{20260702184016\_...}) had to \code{DROP} and re-\code{CREATE} the function to add them. \textbf{Lesson for the next schema change that touches \code{books} or \code{clubs}:} adding a column to the underlying table does \emph{not} automatically surface it through either nearby function — you must also update its \code{RETURNS TABLE} list and redeploy the function.
+\end{olkgotcha}
+
+\section{Public aggregates}
+
+\code{get\_community\_stats()} returns \code{(total\_books, total\_users, completed\_exchanges)} as a single-row aggregate for the landing page. It is \code{SECURITY DEFINER} specifically so it can \code{COUNT(*)} across every user's rows despite RLS, while the function's return type guarantees it can never leak anything beyond those three numbers — a clean example of the "narrow, deliberate escape hatch" pattern from Chapter~\ref{ch:supabase-fundamentals}.
+
+\section{The exchange lifecycle: completion \& read-count}
+
+\begin{lstlisting}[style=olkcodesql, caption={complete\_donated\_book\_reading — ownership transfer with an authorization check inline}]
+CREATE OR REPLACE FUNCTION public.complete_donated_book_reading(p_request_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE v_book_id uuid; v_owner uuid; v_listing_type varchar;
+BEGIN
+  SELECT br.book_id, b.owner_id, b.listing_type
+    INTO v_book_id, v_owner, v_listing_type
+  FROM book_requests br JOIN books b ON b.id = br.book_id
+  WHERE br.id = p_request_id AND br.status = 'handed_over';
+
+  IF v_book_id IS NULL THEN
+    RAISE EXCEPTION 'Request not found or not in handed_over state';
+  END IF;
+  IF v_listing_type <> 'donate' THEN
+    RAISE EXCEPTION 'Only donated books can be completed this way';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM book_requests
+                 WHERE id = p_request_id AND requester_id = auth.uid()) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  UPDATE books SET owner_id = auth.uid(), status = 'available',
+                    listing_type = 'donate', acquired_via_donation = true
+  WHERE id = v_book_id;
+
+  UPDATE book_requests SET status = 'returned', completed_at = now()
+  WHERE id = p_request_id;
+
+  DELETE FROM book_progress WHERE request_id = p_request_id;
+END;
+$$;
+\end{lstlisting}
+
+This function is the entire "Pass It On" feature (Chapter~\ref{ch:lifecycle}): finishing a donated book transfers ownership to the reader, who now becomes its new owner and can re-list it, while forcing \code{acquired\_via\_donation = true} so the book is permanently locked into the donation circuit — it can never quietly become someone's personal lending copy. The authorization check (\code{requester\_id = auth.uid()}) matters precisely \emph{because} the function is \code{SECURITY DEFINER}: without that explicit check, any authenticated user could call this RPC with any request id and reassign someone else's book to themselves.
+
+\code{increment\_read\_count\_on\_return()} is a small trigger function, fired \code{AFTER UPDATE OF status ON book\_requests FOR EACH ROW}: whenever a request's status transitions \emph{into} \code{returned}, it increments the associated book's \code{read\_count} by one. It fires for both an ordinary lending return and the \code{UPDATE} inside \code{complete\_donated\_book\_reading} above — one trigger, two call sites, no duplicated increment logic.
+
+\section{Club membership counting}
+
+\code{update\_club\_member\_count()}, trigger \code{trg\_club\_member\_count} (\code{AFTER INSERT OR DELETE ON club\_members}), increments or decrements \code{clubs.member\_count} atomically in the database. This trigger \emph{replaced} an earlier client-side "read count, then write count + 1" approach specifically because two people joining the same club at nearly the same moment could both read the same starting count and each write the same (wrong, too-low) result — a classic read-modify-write race. Doing the arithmetic inside the trigger, on the actual row being inserted/deleted, removes the race entirely.
+
+\begin{olknote}
+\pathname{src/lib/admin-actions.ts}'s \code{removeClubMember} (Chapter~\ref{ch:admin}) used to not trust this trigger — after deleting a membership, it \emph{also} manually re-counted \code{club\_members} and wrote \code{count + 1} back onto \code{clubs.member\_count}, double-counting on top of the trigger's already-correct decrement. That manual re-count/write has been removed; the trigger is now the sole writer of \code{member\_count} for join/leave.
+\end{olknote}
+
+\section{Club-creation eligibility and book-notes limits, enforced at the database layer}
+
+\code{check\_club\_creation\_eligibility()}, trigger \code{trg\_check\_club\_creation\_eligibility} (\code{BEFORE INSERT ON clubs}), re-derives the same "5+ completed exchanges, no reports" rule \pathname{clubs/create/page.tsx} (Chapter~\ref{ch:pages}) already computes client-side, and raises an exception if \code{NEW.creator\_id} doesn't qualify — so the check now holds even for a request that bypasses the UI entirely.
+
+\code{check\_book\_notes\_limits()}, trigger \code{trg\_check\_book\_notes\_limits} (\code{BEFORE INSERT OR UPDATE ON book\_notes}), mirrors \pathname{book-notes-modal.tsx}'s 100-word note limit and its max-10-community-notes-per-book cap (Chapter~\ref{ch:components}), rejecting the write at the database layer rather than trusting the client to have enforced it.
+
+\begin{olkhowto}
+Raising the per-note word cap to, say, 150 is the same "UI mirrors DB" shape as the club-creation example in Chapter~\ref{ch:wishlists-clubs}, just with two files instead of one:
+\begin{enumerate}
+  \item \code{check\_book\_notes\_limits()} in \pathname{supabase/schema.sql} — \code{IF word\_count > 100 THEN}, changed inside a new migration.
+  \item \pathname{src/components/book-notes-modal.tsx} — \code{const overLimit = words > 100} and the \code{\{words\}/100 words} counter label just below it.
+\end{enumerate}
+The max-10-notes-per-book cap is the identical pattern one level up: \code{IF other\_notes\_count >= 10} in the same trigger function, mirrored by \code{otherNotesCount >= 10} in the same component.
+\end{olkhowto}
+
+\section{Wishlist fuzzy matching}
+
+\begin{lstlisting}[style=olkcodesql, caption={match\_wishlists\_for\_book — pg\_trgm similarity search across all users}]
+CREATE OR REPLACE FUNCTION public.match_wishlists_for_book(
+  p_title text, p_owner_id uuid, p_threshold real DEFAULT 0.35
+) RETURNS TABLE (id uuid, user_id uuid, title text)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT w.id, w.user_id, w.title
+  FROM public.wishlists w
+  WHERE w.active = true AND w.matched_book_id IS NULL
+    AND w.user_id <> p_owner_id
+    AND similarity(w.title, p_title) > p_threshold
+  ORDER BY similarity(w.title, p_title) DESC;
+$$;
+
+REVOKE ALL ON FUNCTION public.match_wishlists_for_book(text, uuid, real) FROM public;
+GRANT EXECUTE ON FUNCTION public.match_wishlists_for_book(text, uuid, real) TO authenticated;
+\end{lstlisting}
+
+This function exists to fix a bug, not just add a feature: the original client-side approach ran an \code{ilike '\%title\%'} query under the \emph{book owner's own session}, but the \code{wishlists} RLS policy only allows a user to \code{SELECT} their own rows — so cross-user matching silently returned nothing, ever, for anyone. \code{SECURITY DEFINER} plus an explicit, narrow return (\code{id}/\code{user\_id}/\code{title} only, never a full row) lets it search everyone's wishlists safely. \code{pg\_trgm}'s \code{similarity()} also fixes a second, independent problem: plain \code{ilike} matches substrings anywhere (\emph{"The Book"} inside \emph{"The Bookshelf is Empty"}), which trigram similarity does not.
+
+\begin{olkhowto}
+Matches feeling too loose (\emph{"Old Man River"} pairing with \emph{"The Old Man and the Sea"})? Raise \code{p\_threshold real DEFAULT 0.35} in the \code{CREATE OR REPLACE FUNCTION} signature above — say to \code{0.5} — inside a new migration (\code{npx supabase migration new tighten\_wishlist\_match}). One file, one number: unlike the club-creation example above, nothing on the frontend duplicates this threshold, since \pathname{my-books/page.tsx} just calls the RPC and trusts whatever it returns.
+\end{olkhowto}
+
+\section{Rate limiting}
+
+Two \code{BEFORE INSERT} triggers enforce limits that, before this migration existed, were configured in \code{platform\_settings} but never actually checked:
+
+\begin{lstlisting}[style=olkcodesql, caption={enforce\_message\_rate\_limit — reads its own limit from platform\_settings}]
+CREATE OR REPLACE FUNCTION public.enforce_message_rate_limit()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE v_limit int; v_count int;
+BEGIN
+  v_limit := public.get_platform_setting_int('max_messages_per_hour', 30);
+  SELECT count(*) INTO v_count FROM public.messages
+  WHERE sender_id = NEW.sender_id AND created_at > now() - interval '1 hour';
+  IF v_count >= v_limit THEN
+    RAISE EXCEPTION 'RATE_LIMIT_EXCEEDED: max % messages per hour reached', v_limit
+      USING ERRCODE = 'P0001';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+-- trg_enforce_message_rate_limit: BEFORE INSERT ON messages, FOR EACH ROW
+-- enforce_request_rate_limit / trg_enforce_request_rate_limit mirrors this
+-- exactly, against book_requests and the max_requests_per_day setting.
+\end{lstlisting}
+
+\code{get\_platform\_setting\_int(p\_key, p\_default)} is the small helper both triggers call: it reads \code{platform\_settings.value} (a \code{jsonb} column) and unwraps it with \code{\#>> '\{\}'} rather than a plain \code{::text} cast, specifically because the admin settings UI always writes values as JSON strings (e.g. the JSON string \code{"30"}, not the JSON number \code{30}) — a plain \code{::text} cast on a JSON string keeps the surrounding quote characters and breaks a numeric cast, while \code{\#>> '\{\}'} correctly unwraps either encoding to plain unquoted text first.
+
+\begin{olknote}
+Enforcing these limits as \code{BEFORE INSERT} triggers — rather than only checking in the frontend before calling \code{.insert()} — means the limit holds even against a direct API call or a malicious client that skips the UI entirely. This is the same category of defence as RLS itself: the database is the last line, not the frontend.
+\end{olknote}
+
+\begin{olkhowto}
+This is the one limit in the whole manual you should \emph{not} fix with a migration: \code{max\_messages\_per\_hour} lives as a row in \code{platform\_settings}, not a literal in the function body, specifically so it can be tuned without a deploy. As a \code{super\_admin}, go to \pathname{/admin/settings} in the app and edit the value there (backed by \pathname{src/app/(dashboard)/admin/settings/page.tsx}); the next call to \code{get\_platform\_setting\_int} picks it up immediately. Compare this to the club-creation threshold (Chapter~\ref{ch:wishlists-clubs}) or the similarity threshold above — both are baked into code and need a migration. If a value \emph{might} need retuning by a non-engineer, \code{platform\_settings} is where it belongs.
+\end{olkhowto}
+
+\begin{olkhowto}
+Unlike the two limits above, \code{max\_books\_per\_user} (also seeded in \code{platform\_settings}, default \code{50}) is currently decorative — grep the codebase and you will not find a single trigger, RPC, or frontend check that ever reads it. Wiring it up means writing a third rate-limit trigger, copying \code{enforce\_message\_rate\_limit}'s shape almost exactly: a \code{BEFORE INSERT ON books} trigger that calls \code{get\_platform\_setting\_int('max\_books\_per\_user', 50)}, counts the caller's existing \code{books} rows, and \code{RAISE EXCEPTION}s past the limit — then a migration, per Chapter~\ref{ch:workflow}. A good first real ticket if you want practice with this exact pattern before touching a limit that already matters in production.
+\end{olkhowto}
+
+\section{Admin analytics}
+
+Six \code{SECURITY DEFINER} functions back the admin Overview dashboard (Chapter~\ref{ch:admin}), each doing one aggregate query so the frontend never has to compute statistics client-side over unfiltered data it isn't allowed to see in full:
+
+\begin{center}
+\begin{longtable}{@{}p{4.6cm} p{10.2cm}@{}}
+\toprule
+\textbf{Function} & \textbf{What it returns} \\
+\midrule
+\endhead
+\codecell{admin\_get\_daily\_stats(days\_back=30)} & One row per calendar day (via \codecell{generate\_series}): new users, new books, new requests, completed exchanges — the growth chart's data source. \\
+\codecell{admin\_get\_top\_contributors(lim=10)} & Per user: books listed (total/donated/lent, via \codecell{FILTER}) and average rating received, ordered by books listed. \\
+\codecell{admin\_get\_area\_stats()} & Per non-empty area: distinct user count and distinct book count. \\
+\codecell{admin\_get\_exchange\_stats()} & Request counts by status plus a computed \codecell{success\_rate} (handed-over + returned, over the completed-or-declined total). \\
+\codecell{admin\_get\_overdue\_books(threshold\_days=30)} & Lend-type requests still \codecell{handed\_over} past the threshold, with owner and borrower names joined in. \\
+\codecell{admin\_get\_rating\_distribution()} & Exactly 5 rows (scores 1--5) via \codecell{generate\_series}, left-joined to actual counts — guarantees a complete histogram even for scores nobody has ever given. \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\begin{olktask}
+Using Studio's SQL editor against your local stack (Chapter~\ref{ch:local-env}), run \code{SELECT * FROM public.admin\_get\_exchange\_stats();} and \code{SELECT * FROM public.get\_books\_nearby(34.0837, 74.7973);} (Srinagar's approximate coordinates) directly. Confirm the shapes match this chapter, then find where in the frontend each is called from and match the RPC arguments to what you just typed by hand.
+\end{olktask}

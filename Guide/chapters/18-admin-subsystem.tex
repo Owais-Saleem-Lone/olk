@@ -1,0 +1,56 @@
+\chapter{The Admin \& Moderation Subsystem, End to End}
+\label{ch:admin}
+
+Chapters~\ref{ch:rls} and~\ref{ch:server-actions} covered the role hierarchy and the guard/act/log/revalidate action pattern in isolation. This chapter follows a single report from submission to resolution through every layer it touches, then surveys the parts of the admin subsystem a report never reaches: content management and platform settings.
+
+\section{A report's journey}
+
+\subsection*{1. Submission}
+
+Any user can flag another user or a book from \pathname{report-modal.tsx} (Chapter~\ref{ch:components}) — a reason (from a fixed radio list) plus optional free-text details. This inserts one \code{reports} row, \code{status = 'pending'}, \code{category = 'other'} by default. RLS (Chapter~\ref{ch:rls}) lets the reporter see only their own submitted reports from here on — visibility into the report's fate belongs to moderators.
+
+\subsection*{2. Triage}
+
+\pathname{admin/reports/page.tsx} (Chapter~\ref{ch:pages}) lists every report, filterable by status. A moderator can re-categorise it (\code{updateReportCategory}), assign it to a specific admin (\code{assignReport}), and leave internal notes (\code{addAdminNote}, written to the separate \code{admin\_notes} table so reporters and reported users never see moderator deliberation) — each of these three, like every admin action, guarded by \code{guardRole('moderator')} and logged to \code{admin\_audit\_log} (Chapter~\ref{ch:server-actions}).
+
+\subsection*{3. Resolution — the long way or the quick way}
+
+\code{updateReportStatus(reportId, status)} moves a report to \code{resolved} or \code{dismissed}, stamping \code{resolved\_at}/\code{resolved\_by}. Separately, a "Quick Actions" panel on the same page can ban, warn, or hide in a single click, auto-resolving the report as a side effect.
+
+\begin{olknote}
+The Quick Actions panel's ban action used to always call \code{banUser(userId, reason, false, 7)} — a hardcoded 7-day suspension, even though the underlying \code{banUser} Server Action fully supports an arbitrary duration (\code{banUser(userId, reason, isPermanent, durationDays?)}, Chapter~\ref{ch:server-actions}). The panel now shows a duration (days) field alongside the reason textarea when the quick action is \code{ban}, defaulting to 7 but editable before confirming.
+\end{olknote}
+
+\subsection*{4. What happens inside \code{banUser}, concretely}
+
+\begin{enumerate}
+  \item Guard: \code{guardRole('moderator')}.
+  \item Insert a \code{user\_bans} row (permanent history, Chapter~\ref{ch:schema}).
+  \item Update \code{profiles.is\_banned}/\code{ban\_reason}/\code{ban\_expires\_at} (the summary fields the Proxy layer reads on every request, Chapter~\ref{ch:proxy}).
+  \item Insert a \code{notifications} row telling the user they've been banned and why.
+  \item Write to \code{admin\_audit\_log}.
+  \item \code{revalidatePath('/admin')}.
+\end{enumerate}
+
+The very next time that banned user makes any request to a protected route, \pathname{src/proxy.ts} (Chapter~\ref{ch:proxy}) reads \code{profiles.is\_banned}/\code{ban\_expires\_at} and redirects them to \pathname{/profile} — the one page a banned user can still reach, so they can at least see the ban reason rather than being stuck on an opaque redirect loop.
+
+\section{The audit log is the whole point}
+
+Every path through this chapter — resolve, dismiss, ban, warn, hide, categorise, assign, note — ends at exactly one \code{admin\_audit\_log} insert, visible on \pathname{admin/settings/page.tsx}'s paginated audit log view (Chapter~\ref{ch:pages}), joined to the acting admin's profile. Because the log has no UPDATE or DELETE policy at all (Chapter~\ref{ch:rls}), it is the one part of the admin subsystem that is genuinely tamper-evident: even a \code{super\_admin} cannot quietly edit history after the fact through the normal application layer.
+
+\section{Beyond reports: content and settings}
+
+Two admin pages never touch a report at all:
+
+\begin{itemize}
+  \item \textbf{Content} (\pathname{admin/content/page.tsx}) manages \code{announcements} (with the single-active-banner invariant enforced in \code{createAnnouncement}, Chapter~\ref{ch:schema}), \code{genres}, \code{areas}, and \code{book\_of\_month} (same single-active-row pattern via \code{saveBotm}).
+  \item \textbf{Settings} (\pathname{admin/settings/page.tsx}) edits \code{platform\_settings} directly — the same key/value table the rate-limiting triggers read from (Chapter~\ref{ch:functions}). Toggling \code{feature\_clubs}, \code{feature\_wishlists}, \code{feature\_messages}, \code{feature\_ratings}, or \code{maintenance\_mode} here now has an observable effect: \pathname{src/lib/platform-settings.ts} centralises reading and parsing these flags, \pathname{src/proxy.ts} (Chapter~\ref{ch:proxy}) redirects away from a disabled feature's routes (and everyone but admins to \pathname{/maintenance} when maintenance mode is on), the sidebar nav hides the corresponding link, and the requests page hides its Rate/Message buttons accordingly. \code{updatePlatformSetting} is also the action guarded by \code{is\_super\_admin()} rather than \code{is\_admin\_or\_mod()} (Chapter~\ref{ch:rls}) — the one meaningfully higher bar in the whole admin action set.
+\end{itemize}
+
+\begin{olknote}
+\code{updatePlatformSetting} used to write its value with \code{JSON.parse(\`"\$\{value\}"\`)} — wrapping the raw incoming string in literal quote characters to coerce it into a JSON string before storing it in the \code{jsonb} column. Any value containing an unescaped \code{"} or \code{\textbackslash} would throw a \code{SyntaxError} inside the (caught) \code{try} block, so the setting silently failed to save with only a generic error message. It now uses \code{JSON.stringify(value)}, the correct one-line fix.
+\end{olknote}
+
+\begin{olktask}
+As a \code{moderator}-role test account (not \code{super\_admin}), attempt to change a value on the Settings page and confirm it is rejected — then check whether the rejection happens because the button/form is hidden by the frontend, or because the underlying \code{updatePlatformSetting} call fails \code{guardRole('super\_admin')} even if you force the request through. This distinguishes a UI-only gate from a real one, the same distinction Chapter~\ref{ch:wishlists-clubs} raised for club creation — a habit worth building for every admin feature you touch.
+\end{olktask}

@@ -1,0 +1,44 @@
+\chapter{Welcome \& Vision}
+\label{ch:welcome}
+
+\section{What OLK is}
+
+\textbf{Open Library Kashmir (OLK)} is a community book-sharing platform for readers in the Kashmir valley. Someone with books sitting on a shelf lists them; someone who wants to read them finds them by browsing nearby listings and sends a request; the two arrange an in-person handover. No shipping, no warehouses, no payment processing — the entire transaction is a conversation between two neighbours and a walk to a bus stop.
+
+That constraint — everything happens in person, within walking or short-commute distance — is not an accident or a missing feature. It is the product's central design decision, and it explains almost everything else in this manual: why every book and every club carries a latitude/longitude and an area name, why the database has a haversine-distance function instead of a shipping-address field, why there is no payment table anywhere in the schema, and why "trust" (ratings, warnings, bans, reports) matters as much as inventory.
+
+\section{Core features}
+
+\begin{itemize}
+  \item \textbf{Community book sharing} — list a book you own as either a \emph{loan} (you get it back) or a \emph{donation} (you don't), with condition, genre, and now (as of the two most recent migrations) a description and publication year enriched automatically from an ISBN scan.
+  \item \textbf{Location-aware discovery} — browsing sorts by distance from the viewer using the \code{get\_books\_nearby} RPC (Chapter~\ref{ch:functions}), not just recency.
+  \item \textbf{Requesting \& the exchange lifecycle} — a full state machine from \code{pending} through \code{accepted}, \code{handed\_over}, and \code{returned}, tracked per-request with reading-progress and due-date awareness (Chapter~\ref{ch:lifecycle}).
+  \item \textbf{Messaging} — a realtime 1:1 chat scoped to each book request, so conversation history is naturally organised by exchange rather than by contact.
+  \item \textbf{Wishlists with fuzzy matching} — ask for a title you can't find; the moment anyone lists something close to it, a \code{pg\_trgm}-powered match fires a notification.
+  \item \textbf{Reading clubs} — geographically-scoped community groups with posts, membership, and an eligibility gate tied to a user's exchange history.
+  \item \textbf{Ratings \& reputation} — a lightweight 1--5 star system that feeds a "Trusted Sharer" badge on public profiles.
+  \item \textbf{Reporting \& moderation} — every user and book can be reported; a full admin/moderator subsystem triages, bans, warns, and audits (Chapter~\ref{ch:admin}).
+  \item \textbf{Notifications \& email digests} — in-app notifications with a Resend-powered weekly email digest for subscribed users.
+\end{itemize}
+
+\section{Who this manual is for}
+
+Primarily, the two or three interns who are about to inherit this codebase. You are not expected to have touched Next.js's App Router before, or Supabase, or even necessarily written Postgres row-level security policies — this manual explains all three from the ground up in Parts III and IV. What it does assume is that you can read TypeScript and SQL.
+
+\begin{olkwarn}
+This exact version of Next.js is \textbf{not} the Next.js in your training data or muscle memory. The project's own \pathname{AGENTS.md} says so explicitly: \emph{"This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in \texttt{node\_modules/next/dist/docs/} before writing any code."} A concrete example: Next.js 16 renamed \emph{Middleware} to \emph{Proxy}. This project uses the current \pathname{src/proxy.ts} convention. See Chapter~\ref{ch:proxy} for the full story.
+\end{olkwarn}
+
+\section{The bigger picture: why this project exists}
+
+OLK's founder wants two things, in this order. First: get the platform live, publicly, on Vercel, serving real readers in Kashmir. Second, and this is the part worth stating explicitly because it will shape architectural decisions for years: \textbf{eventually run the platform's own infrastructure — including Supabase itself, since it is open source — on a local server physically located in Kashmir}, rather than depending indefinitely on a remote, foreign-hosted database.
+
+That second goal is why Chapter~\ref{ch:local-env} is not a throwaway "how to run this on your laptop" section. Learning to run Supabase's full stack under Docker locally — Postgres, GoTrue auth, PostgREST, Realtime, Storage, Studio, all of it — is a rehearsal for the day that same stack runs on a physical machine in-region instead of on a developer's laptop. Every command in that chapter (\code{supabase start}, \code{supabase stop}, \code{supabase db reset}) is a command that will eventually run against real hardware, not a metaphor for it.
+
+\begin{olknote}
+As of this edition, the project already keeps a working local Docker/Supabase environment side-by-side with the hosted one, switched with a single environment variable (see Chapter~\ref{ch:local-env}). This exists specifically so that day-to-day development does not have to touch the production database at all.
+\end{olknote}
+
+\section{A tour of the rest of this manual, in one paragraph}
+
+You will set up the project locally with Docker (Part II), learn how the Next.js frontend is organised page by page and component by component (Part III), learn the Supabase/Postgres backend table by table, function by function, and policy by policy (Part IV), then watch those two halves work together across three real user journeys — exchanging a book, matching a wishlist, moderating a report — traced start to finish (Part V). Part VI is what to do once this is live: deploying, the environment variables that matter, a maintenance playbook organised as "if you need to do X, start here," and a candid accounting of what is still broken or unfinished. Let's begin.

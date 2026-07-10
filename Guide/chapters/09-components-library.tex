@@ -1,0 +1,117 @@
+\chapter{Shared Components Library}
+\label{ch:components}
+
+All fourteen files in \pathname{src/components} (plus \pathname{admin/admin-nav.tsx}) are listed in Chapter~\ref{ch:project-structure}. This chapter covers the handful with logic worth understanding, not just using.
+
+\section{The ISBN scanner — \pathname{isbn-scanner.tsx}}
+
+Used from \pathname{my-books} to fill in title/author/cover/genre from a barcode instead of typing. It talks to no Supabase table at all — it calls the external Open Library REST API directly from the browser — and it has to cope with real-world camera API support gaps:
+
+\begin{lstlisting}[caption={Feature-detecting the camera barcode API, with a graceful fallback}]
+const startCamera = async () => {
+  setMode('camera')
+  setError('')
+
+  if (!('BarcodeDetector' in window)) {
+    setError('Barcode scanning not supported in this browser. Try entering the ISBN manually.')
+    setMode('manual')
+    return
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' },
+    })
+    streamRef.current = stream
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream
+      await videoRef.current.play()
+    }
+    const detector = new (window as any).BarcodeDetector({ formats: ['ean_13', 'ean_8'] })
+    // ...
+\end{lstlisting}
+
+\code{BarcodeDetector} is a Chrome/Edge-only Web API — it does not exist in Firefox or Safari. The component checks for it before ever requesting camera access, and drops straight into a manual-entry mode with an explanatory message if it's missing, rather than showing a broken camera view or a cryptic error.
+
+Once an ISBN resolves via Open Library, the component has to guess a genre from Open Library's free-text subject tags, which are noisy and inconsistent:
+
+\begin{lstlisting}[caption={A "clear lead over runner-up" heuristic, not first-match}]
+function guessGenre(subjects: string[]): string | null {
+  const scores = GENRE_KEYWORDS.map(([genre, keywords]) => ({
+    genre,
+    count: subjects.filter(s => {
+      const lower = s.toLowerCase()
+      return keywords.some(kw => lower.includes(kw))
+    }).length,
+  })).sort((a, b) => b.count - a.count)
+
+  const [top, runnerUp] = scores
+  if (!top || top.count < 2 || top.count <= (runnerUp?.count ?? 0)) return null
+  return top.genre
+}
+\end{lstlisting}
+
+It requires at least two matching keywords \emph{and} a strictly clear lead over the second-place genre before committing to a guess — otherwise it returns \code{null} and leaves the genre field for the human to fill in. This is a deliberately conservative pattern: a wrong confident guess is worse than no guess, because a wrong guess looks like data and a blank field looks like a prompt.
+
+\begin{olkhowto}
+Adding scanner support for a genre it currently misses (say "Poetry") is one tuple in \code{GENRE\_KEYWORDS} in \pathname{src/components/isbn-scanner.tsx} — \code{['Poetry', ['poetry', 'poems', 'verse']]}. Nothing else needs to change: \code{guessGenre} iterates the array generically, and the two-keyword-and-clear-lead rule above applies automatically to the new entry. This list is unrelated to the \code{genres} table (Chapter~\ref{ch:schema}, admin-editable from \pathname{admin/content/page.tsx}) — that one supplies Browse's genre filter options; this one only controls what the scanner \emph{guesses} for a newly-scanned book, and the two lists can silently drift out of sync without either one failing.
+\end{olkhowto}
+
+\section{The realtime notification bell — \pathname{notification-bell.tsx}}
+
+Lives in the dashboard header on every authenticated page. It maintains its own Supabase Realtime channel independent of whatever page is currently mounted:
+
+\begin{lstlisting}[caption={Instance-unique channel naming to survive Fast Refresh / multiple mounts}]
+const instanceId = useRef(Math.random().toString(36).slice(2)).current
+// ...
+const channel = supabase
+  .channel(`notif:${instanceId}:${Date.now()}`)
+  .on('postgres_changes',
+    { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+    (payload) => { /* prepend to local list, bump unread count */ }
+  )
+  .subscribe()
+\end{lstlisting}
+
+The unique channel name per mount matters in development specifically: React's Fast Refresh can re-run an effect without a full page reload, and if two subscriptions ever shared one channel name, Supabase's realtime client would treat the second \code{.subscribe()} as a conflicting duplicate rather than an independent listener. An \code{aborted} flag guards the async setup against the classic React unmount race (component unmounts while \code{await}ing something, then tries to call \code{setState} on a component that no longer exists).
+
+\section{The request lifecycle stepper — \pathname{request-stepper.tsx}}
+
+A small, purely presentational component, but it encodes a real branch in the product's domain model: a \emph{lend} and a \emph{donate} listing have different lifecycles.
+
+\begin{lstlisting}[caption={Two different step lists, and a short-circuit for the third outcome}]
+const LEND_STEPS = [
+  { key: 'pending', label: 'Requested' },
+  { key: 'accepted', label: 'Accepted' },
+  { key: 'handed_over', label: 'Handed Over' },
+  { key: 'returned', label: 'Returned' },
+]
+
+const DONATE_STEPS = [
+  { key: 'pending', label: 'Requested' },
+  { key: 'accepted', label: 'Accepted' },
+  { key: 'handed_over', label: 'Donated' },
+]
+
+export default function RequestStepper({ status, listingType }: { status: string; listingType: string }) {
+  if (status === 'declined') {
+    // renders a 2-dot "Requested -> Declined" view instead of the normal stepper
+  }
+  const steps = listingType === 'donate' ? DONATE_STEPS : LEND_STEPS
+  const currentIndex = steps.findIndex(s => s.key === status)
+  // ...
+\end{lstlisting}
+
+A \emph{lend} has four stages because the book comes back (\code{returned} is a real, distinct state); a \emph{donate} has three, because "handed over" \emph{is} the terminal state — the book was given away, there's nothing further to track on this stepper (reading progress and eventual "Pass It On" for donations is tracked separately, see Chapter~\ref{ch:lifecycle}).
+
+\section{Modals: a consistent portal pattern}
+
+\pathname{about-modal.tsx}, \pathname{book-of-month.tsx}, \pathname{report-modal.tsx}, \pathname{book-notes-modal.tsx}, and \pathname{confirm-modal.tsx} all render via \code{createPortal(..., document.body)}, the standard React pattern for content that needs to visually escape whatever scrolling/overflow container it's logically nested inside. \pathname{rating-modal.tsx} used to use a raw \code{alert()} for its error states and \pathname{clubs/[id]/page.tsx}'s delete used a raw \code{confirm()} for its one destructive action; the former now shows an inline styled error message and the latter now goes through the shared \code{ConfirmModal} component.
+
+\begin{olkhowto}
+Start a new modal from \pathname{confirm-modal.tsx} — at 46 lines, the smallest of the five — rather than from a blank file. Its whole shape is worth copying exactly: \code{createPortal(<jsx>, document.body)}, a fixed, full-screen, semi-transparent backdrop \code{<div>} whose own \code{onClick} closes the modal, and the card itself with \code{onClick={e => e.stopPropagation()}} so a click \emph{inside} the card doesn't bubble up and trigger that same close handler. Skipping \code{createPortal} still looks fine in most places you'd try it, but breaks the moment the modal is triggered from inside a card or list row that has its own \code{overflow-hidden} — the modal gets visually clipped by its logical parent instead of escaping to the top of the page.
+\end{olkhowto}
+
+\begin{olknote}
+Don't read this as "the app is now fully consistent about error/confirm UX everywhere" — plain \code{alert()} is still the normal way several pages report a failed action (\pathname{browse/page.tsx}, \pathname{requests/page.tsx}, \pathname{my-books/page.tsx}, \pathname{messages/[id]/page.tsx}, \pathname{clubs/create/page.tsx}). \pathname{rating-modal.tsx} and the clubs delete confirmation were the two instances flagged in Chapter~\ref{ch:known-issues}; the broader pattern of \code{alert()} for one-off error messages across the rest of the app is a separate, larger consistency project, not something this fix addressed.
+\end{olknote}

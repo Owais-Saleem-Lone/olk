@@ -1,0 +1,43 @@
+\chapter{Troubleshooting Guide}
+\label{ch:troubleshooting}
+
+Symptom-first, ordered roughly by how often each actually comes up.
+
+\section*{"I changed \pathname{.env.local} but the app still hits the old backend"}
+Next.js bakes \code{NEXT\_PUBLIC\_*} variables into the server process at startup — it does not hot-reload them. Kill \code{npm run dev} and restart it. Chapter~\ref{ch:local-env} flags this exact trap.
+
+\section*{"\code{supabase start} says containers are already running, or something looks stale"}
+Check what's actually running and whether it matches your migrations before trusting it:
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Diagnosing a possibly-stale local stack}]
+docker ps --filter "name=_olk"
+docker exec supabase_db_olk psql -U postgres -d postgres -c "\dt public.*"
+\end{lstlisting}
+Count the tables against Chapter~\ref{ch:schema} (24, as of this edition). Fewer than that means the volume predates recent migrations — run \code{npx supabase db reset} to bring it current. Chapter~\ref{ch:local-env} documents a real instance of this happening.
+
+\section*{"A query that should work according to the schema returns zero rows"}
+This is almost always RLS (Chapter~\ref{ch:rls}), not a bug in the query itself. Ask: is this table's SELECT policy restricted to \code{auth.uid() = user\_id} (or similar)? If you need to see \emph{other users'} rows for a legitimate reason, you need a \code{SECURITY DEFINER} RPC (Chapter~\ref{ch:functions}), not a wider client-side query — widening a table's RLS policy to work around one screen is usually the wrong fix and a security regression.
+
+\section*{"A migration fails to apply"}
+Read the actual Postgres error — \code{supabase db reset} prints it inline, referencing the specific migration file and statement. Common causes in this codebase's style: a \code{CREATE POLICY} without an \code{IF NOT EXISTS} guard re-running against a database that already has it (wrap in the \code{DO \$\$ ... EXCEPTION WHEN duplicate\_object THEN NULL; END \$\$;} pattern used throughout \pathname{20260627095459\_admin\_comprehensive.sql}, Chapter~\ref{ch:schema}), or a \code{DROP FUNCTION} missing before a \code{CREATE OR REPLACE} that changes a return type (Postgres disallows changing a function's return type via \code{CREATE OR REPLACE} alone — Chapter~\ref{ch:functions}'s note on \code{get\_books\_nearby} explains this exact situation).
+
+\section*{"Realtime (chat / notification bell) isn't updating live"}
+Check, in order: (1) is the local Supabase Realtime container actually healthy (\code{docker ps --filter name=\_olk}, Chapter~\ref{ch:local-env})? (2) does the channel's \code{filter} string exactly match the row you expect (\code{request\_id=eq.\$\{requestId\}}, Chapter~\ref{ch:pages}) — a mismatched id silently subscribes to nothing? (3) in dev, did Fast Refresh leave a duplicate/stale subscription — check for the instance-unique channel-naming pattern in Chapter~\ref{ch:components} and confirm your own new code follows it if you're adding a new realtime subscription elsewhere.
+
+\section*{"Email isn't sending, even in production"}
+Check, in order: is \code{RESEND\_API\_KEY} actually set in Vercel's environment variables (Chapter~\ref{ch:envvars})? Is \code{RESEND\_FROM\_EMAIL}'s domain verified in the Resend dashboard? For the digest specifically: is anything actually calling \pathname{/api/digest} at all — recall Chapter~\ref{ch:vercel}'s finding that no scheduler is currently wired up, so "email isn't sending" may simply mean "nothing is triggering the endpoint."
+
+\section*{"I get a 401 testing the digest endpoint myself"}
+Your \code{Authorization} header must be exactly \code{Bearer <CRON\_SECRET value>} (Chapter~\ref{ch:server-actions}) — check for a stray trailing newline or space if you pasted the secret from somewhere, and confirm you're comparing against the same environment the server process actually loaded (local \pathname{.env.local} vs. Vercel's dashboard value are independent).
+
+\section*{"Every \code{npm run dev} boot prints a Proxy/Middleware deprecation warning"}
+Expected, for now — see Chapter~\ref{ch:proxy} for the full explanation and the migration task to make it go away permanently.
+
+\section*{"Port 3000 (or 54321--54327) is already in use"}
+Something — often a dev server or Supabase stack from a previous session — is still running. \code{ss -ltnp | grep <port>} or \code{lsof -i :<port>} to identify the process; for a stray \code{next dev}, killing it and restarting is safe and stateless. For Supabase container ports, prefer \code{npx supabase stop} over killing Docker containers directly, so the CLI's own bookkeeping stays consistent.
+
+\section*{"I'm not sure if something is really blocked by RLS or just by the UI"}
+This distinction matters enough that it recurs as its own exercise in Chapters~\ref{ch:pages},~\ref{ch:wishlists-clubs}, and~\ref{ch:admin}. The reliable test: open the browser devtools network tab (or Studio's SQL editor with \code{SET ROLE authenticated;} / \code{SET ROLE anon;}), and try the operation directly against the REST API or SQL editor rather than through the app's UI. If it succeeds there despite the UI normally preventing it, the gate is UI-only.
+
+\begin{olktask}
+Deliberately break something small and practice diagnosing it with this chapter alone: temporarily rename a column referenced by \code{get\_books\_nearby} in a scratch migration, run \code{supabase db reset}, and work through the resulting error using only the "a migration fails to apply" entry above. Then revert the scratch migration. This builds the single most useful skill for maintaining this codebase — reading a real Postgres error and knowing where in the six-migration, twenty-four-table schema it's actually pointing.
+\end{olktask}

@@ -1,0 +1,52 @@
+\chapter{Wishlists, Matching \& Clubs}
+\label{ch:wishlists-clubs}
+
+\section{Wishlists: asking for a book that doesn't exist yet}
+
+A wishlist entry (\pathname{wishlist/page.tsx}, Chapter~\ref{ch:pages}) is just a title, author, and genre a user wants but couldn't find on Browse. On its own it does nothing — it becomes useful only through the matching flow triggered from the \emph{other} side of the transaction.
+
+\subsection*{The matching flow}
+
+\begin{enumerate}
+  \item User A adds \emph{"The Old Man and the Sea"} to their wishlist. Nothing happens yet — \code{matched\_book\_id} stays \code{NULL}.
+  \item User B, independently, lists a copy of \emph{"The Old Man and The Sea"} (different capitalisation, doesn't matter) on \pathname{my-books}.
+  \item \pathname{my-books/page.tsx} calls \code{match\_wishlists\_for\_book(title, owner\_id)} (Chapter~\ref{ch:functions}) right after the insert.
+  \item The \code{pg\_trgm} similarity search finds User A's wishlist row (similarity comfortably above the 0.35 threshold despite the capitalisation difference), and the frontend updates that row's \code{matched\_book\_id} and fires a notification to User A.
+\end{enumerate}
+
+\begin{olknote}
+Re-read Chapter~\ref{ch:functions}'s explanation of \emph{why} this needs to be a \code{SECURITY DEFINER} RPC rather than a plain query: the \code{wishlists} RLS policy (Chapter~\ref{ch:rls}) restricts a normal \code{SELECT} to \code{user\_id = auth.uid()}. User B's own session, running the match search, could never see User A's wishlist row through an ordinary query — the whole feature would be silently non-functional without the RPC's elevated privilege, which is exactly the bug this migration fixed.
+\end{olknote}
+
+The unique index on \code{(user\_id, lower(btrim(title)))} (Chapter~\ref{ch:schema}) exists to stop a second, independent problem: without it, adding the same title twice (perhaps after a page refresh double-submits a form) would previously have produced two wishlist rows, and a later match would notify the user twice for the same book.
+
+\section{Clubs: geography plus a trust gate}
+
+Clubs are the only feature in the schema besides books themselves that carries its own latitude/longitude (Chapter~\ref{ch:schema}) and its own nearby-search RPC, \code{get\_clubs\_nearby} (Chapter~\ref{ch:functions}) — the same haversine pattern, applied to a different table, ordered by distance then by \code{member\_count}.
+
+\subsection*{Creating a club is gated on trust, in the UI and now the database}
+
+\pathname{clubs/create/page.tsx} (Chapter~\ref{ch:pages}) requires 5+ completed exchanges and zero reports against the creator, computed with two client-side count queries before the form will even submit. The \code{clubs} table's INSERT policy still allows any authenticated user (Chapter~\ref{ch:rls}), but a \code{BEFORE INSERT} trigger, \code{check\_club\_creation\_eligibility} (Chapter~\ref{ch:functions}), now re-derives the same eligibility rule at the database layer, so the gate holds even for a request that bypasses the UI.
+
+\begin{olkhowto}
+Raising the bar to, say, 10 exchanges means editing the number in \emph{two} places, both of which currently hard-code \code{5}:
+\begin{enumerate}
+  \item \pathname{src/app/(dashboard)/clubs/create/page.tsx}, line 81 — \code{setEligible(completedCount >= 5 \&\& !userHasReports)} — plus the \code{5} inside the "5+ completed exchanges" label around line 132, or the badge will contradict the actual gate.
+  \item \code{check\_club\_creation\_eligibility()} in \pathname{supabase/schema.sql} — the line \code{IF completed\_count < 5 OR report\_count > 0 THEN}. Never hand-edit \pathname{schema.sql} directly: run \code{npx supabase migration new raise\_club\_threshold}, put the \code{CREATE OR REPLACE FUNCTION} with \code{< 10} in the new migration file, then apply it (Chapter~\ref{ch:local-env}).
+\end{enumerate}
+Ship only \#1 and the UI merely \emph{feels} stricter — a direct API call still gets through at the old threshold, since the trigger is what actually enforces the rule.
+\end{olkhowto}
+
+\subsection*{Membership and posts}
+
+Joining is a simple \code{club\_members} insert, kept honest by \code{trg\_club\_member\_count} (Chapter~\ref{ch:functions}) rather than client-side arithmetic. \code{removeClubMember} in admin actions (Chapter~\ref{ch:admin}) used to redundantly re-count on top of the trigger, introducing an off-by-one on every admin-initiated removal; that manual re-count has been removed.
+
+Posting to a club is creator-only (Chapter~\ref{ch:rls}); a new post fans out one notification per member via a single batched \code{.insert(notifications[])} call (Chapter~\ref{ch:pages}) — the same N+1-avoidance discipline seen in the messages list (Chapter~\ref{ch:pages}) and the admin broadcast action (Chapter~\ref{ch:admin}).
+
+\subsection*{Deactivation is soft, always}
+
+Neither a club's creator nor an admin can hard-delete a club through the app layer — \code{active = false} is the only operation exposed (\pathname{clubs/[id]/page.tsx}'s "delete," and the admin \code{deactivateClub}/\code{reactivateClub} actions, Chapter~\ref{ch:admin}). Only a \code{super\_admin}, and only directly via SQL, could actually remove a \code{clubs} row (Chapter~\ref{ch:rls}'s DELETE policy) — there is no UI path to a hard delete at all, by design.
+
+\begin{olktask}
+Add a wishlist entry for a title that doesn't exist yet, then list a book with a \emph{deliberately misspelled} version of that title from a second test account (swap two letters, or use a different capitalisation) and confirm the match still fires. Then try a title that only shares one common word (e.g. "The Old Man" vs. "Old Man River") and confirm it does \emph{not} match — this is the fastest way to build a feel for where the 0.35 similarity threshold actually sits in practice, beyond just reading the number.
+\end{olktask}

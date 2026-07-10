@@ -1,0 +1,63 @@
+\chapter{Supabase Fundamentals}
+\label{ch:supabase-fundamentals}
+
+\section{What Supabase actually is}
+
+"Supabase" is not one server — it is a bundle of independent, cooperating open-source services in front of a stock Postgres database. Chapter~\ref{ch:local-env} listed them as Docker containers; conceptually, the ones OLK actually uses are:
+
+\begin{itemize}
+  \item \textbf{Postgres} — the real database. Every table in Chapter~\ref{ch:schema} is a plain Postgres table; nothing about them is Supabase-proprietary.
+  \item \textbf{PostgREST} — introspects the Postgres schema and turns it into a REST API automatically. When the frontend calls \code{supabase.from('books').select('*')}, that becomes an HTTP \code{GET} to PostgREST, which translates it into SQL. This is why table/column names are not statically checked anywhere (Chapter~\ref{ch:techstack}) — there is no generated client, just a REST convention.
+  \item \textbf{GoTrue (Auth)} — issues and verifies JWTs, manages \code{auth.users} (a schema \emph{outside} \code{public}, which application tables reference but never own).
+  \item \textbf{Storage} — an S3-like object store with its own RLS-like policy system, layered on a Postgres table (\code{storage.objects}) under the hood. OLK's one bucket, \code{book-covers}, is configured this way (Chapter~\ref{ch:schema}).
+  \item \textbf{Realtime} — listens to Postgres's logical replication stream and forwards row changes to subscribed clients over WebSockets. This is what powers the chat page and the notification bell (Chapters~\ref{ch:pages},~\ref{ch:components}).
+\end{itemize}
+
+\begin{olknote}
+Every one of these is open source and self-hostable, which is precisely why Chapter~\ref{ch:welcome} frames "get comfortable with the local Docker stack" as more than a developer-experience nicety — the same containers can run anywhere, including on a physical server in Kashmir.
+\end{olknote}
+
+\section{Two ways application code talks to Postgres}
+
+\begin{enumerate}
+  \item \textbf{The query builder}, e.g. \code{supabase.from('book\_requests').select('*, books(*)').eq('status', 'pending')}. Every such call is subject to Row-Level Security (Chapter~\ref{ch:rls}) as whichever user's JWT is attached to the request — an anonymous visitor, a logged-in reader, or (in two specific server-only files) the service role.
+  \item \textbf{RPC calls to Postgres functions}, e.g. \code{supabase.rpc('get\_books\_nearby', \{ user\_lat, user\_lng \})}. This is how OLK does anything the query builder can't express directly: geographic distance sorting, cross-user aggregate stats, and — critically — anything that needs to see \emph{other users'} rows despite RLS, via \code{SECURITY DEFINER} (next section). Chapter~\ref{ch:functions} is the full reference.
+\end{enumerate}
+
+\section{\code{SECURITY DEFINER}: the escape hatch from RLS, used deliberately}
+
+By default, a Postgres function runs with the privileges of whoever calls it (\code{SECURITY INVOKER}) — so a function called by an ordinary logged-in user is just as constrained by RLS as a raw query would be. Marking a function \code{SECURITY DEFINER} makes it run with the privileges of the function's \emph{owner} (here, the \code{postgres} superuser role that created it) — meaning it can read or write rows that RLS would otherwise hide from the calling user, \emph{but only through whatever that function's own SQL body chooses to expose}.
+
+Nearly every function in this codebase is \code{SECURITY DEFINER}, and that is the correct choice for what they do: \code{get\_community\_stats()} needs to count every row in \code{books} and \code{profiles} to produce a public aggregate, even though a plain user cannot \code{SELECT *} across other people's data; \code{match\_wishlists\_for\_book} needs to search across \emph{every} user's wishlist rows to find a fuzzy match, even though the \code{wishlists} RLS policy restricts a normal query to your own rows only.
+
+\begin{olkwarn}
+\code{SECURITY DEFINER} is exactly as dangerous as it is useful: a bug in a \code{SECURITY DEFINER} function's SQL body is a bug that runs with elevated privilege, bypassing the RLS policies that would otherwise contain it. Every such function in this codebase is deliberately narrow — it returns only specific, chosen columns (never \code{SELECT *} on a sensitive table), and several (\code{match\_wishlists\_for\_book}, the \code{admin\_get\_*} analytics functions) explicitly \code{REVOKE}/\code{GRANT} execute permission rather than relying on the default. If you add a new \code{SECURITY DEFINER} function, that same discipline — narrow return columns, explicit grants — is not optional.
+\end{olkwarn}
+
+\section{\code{auth.users} vs. \code{public.profiles}}
+
+Supabase Auth owns a schema called \code{auth}, and \code{auth.users} is its user table — email, hashed password, confirmation status, and so on. Application code is not supposed to touch \code{auth.users} directly (and mostly can't, through the query builder — RLS on \code{auth} tables is Supabase's own concern, not this project's). Instead, OLK's own \code{public.profiles} table holds everything the app actually needs to display or query (display name, area, bio, admin role, ban state), with \code{profiles.id} equal to \code{auth.users.id}.
+
+The two are kept in lockstep by a single trigger, fired the moment GoTrue creates a new \code{auth.users} row:
+
+\begin{lstlisting}[style=olkcodesql, caption={The trigger that makes signup "just work" (see supabase/migrations/20260621123649...)}]
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, display_name)
+  VALUES (NEW.id, NEW.email);
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+\end{lstlisting}
+
+This is why \pathname{app/register/page.tsx} (Chapter~\ref{ch:pages}) never explicitly creates a \code{profiles} row itself — by the time \code{supabase.auth.signUp()} resolves, this trigger has already run, and a matching profile (with \code{display\_name} defaulted to the user's email) already exists.
+
+\begin{olkwarn}
+Almost every foreign key in this schema points at \code{public.profiles(id)} — with one deliberate, consequential exception: \code{books.owner\_id} points at \code{auth.users(id)} directly. Chapter~\ref{ch:pages}'s "Requests" section and Chapter~\ref{ch:schema} both cover the concrete consequence: PostgREST cannot auto-embed \code{profiles} through \code{books.owner\_id}, because there is no foreign-key edge from \code{books} to \code{profiles} for it to walk — only \code{books} $\to$ \code{auth.users}, a schema the query builder cannot embed into at all. Any code that needs "the book owner's profile" has to fetch it as a second, separate, batched query.
+\end{olkwarn}

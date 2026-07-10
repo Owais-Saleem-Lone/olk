@@ -1,0 +1,38 @@
+\chapter{Full Table Reference}
+\label{ch:table-reference}
+
+A single-page-per-eye-scan version of Chapter~\ref{ch:schema}, for quick lookup. Types are abbreviated (\code{tz} = \code{timestamptz}). \textbf{FK} column names the table it references.
+
+\begin{center}
+\begin{longtable}{@{}p{2.7cm} p{9.3cm} p{3.6cm}@{}}
+\toprule
+\textbf{Table} & \textbf{Columns} & \textbf{Key FKs} \\
+\midrule
+\endhead
+\codecell{profiles} & id, display\_name, area\_name, latitude, longitude, bio, email\_digest, is\_admin, admin\_role, is\_banned, ban\_reason, ban\_expires\_at, warning\_count, last\_active\_at, created\_at, updated\_at & id $\to$ auth.users \\
+\codecell{books} & id, owner\_id, title, author, condition, listing\_type, status, genre, cover\_url, lending\_duration\_months, acquired\_via\_donation, read\_count, description, publication\_year, hidden\_by\_admin, admin\_hide\_reason, hidden\_at, created\_at & owner\_id $\to$ auth.users \\
+\codecell{book\_requests} & id, book\_id, requester\_id, status, created\_at, handed\_over\_at, completed\_at & book\_id $\to$ books; requester\_id $\to$ profiles \\
+\codecell{book\_progress} & id, book\_id, request\_id, reader\_id, progress\_pct, updated\_at & book\_id $\to$ books; request\_id $\to$ book\_requests; reader\_id $\to$ profiles \\
+\codecell{messages} & id, request\_id, sender\_id, content, created\_at & request\_id $\to$ book\_requests; sender\_id $\to$ profiles \\
+\codecell{bookmarks} & id, user\_id, book\_id, created\_at & user\_id $\to$ profiles; book\_id $\to$ books \\
+\codecell{ratings} & id, request\_id, rater\_id, rated\_user\_id, score, comment, created\_at & request\_id $\to$ book\_requests; rater\_id/rated\_user\_id $\to$ profiles \\
+\codecell{wishlists} & id, user\_id, title, author, genre, active, matched\_book\_id, created\_at & user\_id $\to$ profiles; matched\_book\_id $\to$ books \\
+\codecell{book\_notes} & id, book\_id, user\_id, note, created\_at & book\_id $\to$ books; user\_id $\to$ profiles \\
+\codecell{clubs} & id, name, description, interest, area\_name, latitude, longitude, cover\_url, creator\_id, member\_count, active, created\_at & creator\_id $\to$ profiles \\
+\codecell{club\_members} & id, club\_id, user\_id, joined\_at & club\_id $\to$ clubs; user\_id $\to$ profiles \\
+\codecell{club\_posts} & id, club\_id, author\_id, content, created\_at & club\_id $\to$ clubs; author\_id $\to$ profiles \\
+\codecell{notifications} & id, user\_id, type, title, body, link, read, created\_at & user\_id $\to$ profiles \\
+\codecell{notification\_templates} & id, name, title, body, type, created\_at & --- \\
+\codecell{announcements} & id, admin\_id, title, body, type, is\_banner, active, starts\_at, ends\_at, created\_at & admin\_id $\to$ profiles \\
+\codecell{genres} & id, name, display\_order, active, created\_at & --- \\
+\codecell{areas} & id, name, district, active, created\_at & --- \\
+\codecell{book\_of\_month} & id, title, author, description, cover\_url, month\_label, active, created\_at & --- \\
+\codecell{platform\_settings} & key (PK), value (jsonb), description, updated\_at, updated\_by & updated\_by $\to$ profiles \\
+\codecell{reports} & id, reporter\_id, reported\_user\_id, reported\_book\_id, reason, details, status, category, assigned\_to, resolved\_at, resolved\_by, created\_at & reporter\_id/reported\_user\_id/assigned\_to/resolved\_by $\to$ profiles; reported\_book\_id $\to$ books \\
+\codecell{user\_bans} & id, user\_id, admin\_id, reason, is\_permanent, expires\_at, unbanned\_at, unbanned\_by, created\_at & user\_id/admin\_id/unbanned\_by $\to$ profiles \\
+\codecell{user\_warnings} & id, user\_id, admin\_id, reason, created\_at & user\_id/admin\_id $\to$ profiles \\
+\codecell{admin\_audit\_log} & id, admin\_id, action, target\_type, target\_id, details (jsonb), created\_at & admin\_id $\to$ profiles \\
+\codecell{admin\_notes} & id, report\_id, admin\_id, content, created\_at & report\_id $\to$ reports; admin\_id $\to$ profiles \\
+\bottomrule
+\end{longtable}
+\end{center}

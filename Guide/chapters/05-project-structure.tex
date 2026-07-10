@@ -1,0 +1,150 @@
+\chapter{Project Structure \& File-by-File Reference}
+\label{ch:project-structure}
+
+\section{Top-level layout}
+
+\begin{lstlisting}[style=olkcodetree, caption={Repository root (trimmed of build artefacts, node\_modules, and dotfiles)}]
+olk/
+|-- src/
+|   |-- app/                  Next.js App Router: every route lives here
+|   |-- components/           Shared React components, used across routes
+|   |-- lib/                  Server actions, Supabase clients, small utilities
+|   `-- proxy.ts               The Proxy layer (see Chapter 7)
+|-- supabase/
+|   |-- migrations/           Chronological, hand-numbered SQL migration files
+|   |-- schema.sql            A point-in-time full schema dump (can go stale -- see Ch.12)
+|   `-- config.toml           Local Supabase CLI project config (project_id = "olk")
+|-- .github/workflows/ci.yml  Lint + test on push/PR (see Ch.6)
+|-- public/                   Static assets served as-is
+|-- Guide/                    This manual
+|-- vercel.json               Cron schedule for the weekly digest (see Ch.19)
+|-- vitest.config.ts          Test runner config (see Ch.6)
+|-- package.json / tsconfig.json / next.config.ts / eslint.config.mjs / postcss.config.mjs
+|-- .env.local                Active environment (gitignored)
+`-- README.md / AGENTS.md / CLAUDE.md
+\end{lstlisting}
+
+\begin{olknote}
+\pathname{AGENTS.md} (pulled in by \pathname{CLAUDE.md}) is read by AI coding assistants working in this repository and carries one instruction: this Next.js version has real breaking changes from what most training data assumes, so check \pathname{node\_modules/next/dist/docs/} before writing framework-adjacent code. It is short, but do not skip it — Chapter~\ref{ch:proxy}'s entire subject exists because of exactly this kind of drift.
+\end{olknote}
+
+\section{\pathname{src/app} — every route in the application}
+
+Route groups in parentheses, e.g. \pathname{(dashboard)}, do not appear in the URL — they exist purely to share a layout without adding a path segment.
+
+\begin{center}
+\begin{longtable}{@{}p{5.8cm} p{1.7cm} p{7.9cm}@{}}
+\toprule
+\textbf{File} & \textbf{Kind} & \textbf{Purpose} \\
+\midrule
+\endhead
+\pathcell{app/layout.tsx} & Server & Root HTML shell, Geist fonts (now actually the default body font), real \code{"OLK — Open Library Kashmir"} metadata. \\
+\pathcell{app/page.tsx} & Server & Public landing page: hero, live community stats, Book of the Month, recent activity, nearby clubs preview. \\
+\pathcell{app/login/page.tsx} & Client & Email/password sign-in via \code{supabase.auth.signInWithPassword}. \\
+\pathcell{app/register/page.tsx} & Client & Sign-up via \code{supabase.auth.signUp}; profile row is created by a database trigger, not this page. \\
+\pathcell{app/maintenance/page.tsx} & Server & Static page shown to non-admins when \code{maintenance\_mode} is on (Chapter~\ref{ch:proxy}). \\
+\pathcell{app/api/digest/route.ts} & Route Handler & \code{GET}/\code{POST} endpoint for the weekly email digest cron (Chapter~\ref{ch:vercel}). \\
+\pathcell{app/(dashboard)/layout.tsx} & Server & Branches entirely on auth state: guests get a minimal navbar, signed-in users get the full \code{DashboardShell}. \\
+\pathcell{app/(dashboard)/browse/page.tsx} & Client & Book discovery: search, filters, distance radius, request/bookmark actions. \\
+\pathcell{app/(dashboard)/my-books/page.tsx} & Client & Add/edit/delete listings, ISBN scanner, reading-progress, "Pass It On." \\
+\pathcell{app/(dashboard)/requests/page.tsx} & Client & Incoming/outgoing request management, handover, return, ratings. \\
+\pathcell{app/(dashboard)/messages/page.tsx} & Client & Conversation list, derived from accepted requests (no dedicated conversations table). \\
+\pathcell{app/(dashboard)/messages/[id]/page.tsx} & Client & 1:1 realtime chat scoped to one \code{book\_requests} row. \\
+\pathcell{app/(dashboard)/profile/page.tsx} & Client & Edit display name, area, bio, geolocation, email-digest preference. \\
+\pathcell{app/(dashboard)/notifications/page.tsx} & Client & Full notification history with mark-as-read. \\
+\pathcell{app/(dashboard)/saved/page.tsx} & Client & Bookmarked books grid. \\
+\pathcell{app/(dashboard)/wishlist/page.tsx} & Client & Wishlist CRUD; shows matches found by the fuzzy-match RPC. \\
+\pathcell{app/(dashboard)/clubs/page.tsx} & Client & Club directory: search, interest filter, geo radius. \\
+\pathcell{app/(dashboard)/clubs/create/page.tsx} & Client & Gated club-creation form (5+ completed exchanges, no reports). \\
+\pathcell{app/(dashboard)/clubs/[id]/page.tsx} & Client & Club detail: posts, membership, creator-only edit/soft-delete. \\
+\pathcell{app/(dashboard)/user/[id]/page.tsx} & Client & Public profile view: listings, rating average, "Trusted Sharer" badge. \\
+\pathcell{app/(dashboard)/admin/layout.tsx} & Server & Wraps all \pathcell{/admin/*} routes with \code{requireAdmin('viewer')}. \\
+\pathcell{app/(dashboard)/admin/page.tsx} & Client & Overview dashboard: stats, growth charts, top contributors. \\
+\pathcell{app/(dashboard)/admin/users/page.tsx} & Client & User search, ban/unban/warn/reset-field/set-role. \\
+\pathcell{app/(dashboard)/admin/books/page.tsx} & Client & Paginated book table with hide/unhide/edit/bulk-hide. \\
+\pathcell{app/(dashboard)/admin/requests/page.tsx} & Client & All-requests table plus an "Overdue" tab. \\
+\pathcell{app/(dashboard)/admin/reports/page.tsx} & Client & Report triage, quick actions, internal notes. \\
+\pathcell{app/(dashboard)/admin/clubs/page.tsx} & Client & Club moderation: deactivate/reactivate, remove member, transfer ownership. \\
+\pathcell{app/(dashboard)/admin/content/page.tsx} & Client & Tabbed CMS: announcements, genres, areas, Book of the Month. \\
+\pathcell{app/(dashboard)/admin/notifications/page.tsx} & Client & Broadcast / direct notifications, templates. \\
+\pathcell{app/(dashboard)/admin/settings/page.tsx} & Client & Feature-flag toggles, platform settings, audit log. \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\section{\pathname{src/components} — shared UI}
+
+\begin{center}
+\begin{longtable}{@{}p{5.0cm} p{10.4cm}@{}}
+\toprule
+\textbf{File} & \textbf{Purpose} \\
+\midrule
+\endhead
+\pathcell{dashboard-shell.tsx} & Responsive app shell: mobile drawer vs. desktop persistent sidebar. \\
+\pathcell{dashboard-sidebar.tsx} & Main nav; live active-link highlighting; sign-out. \\
+\pathcell{admin/admin-nav.tsx} & Horizontal admin section nav, filtered by role hierarchy. \\
+\pathcell{about-modal.tsx} & Static About/Vision/Team modal. \\
+\pathcell{animated-counter.tsx} & Count-up-on-scroll number, used for landing-page stats. \\
+\pathcell{announcement-banner.tsx} & Renders active banner announcements. \\
+\pathcell{book-notes-modal.tsx} & Per-user community notes on a book. \\
+\pathcell{book-of-month.tsx} & Landing-page featured book card + detail modal. \\
+\pathcell{isbn-scanner.tsx} & Camera barcode scan (or manual entry) + Open Library lookup + genre guessing. \\
+\pathcell{notification-bell.tsx} & Header bell with unread badge, dropdown, realtime updates. \\
+\pathcell{rating-modal.tsx} & Post-exchange 1--5 star rating. \\
+\pathcell{report-modal.tsx} & Report a user or book. \\
+\pathcell{request-card.tsx} & Shared card layout for incoming/outgoing requests. \\
+\pathcell{request-stepper.tsx} & Visual lifecycle stepper (lend vs. donate, declined short-circuit). \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\section{\pathname{src/lib} — server logic and small utilities}
+
+\begin{center}
+\begin{longtable}{@{}p{5.0cm} p{10.4cm}@{}}
+\toprule
+\textbf{File} & \textbf{Purpose} \\
+\midrule
+\endhead
+\pathcell{supabase/client.ts} & Browser Supabase client factory (\code{createBrowserClient}). \\
+\pathcell{supabase/server.ts} & Server Supabase client factory (\code{createServerClient}), cookie-aware. \\
+\pathcell{admin.ts} & \code{requireAdmin} / \code{checkAdminAPI} — the role-hierarchy gate every admin page and action goes through. \\
+\pathcell{admin-actions.ts} & Every admin/moderator Server Action: bans, warnings, book hiding, report resolution, club moderation, content management, broadcasts, settings. \\
+\pathcell{notifications.ts} & \code{createNotification} — writes a notification row via the service-role client (after confirming the caller is authenticated), then best-effort sends an email. \\
+\pathcell{send-notification-email.ts} & Resend integration; builds a service-role client to resolve any user's email. \\
+\pathcell{email-brand.ts} & Shared hex-color constants for transactional email HTML (can't use CSS custom properties). \\
+\pathcell{platform-settings.ts} & \code{FeatureFlags} type, defaults, and \code{parseFeatureFlags} — the single source of truth \pathname{proxy.ts}, the dashboard layout, and client components all read \code{platform\_settings} flags through. \\
+\pathcell{use-feature-flags.ts} & Client-side \code{useFeatureFlags()} hook, for components that need a flag (e.g. hiding the Rate/Message buttons on the requests page). \\
+\pathcell{notification-icons.ts} & \code{NOTIFICATION\_ICONS} — the one icon map shared by \pathname{notification-bell.tsx} and \pathname{notifications/page.tsx}. \\
+\pathcell{text-limits.ts} & \code{wordCount} — shared by \pathname{book-notes-modal.tsx} and its unit tests. \\
+\pathcell{geo.ts} & \code{formatDistance} — turns a km float into a human string. \\
+\pathcell{html-escape.ts} & \code{escapeHtml} — used before interpolating user content into email HTML. \\
+\pathcell{image-utils.ts} & Client-side image compression to WebP before upload; remote URL validation. \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\section{Configuration files at the repository root}
+
+\begin{center}
+\begin{longtable}{@{}p{4.4cm} p{11.0cm}@{}}
+\toprule
+\textbf{File} & \textbf{Purpose} \\
+\midrule
+\endhead
+\pathcell{next.config.ts} & Whitelists \code{*.supabase.co/storage/v1/object/public/**} as a remote image source for \code{next/image}. \\
+\pathcell{tsconfig.json} & Strict TypeScript, \code{@/*} path alias to \pathcell{src/*}. \\
+\pathcell{eslint.config.mjs} & Flat ESLint config built on \code{eslint-config-next}. \\
+\pathcell{postcss.config.mjs} & Tailwind v4 via \code{@tailwindcss/postcss}. \\
+\pathcell{supabase/config.toml} & Local Supabase CLI project identity and per-service port configuration. \\
+\pathcell{vercel.json} & Cron schedule (\code{crons}) calling \pathname{/api/digest} weekly (Chapter~\ref{ch:vercel}). \\
+\pathcell{vitest.config.ts} & Vitest test runner config; \code{@/*} alias mirrors \pathcell{tsconfig.json}. \\
+\pathcell{.github/workflows/ci.yml} & Runs \code{npm run lint} and \code{npm test} on every push/PR (Chapter~\ref{ch:workflow}). \\
+\pathcell{.env.local} & Active Supabase URL/anon key (gitignored). \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\begin{olktask}
+Without opening any page file, predict from this table alone which pages are Server Components and which are Client Components, based only on whether they plausibly need interactivity (forms, buttons, live state). Then open five of them and check your predictions against the \code{"use client"} directive. Where you were wrong, ask yourself why — it is a fast way to build intuition for the split described in Chapter~\ref{ch:architecture}.
+\end{olktask}

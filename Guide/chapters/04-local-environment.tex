@@ -1,0 +1,223 @@
+\chapter{Local Environment Setup: Docker \& Supabase CLI}
+\label{ch:local-env}
+
+This chapter gets you from a fresh clone to a fully working local copy of OLK — frontend and database both — running entirely on your own machine, with zero requests ever touching the hosted production database. Follow it in order the first time; after that, Appendix~\ref{ch:cheatsheet} is a faster daily reference.
+
+\section{Prerequisites}
+
+\begin{itemize}
+  \item Node.js 18.18 or later, and \code{npm}.
+  \item \textbf{Docker} — this is the piece that runs Supabase locally. Docker Desktop on macOS/Windows, or the Docker Engine + CLI on Linux. Verify with:
+\end{itemize}
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Verifying Docker is installed and the daemon is reachable}]
+docker --version
+docker info    # should print server info, not a connection error
+\end{lstlisting}
+
+\begin{olkwarn}
+On Linux, your user account needs to be in the \code{docker} group (\code{groups} should list \code{docker}) or every command in this chapter will need \code{sudo}. If it's missing: \code{sudo usermod -aG docker \$USER}, then log out and back in.
+\end{olkwarn}
+
+\section{Why Docker, specifically}
+
+Supabase is not one server — it is roughly a dozen cooperating services: Postgres itself, GoTrue (auth), PostgREST (the REST API that turns table/RLS definitions into HTTP endpoints), Realtime, Storage, a Postgres-metadata API, Kong (API gateway), Mailpit (a fake SMTP inbox for local auth emails), Studio (the admin UI), and a couple of supporting services for logs and analytics. Docker is what lets the Supabase CLI hand you all of that with two commands instead of installing each service by hand. You will never run a raw \code{docker} or \code{docker compose} command yourself in this project — the Supabase CLI drives Docker for you.
+
+\section{Step by step}
+
+\subsection{1. Install the Supabase CLI}
+
+There is nothing to install globally — the project uses it via \code{npx}, which downloads and caches it on first use:
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Confirming the CLI is reachable}]
+npx supabase --version
+\end{lstlisting}
+
+\subsection{2. Initialise the project config (already done — skip if \pathname{supabase/config.toml} exists)}
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={One-time: generates supabase/config.toml}]
+npx supabase init
+\end{lstlisting}
+
+This writes \pathname{supabase/config.toml}, which fixes the project's identity to \code{project\_id = "olk"} — this is what makes every container the CLI creates be named \code{supabase\_<service>\_olk}, and it's how \code{supabase start} recognises "the OLK stack" specifically versus any other Supabase project you might also have running locally.
+
+\begin{olkgotcha}
+This exact situation happened during this manual's own research: a full set of \code{supabase\_*\_olk} Docker containers were already running on the development machine, healthy, with \textbf{no \pathname{supabase/config.toml} in the repository at all} and no record of it in git history. The Supabase CLI had matched containers to the working directory name (\code{olk}) even without a committed config. Worse, that stack's schema was stale — it only had the first 7 tables from the very first migration, missing 8 subsequent migrations' worth of columns and tables (\code{bio}, geolocation, clubs, bans, ratings, and more). \textbf{Lesson:} never assume a running \code{\_olk} container set is up to date. Always check (\code{docker exec supabase\_db\_olk psql -U postgres -d postgres -c "\textbackslash dt public.*"}) against \pathname{supabase/migrations} before trusting it, and when in doubt, run \code{supabase db reset}.
+\end{olkgotcha}
+
+\subsection{3. Start the stack}
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Pulls Supabase's Docker images (first run only) and starts every service}]
+npx supabase start
+\end{lstlisting}
+
+On success, this prints a block of credentials — save this output, or just re-run \code{npx supabase status} any time you need it again:
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Typical `supabase start` / `supabase status` output}]
+{
+  "ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "API_URL": "http://127.0.0.1:54321",
+  "DB_URL": "postgresql://postgres:postgres@127.0.0.1:54322/postgres",
+  "GRAPHQL_URL": "http://127.0.0.1:54321/graphql/v1",
+  "INBUCKET_URL": "http://127.0.0.1:54324",
+  "MAILPIT_URL": "http://127.0.0.1:54324",
+  "SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "STUDIO_URL": "http://127.0.0.1:54323"
+}
+\end{lstlisting}
+
+\begin{olktip}
+If \code{supabase start} reports \emph{"Starting database from backup"} instead of applying migrations fresh, it has restored a previous Docker volume rather than replaying \pathname{supabase/migrations}. That volume could be stale (see the KNOWN ISSUE box above). When you are not certain the volume matches the current migrations directory, immediately follow up with \code{supabase db reset} — it is cheap, local-only, and guarantees correctness.
+\end{olktip}
+
+\subsection{4. Apply every migration from a clean slate}
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Wipes the local database and replays every file in supabase/migrations in order}]
+npx supabase db reset
+\end{lstlisting}
+
+You should see all 15 (at the time of writing) migrations apply in chronological order, each printed by filename. This is the command to reach for whenever local data drifts, whenever you pull a teammate's new migration, or whenever something in the local database looks wrong and you'd rather start over than debug it.
+
+\subsection{5. Point the app at the local stack}
+
+Two gitignored files hold a full credential set each — \pathname{.env.docker} (local Docker) and \pathname{.env.remote} (the hosted/production project) — and a pair of npm scripts copy whichever one you want over \pathname{.env.local}, which is the only file Next.js actually reads:
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Switching which backend the dev server talks to}]
+npm run env:local    # copies .env.docker -> .env.local (local Docker stack)
+npm run env:remote   # copies .env.remote -> .env.local (hosted project)
+\end{lstlisting}
+
+\pathname{.env.docker} is generated once (and regenerated any time the local stack's keys change, e.g. after \code{supabase stop}/\code{start} on a fresh volume) with:
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Regenerating .env.docker from the running local stack}]
+npx supabase status -o env \
+  --override-name api.url=NEXT_PUBLIC_SUPABASE_URL \
+  --override-name auth.anon_key=NEXT_PUBLIC_SUPABASE_ANON_KEY \
+  --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \
+  | grep -E '^(NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_ANON_KEY|SUPABASE_SERVICE_ROLE_KEY)=' \
+  > .env.docker
+\end{lstlisting}
+
+\begin{olknote}
+\pathname{.env.docker} carries \code{SUPABASE\_SERVICE\_ROLE\_KEY} alongside the two \code{NEXT\_PUBLIC\_*} vars — \pathname{src/lib/notifications.ts}'s \code{createNotification} (Chapter~\ref{ch:server-actions}) requires it to write cross-user notifications, so local dev is incomplete without it. \pathname{.env.remote} does \emph{not} carry one by default — the hosted project's service-role key bypasses RLS entirely (Chapter~\ref{ch:rls}) and is never something to fetch or store automatically; pull it yourself from the hosted project's dashboard (Project Settings \(\to\) API) if you need it there.
+\end{olknote}
+
+\subsection{6. Run the app}
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Standard Next.js dev server}]
+npm run dev
+\end{lstlisting}
+
+\begin{olkwarn}
+Next.js does \textbf{not} hot-reload \code{NEXT\_PUBLIC\_*} environment variables into an already-running dev server process — they are baked in at server start. If you edit \pathname{.env.local} while \code{npm run dev} is already running, kill and restart it, or you will silently keep talking to whichever backend it started with.
+\end{olkwarn}
+
+\section{Day-to-day commands}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}l Y@{}}
+\toprule
+\textbf{Command} & \textbf{What it does} \\
+\midrule
+\code{npx supabase start} & Start the local Docker stack (containers persist between restarts via a Docker volume). \\
+\code{npx supabase stop} & Stop all containers. Data is preserved in the volume — a subsequent \code{start} restores it, it does not wipe it. \\
+\code{npx supabase db reset} & Drop and recreate the local database, then replay every migration from scratch. The single most useful command when local state is in doubt. \\
+\code{npx supabase status} & Reprint the local credentials block without restarting anything. \\
+\code{npx supabase migration new <name>} & Scaffold a new, correctly-timestamped empty migration file (see Chapter~\ref{ch:workflow} — never hand-create migration files). \\
+\code{npx supabase migration list} & Compare local migration files against the linked hosted project's applied history — the first check to run when confirming local and cloud are in sync. \\
+\code{npx supabase db query "<sql>" --linked} & Run a read-only SQL query against the linked hosted project (e.g.\ row counts) without needing its database password. \\
+\code{npm run env:local} / \code{npm run env:remote} & Point \pathname{.env.local} at the local Docker stack or the hosted project, respectively (restart \code{npm run dev} afterward). \\
+\code{npm run db:push} & \code{supabase db push} — applies any migration that exists locally but not yet on the linked hosted project. \\
+\code{npm run db:pull-data} & Copies \emph{data} (not schema) from the hosted project into the local database — see below. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{The intended workflow: develop locally, push when it works}
+
+The point of all of the above is a specific loop: write and test migrations and features entirely against the local Docker stack, where mistakes are free (\code{db reset} throws it all away and replays from scratch in seconds) — then, once satisfied, run \code{npm run db:push} to apply the same migrations to the hosted project. Never develop directly against hosted data; never run \code{db reset} against a linked remote project (it has no \code{--linked} form for exactly this reason — \code{reset} is a local-only concept).
+
+\begin{olkgotcha}
+This chapter's own example: four migrations were written and fully tested against local Docker in one sitting, but the person testing them ran \code{supabase db reset} to apply them — without registering that the \emph{local} database also held real, hand-entered test data (an account, some books) that \code{db reset} silently discards, since a reset's entire contract is "recreate the database, then replay migrations," never "preserve what was there." The migrations themselves were correct and the hosted project was never touched, but local testing data was gone. \textbf{Lesson: \code{db reset} is safe for schema, never for data you haven't already pushed or don't have a copy of} — see the data-pull workflow immediately below for how this was recovered.
+\end{olkgotcha}
+
+\section{Verifying local and cloud are actually in sync}
+
+Pushing migrations is the easy half; knowing for certain that local and the hosted project agree — both in \emph{schema} (every migration applied on both sides) and in \emph{data} (same rows, not just the same table shapes) — is the half people skip until something breaks. Two checks, run together, cover both.
+
+\subsection{Schema: do both sides agree on which migrations have run?}
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Compares local migration files against the hosted project's applied history}]
+npx supabase migration list
+\end{lstlisting}
+
+This prints every migration timestamp the CLI knows about in two columns, \code{local} and \code{remote}, side by side. Every row should show the same timestamp in both columns. A row with a \code{local} value and a blank \code{remote} (or vice versa) means exactly one side has applied a migration the other hasn't — normally a not-yet-pushed local migration, occasionally a migration that was applied by hand against the hosted project outside the normal \code{db push} flow (don't do this).
+
+\subsection{Data: do both sides hold the same rows?}
+
+A clean \code{migration list} only proves the two schemas are structurally identical — it says nothing about the actual rows in either database. \code{npx supabase db query "<sql>" --linked} runs a read-only query against the hosted project without ever needing its database password yourself (the CLI authenticates using your existing \code{supabase login} session); pair it with the same query against the local Docker Postgres directly to compare:
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Row-count comparison — repeat per table, or script over all of them}]
+# Local
+docker exec supabase_db_olk psql -U postgres -d postgres -t \
+  -c "select count(*) from profiles;"
+
+# Hosted
+npx supabase db query "select count(*) from profiles;" --linked
+\end{lstlisting}
+
+\begin{olktip}
+For a full sweep instead of one table at a time, build a single \code{UNION ALL} query over every table in \code{pg\_tables where schemaname = 'public'} and run it both places — one side-by-side diff instead of 24 separate commands. Don't forget \code{auth.users} itself; it lives outside \code{public} and the two sides can drift there even when every \code{public} table matches (e.g.\ a signup made against local that was never pushed anywhere, per the \code{db reset} gotcha above).
+\end{olktip}
+
+\begin{olknote}
+This is a read-only sanity check, not a repair tool. If it finds drift, the fix is \code{npm run db:push} for schema gaps, or \pathname{scripts/pull-remote-data.sh} (next section) for data gaps — never hand-editing either database to force agreement.
+\end{olknote}
+
+\subsection{When "cloud" becomes "our own server"}
+
+Nothing about either check is Supabase-Cloud-specific — both \code{supabase migration list} and \code{supabase db query --linked} work against any Postgres the project is linked to via \code{supabase link}, hosted or self-hosted. When OLK eventually moves off Supabase Cloud onto a self-hosted stack (Chapter~\ref{ch:welcome}), the same two commands, pointed at the new project ref, are how you'll confirm a migration tested locally landed correctly there too — this verification workflow is not something to relearn later.
+
+\section{Pulling the hosted project's data into local}
+
+A fresh \code{db reset} gives you correct \emph{schema} with zero rows — no test account, no books, nothing to click through. \code{npm run db:pull-data} (\pathname{scripts/pull-remote-data.sh}) closes that gap by copying real data down from the linked hosted project:
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={scripts/pull-remote-data.sh — the whole script}]
+npx supabase db dump --data-only --linked --schema public,auth -f supabase/.temp/remote_data.sql
+npx supabase db query --local -f supabase/.temp/remote_data.sql
+\end{lstlisting}
+
+Two things worth understanding about what this does and doesn't do:
+
+\begin{itemize}
+  \item \textbf{It really does restore logins.} The \code{auth} schema (users, identities, hashed passwords, sessions) is included in the dump, so accounts that exist on the hosted project become usable locally with the same email/password — GoTrue's password hashing is identical in both environments. Old session/refresh-token rows copied along with it won't actually validate locally (they were signed with the hosted project's JWT secret, not the local stack's), which just means those specific rows are inert — logging in fresh works normally and issues new, valid local tokens.
+  \item \textbf{Expect, and ignore, "duplicate key" errors on \code{areas}, \code{genres}, \code{notification\_templates}, and \code{platform\_settings}.} These tables are seeded by the migrations themselves (Chapter~\ref{ch:schema}), so a fresh \code{db reset} already populated them before the data pull runs. Since \code{pg\_dump} emits one multi-row \code{INSERT} per table, a single colliding row aborts that whole statement — but if the migration-seeded rows are identical to the hosted ones (the normal case, since the same migration created both), nothing was actually missing; verify with a row count if in doubt, don't assume from the error alone.
+\end{itemize}
+
+\begin{olkwarn}
+Storage \emph{objects} (uploaded cover images) are not part of this data pull — only \code{public}/\code{auth} schema rows are copied, not files sitting in Supabase Storage's blob backend. In practice this rarely matters for viewing existing content: \code{cover\_url} values are stored as full \code{https://*.supabase.co/storage/v1/object/public/...} URLs (Chapter~\ref{ch:schema}), so a browser fetches them directly from the hosted project regardless of which database the app is talking to. It only becomes a real gap for \emph{new} uploads made against the local stack, which land in local Storage and would need a separate, manual copy to appear elsewhere.
+\end{olkwarn}
+
+\section{Useful local endpoints}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}l Y@{}}
+\toprule
+\textbf{Service} & \textbf{URL} \\
+\midrule
+App (Next.js) & \url{http://localhost:3000} \\
+Supabase API gateway & \url{http://127.0.0.1:54321} \\
+Studio (visual table/SQL editor) & \url{http://127.0.0.1:54323} \\
+Mailpit (catches every auth/verification email sent locally) & \url{http://127.0.0.1:54324} \\
+Postgres (for any SQL client) & \codecell{postgresql://postgres:postgres@127.0.0.1:54322/postgres} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{olktask}
+Start the stack from a clean slate (\code{supabase start} then \code{supabase db reset}), then open Studio at \url{http://127.0.0.1:54323} and confirm you can see all 24 tables listed in Chapter~\ref{ch:schema}. Then register a brand-new account through the running app at \code{localhost:3000/register}, open Mailpit at \code{:54324}, and find the confirmation email that was "sent" — this is how you will test any auth-related change without needing a real inbox.
+\end{olktask}
+
+\section{Why this matters beyond convenience}
+
+As covered in Chapter~\ref{ch:welcome}, this is not just a developer-experience nicety. Supabase is open source and self-hostable; the exact same Docker images this chapter runs on a laptop are what would eventually run on a physical server in Kashmir. Every hour spent comfortable with \code{supabase start} / \code{stop} / \code{db reset} is time spent rehearsing the operational muscle memory that self-hosting will require later — this chapter is deliberately not "throwaway."

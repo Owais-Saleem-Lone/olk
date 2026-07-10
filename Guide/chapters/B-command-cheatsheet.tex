@@ -1,0 +1,58 @@
+\chapter{Command Cheat-Sheet}
+\label{ch:cheatsheet}
+
+Every command this manual actually uses, grouped by tool.
+
+\section{Node / Next.js}
+\begin{lstlisting}[style=olkcodebash, language=bash]
+npm install          # install dependencies
+npm run dev          # start the dev server (localhost:3000)
+npm run build        # production build
+npm run start        # run a production build locally
+npm run lint         # ESLint
+\end{lstlisting}
+
+\section{Supabase CLI (via npx — nothing installed globally)}
+\begin{lstlisting}[style=olkcodebash, language=bash]
+npx supabase init                       # one-time: create supabase/config.toml
+npx supabase start                      # start the local Docker stack
+npx supabase stop                       # stop it (data persists in a volume)
+npx supabase status                     # reprint local credentials
+npx supabase db reset                   # wipe + replay every migration, local only
+npx supabase migration new <name>       # scaffold a correctly-timestamped migration
+npx supabase db dump --local --schema public > supabase/schema.sql
+                                         # regenerate the schema.sql snapshot
+
+# Hosted project (production) only:
+npx supabase login
+npx supabase link --project-ref <ref>
+npx supabase db push                    # apply pending migrations to the hosted project
+\end{lstlisting}
+
+\section{Docker (rarely needed directly — the Supabase CLI drives this for you)}
+\begin{lstlisting}[style=olkcodebash, language=bash]
+docker ps --filter "name=_olk"          # see which OLK containers are running
+docker exec supabase_db_olk psql -U postgres -d postgres -c "\dt public.*"
+                                         # list tables directly against the local DB
+docker info                             # confirm the daemon is reachable at all
+\end{lstlisting}
+
+\section{Verifying the environment (Chapter~\ref{ch:local-env})}
+\begin{lstlisting}[style=olkcodebash, language=bash]
+docker --version
+docker info           # confirms the daemon is reachable, not just the CLI
+groups                # confirm your user is in the `docker` group on Linux
+\end{lstlisting}
+
+\section{Compiling this manual}
+\begin{lstlisting}[style=olkcodebash, language=bash]
+cd Guide
+pdflatex main.tex && pdflatex main.tex   # run twice: once for content, once for
+                                          # the table of contents and cross-references
+# or, if latexmk is available:
+latexmk -pdf main.tex
+\end{lstlisting}
+
+\begin{olktip}
+Every \code{Chapter~??} you might see in a single-pass compile is not an error — it means the cross-reference hasn't been resolved yet because \LaTeX{} needs a second pass to know where every labelled chapter landed. Always compile twice (or use \code{latexmk}, which does this automatically) before judging the output.
+\end{olktip}

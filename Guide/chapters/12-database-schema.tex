@@ -1,0 +1,147 @@
+\chapter{Database Schema Reference}
+\label{ch:schema}
+
+\begin{olknote}
+\pathname{supabase/schema.sql} is a point-in-time dump, not a live view — it used to be five migrations stale (missing rate limiting, wishlist fuzzy matching, book description/year, and the profile \code{bio} column) before being regenerated with \code{npx supabase db dump --local --schema public}. \textbf{This chapter's tables reflect the true current schema}, built from \pathname{supabase/migrations} in full, per the house rule in Chapter~\ref{ch:workflow}: the migrations directory is always the authoritative source, never the dump — treat \pathname{schema.sql} as a convenience snapshot that can drift again the moment a migration lands without a follow-up regeneration.
+\end{olknote}
+
+All 24 tables live in the \code{public} schema and have Row-Level Security enabled; policies are covered separately in Chapter~\ref{ch:rls} so this chapter can focus purely on shape. Every primary key is a \code{uuid} defaulting to \code{gen\_random\_uuid()} unless noted otherwise.
+
+\section{Identity}
+
+\subsection*{\code{profiles}}
+One row per \code{auth.users} row, created automatically by the \code{handle\_new\_user} trigger (Chapter~\ref{ch:supabase-fundamentals}). This is the table almost everything else in the schema references.
+
+\begin{center}
+\begin{longtable}{@{}p{3.4cm} p{2.6cm} p{9.4cm}@{}}
+\toprule
+\textbf{Column} & \textbf{Type} & \textbf{Notes} \\
+\midrule
+\endhead
+\codecell{id} & uuid, PK & = \codecell{auth.users(id)}, \codecell{ON DELETE CASCADE} \\
+\codecell{display\_name} & varchar(50) & \\
+\codecell{area\_name} & varchar(100) & Free-text area label shown alongside \codecell{latitude}/\codecell{longitude} \\
+\codecell{latitude}, \codecell{longitude} & double precision & Feed \codecell{get\_books\_nearby}/\codecell{get\_clubs\_nearby} \\
+\codecell{bio} & text & CHECK length $\le$ 300 \\
+\codecell{email\_digest} & boolean, default true & Opt-out flag for the weekly digest (Chapter~\ref{ch:vercel}) \\
+\codecell{is\_admin} & boolean, default false & Must be true \emph{and} \codecell{admin\_role} set for any admin RLS policy to apply \\
+\codecell{admin\_role} & \codecell{admin\_role} enum & \codecell{super\_admin} / \codecell{moderator} / \codecell{viewer} — see Chapter~\ref{ch:rls} \\
+\codecell{is\_banned}, \codecell{ban\_reason}, \codecell{ban\_expires\_at} & boolean / text / timestamptz & Checked by the Proxy layer (Chapter~\ref{ch:proxy}) on every protected-route request \\
+\codecell{warning\_count} & integer, default 0 & Kept in sync by \codecell{warnUser} (Chapter~\ref{ch:admin}) \\
+\codecell{last\_active\_at}, \codecell{created\_at}, \codecell{updated\_at} & timestamptz & \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\section{Books \& the Exchange Lifecycle}
+
+\subsection*{\code{books}}
+\begin{center}
+\begin{longtable}{@{}p{3.6cm} p{2.6cm} p{9.2cm}@{}}
+\toprule
+\textbf{Column} & \textbf{Type} & \textbf{Notes} \\
+\midrule
+\endhead
+\codecell{owner\_id} & uuid & FK $\to$ \codecell{auth.users(id)} — \textbf{not} \codecell{profiles} (see the warning in Chapter~\ref{ch:supabase-fundamentals}) \\
+\codecell{title}, \codecell{author} & varchar(500) & \\
+\codecell{condition} & varchar(20) & CHECK IN \codecell{excellent/good/fair/poor} \\
+\codecell{listing\_type} & varchar(10), NOT NULL & CHECK IN \codecell{donate/lend} \\
+\codecell{status} & varchar(20), default \codecell{available} & CHECK IN \codecell{available/unavailable/given} \\
+\codecell{genre} & varchar(100) & \\
+\codecell{cover\_url} & text & Points into the \codecell{book-covers} Storage bucket \\
+\codecell{lending\_duration\_months} & smallint & CHECK IN (1,2,3) — only meaningful when \codecell{listing\_type = 'lend'} \\
+\codecell{acquired\_via\_donation} & boolean, default false & Set true by \codecell{complete\_donated\_book\_reading} — locks the book into perpetual donation circulation \\
+\codecell{read\_count} & integer, default 0 & Auto-incremented by \codecell{trg\_increment\_read\_count} \\
+\codecell{description}, \codecell{publication\_year} & text, smallint & \emph{Added in the two most recent-but-one migrations, populated by ISBN-scan enrichment; CHECK 1000--2200 on the year.} \\
+\codecell{hidden\_by\_admin}, \codecell{admin\_hide\_reason}, \codecell{hidden\_at} & boolean / text / timestamptz & Set by \codecell{hideBook} (Chapter~\ref{ch:admin}) \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\begin{olkhowto}
+Adding a fifth \code{condition} value (say \code{'like\_new'}) means editing the same fact in three places, none of which derive from the others:
+\begin{enumerate}
+  \item The \code{books\_condition\_check} CHECK constraint — \code{ALTER TABLE books DROP CONSTRAINT books\_condition\_check, ADD CONSTRAINT books\_condition\_check CHECK (condition IN (...))} inside a new migration (Chapter~\ref{ch:workflow}).
+  \item \pathname{src/app/(dashboard)/my-books/page.tsx} — the \code{<option value="excellent">} list in the listing form.
+  \item \pathname{src/app/(dashboard)/browse/page.tsx} — the identical, independently-typed \code{<option>} list in the filter dropdown.
+\end{enumerate}
+Miss \#1 and both frontend forms happily offer a value the database will reject with a constraint violation on submit; miss \#2 or \#3 and the new value is a valid row you can only ever create by hand in Studio. \code{listing\_type} (\code{books\_listing\_type\_check}, \code{donate}/\code{lend}) is the same three-location shape if you ever need to extend that instead.
+\end{olkhowto}
+
+\subsection*{\code{book\_requests}}
+The spine of the exchange lifecycle (Chapter~\ref{ch:lifecycle}).
+\begin{center}
+\begin{longtable}{@{}p{3.6cm} p{2.6cm} p{9.2cm}@{}}
+\toprule
+\textbf{Column} & \textbf{Type} & \textbf{Notes} \\
+\midrule
+\endhead
+\codecell{book\_id} & uuid & FK $\to$ \codecell{books(id)} \\
+\codecell{requester\_id} & uuid & FK $\to$ \codecell{profiles(id)} \\
+\codecell{status} & varchar(20), default \codecell{pending} & CHECK IN \codecell{pending/accepted/declined/handed\_over/returned} \\
+\codecell{created\_at}, \codecell{handed\_over\_at}, \codecell{completed\_at} & timestamptz & \\
+\bottomrule
+\end{longtable}
+\end{center}
+A partial unique index, \code{idx\_unique\_active\_request(book\_id, requester\_id) WHERE status IN (pending, accepted, handed\_over)}, is the only thing stopping the same user from opening a second concurrent request for a book they already have an active request on — note it does \emph{not} stop two different users from having simultaneous pending requests on the same book (the owner is expected to pick one and decline the rest).
+
+\subsection*{\code{book\_progress}}
+One row per request, tracking a reader's percentage through a book. \code{book\_id} $\to$ \code{books(id)}; \code{request\_id} $\to$ \code{book\_requests(id)}, \code{UNIQUE}; \code{reader\_id} $\to$ \code{profiles(id)}; \code{progress\_pct} smallint CHECK 0--100. Publicly viewable (community visibility of "who's reading what"), writable only by the reader themself.
+
+\section{Community Features}
+
+\subsection*{\code{messages}}
+\code{request\_id} $\to$ \code{book\_requests(id)}; \code{sender\_id} $\to$ \code{profiles(id)}; \code{content} text. Member of the \code{supabase\_realtime} publication — this is the table the chat page (Chapter~\ref{ch:pages}) subscribes to. Guarded by \code{trg\_enforce\_message\_rate\_limit} (Chapter~\ref{ch:functions}).
+
+\subsection*{\code{bookmarks}}
+\code{user\_id} + \code{book\_id}, \code{UNIQUE} pair — a simple save-for-later join table, fully self-service.
+
+\subsection*{\code{ratings}}
+\code{request\_id} $\to$ \code{book\_requests(id)}; \code{rater\_id}, \code{rated\_user\_id} $\to$ \code{profiles(id)}; \code{score} smallint CHECK 1--5; \code{comment} text. \code{UNIQUE(request\_id, rater\_id)} is the constraint \pathname{rating-modal.tsx} (Chapter~\ref{ch:components}) relies on to detect "already rated" via Postgres error code \code{23505} rather than a pre-check query.
+
+\subsection*{\code{wishlists}}
+\code{user\_id} $\to$ \code{profiles(id)}; \code{title}, \code{author}, \code{genre}; \code{matched\_book\_id} $\to$ \code{books(id)} \code{ON DELETE SET NULL}. As of the most recent-but-one migration: a unique index on \code{(user\_id, lower(btrim(title)))} prevents duplicate active wishes for the same title, and a \code{pg\_trgm} GIN index on \code{title} backs the fuzzy-match RPC (Chapter~\ref{ch:functions}).
+
+\subsection*{\code{book\_notes}}
+\code{book\_id} $\to$ \code{books(id)}; \code{user\_id} $\to$ \code{profiles(id)}; \code{note} text; \code{UNIQUE(book\_id, user\_id)} — one editable note per user per book, publicly readable.
+
+\subsection*{\code{clubs}, \code{club\_members}, \code{club\_posts}}
+\code{clubs}: \code{name}, \code{description}, \code{interest}, \code{area\_name}, \code{latitude}/\code{longitude}, \code{cover\_url}, \code{creator\_id} $\to$ \code{profiles(id)}, \code{member\_count} (int, kept in sync by \code{trg\_club\_member\_count} — Chapter~\ref{ch:functions}), \code{active} boolean (used for soft-delete). \code{club\_members}: \code{club\_id} + \code{user\_id}, \code{UNIQUE} pair, \code{joined\_at}. \code{club\_posts}: \code{club\_id}, \code{author\_id}, \code{content}, \code{created\_at} — creator-only to post, author-only to delete, no UPDATE policy at all (posts are immutable once made).
+
+\section{Notifications \& Content}
+
+\subsection*{\code{notifications}}
+\code{user\_id} $\to$ \code{profiles(id)}; \code{type}, \code{title}, \code{body}, \code{link} text; \code{read} boolean. Indexed \code{(user\_id, created\_at DESC)} for the bell/list views. See Chapter~\ref{ch:rls} for a real RLS looseness on this table's INSERT policy.
+
+\subsection*{\code{notification\_templates}}
+Admin-only reusable message templates (\code{name} UNIQUE, \code{title}, \code{body}, \code{type}). Seeded with 7 defaults (welcome, warnings, bans, unban, book drive) by the admin-comprehensive migration.
+
+\subsection*{\code{announcements}}
+\code{title}, \code{body}, \code{type} (CHECK \code{info/warning/success/event}), \code{is\_banner} boolean, \code{active}, \code{starts\_at}/\code{ends\_at}. The "one active banner" invariant is enforced in application code (\code{createAnnouncement} unsets any existing banner first, Chapter~\ref{ch:admin}), not by a database constraint.
+
+\subsection*{\code{genres}, \code{areas}}
+Simple admin-managed lookup tables (\code{name} UNIQUE, \code{active} boolean). Seeded with 19 genres and 29 real Kashmir-region areas across Srinagar, Anantnag, Baramulla, Kupwara, Budgam, Pulwama, Shopian, Kulgam, Ganderbal, and Bandipora — a concrete reflection of the project's regional scope (Chapter~\ref{ch:welcome}).
+
+\subsection*{\code{book\_of\_month}}
+\code{title}, \code{author}, \code{description}, \code{cover\_url}, \code{month\_label}, \code{active}. \code{saveBotm} (Chapter~\ref{ch:admin}) deactivates any existing entry before inserting a new one, the same single-active-row pattern as announcements.
+
+\subsection*{\code{platform\_settings}}
+\code{key} text \textbf{PK} (not a uuid — this table is a key/value store), \code{value} jsonb, \code{description}, \code{updated\_at}/\code{updated\_by}. Seeded keys: \code{max\_books\_per\_user} (50), \code{max\_requests\_per\_day} (10), \code{max\_messages\_per\_hour} (30), \code{overdue\_days\_threshold} (30), \code{maintenance\_mode}, and four \code{feature\_*} flags (clubs/wishlists/ratings/messages). Publicly readable (anyone can \code{SELECT}), writable only by \code{super\_admin}.
+
+\section{Admin \& Moderation}
+
+\subsection*{\code{reports}}
+\code{reporter\_id} $\to$ \code{profiles(id)}; \code{reported\_user\_id}/\code{reported\_book\_id} (either may be null, \code{ON DELETE SET NULL}); \code{reason}, \code{details}, \code{status} (default \code{pending}), \code{category} (default \code{other}), \code{assigned\_to}, \code{resolved\_at}/\code{resolved\_by}.
+
+\subsection*{\code{user\_bans}, \code{user\_warnings}}
+Append-only history tables behind the \code{profiles.is\_banned}/\code{warning\_count} summary fields. \code{user\_bans}: \code{is\_permanent} boolean, \code{expires\_at}, \code{unbanned\_at}/\code{unbanned\_by} — a ban is never deleted, only marked unbanned.
+
+\subsection*{\code{admin\_audit\_log}}
+\code{admin\_id}, \code{action} text, \code{target\_type} text, \code{target\_id} uuid (nullable), \code{details} jsonb. Every single Server Action in \pathname{admin-actions.ts} (Chapter~\ref{ch:admin}) writes exactly one row here — this table is the full history of every moderation action ever taken, by whom. No UPDATE or DELETE policy exists for any role: the log is genuinely immutable once written.
+
+\subsection*{\code{admin\_notes}}
+\code{report\_id} $\to$ \code{reports(id)}; \code{admin\_id}; \code{content} text — free-text internal notes moderators leave on a report, visible only to other admins/moderators.
+
+\begin{olktask}
+Using only this chapter (no source code), sketch the foreign-key graph for the exchange lifecycle: \code{books} $\to$ \code{book\_requests} $\to$ \code{book\_progress}, plus everything that references \code{book\_requests.id} (there are three). Then open Studio's table view (Chapter~\ref{ch:local-env}) and check your sketch against the real foreign keys shown there.
+\end{olktask}

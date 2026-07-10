@@ -1,0 +1,82 @@
+\chapter{Row-Level Security \& the Role Model}
+\label{ch:rls}
+
+\section{What RLS actually does}
+
+Row-Level Security is a Postgres feature, not a Supabase invention: once \code{ALTER TABLE ... ENABLE ROW LEVEL SECURITY} is run on a table (true for all 24 tables in this schema), \emph{every} query against it — from any role, through any route — is filtered by whichever \code{CREATE POLICY} statements apply to the current role and command (\code{SELECT}/\code{INSERT}/\code{UPDATE}/\code{DELETE}). No policy matching means no rows: RLS defaults closed, not open.
+
+The Supabase JS client attaches the calling user's JWT to every request, and Postgres evaluates policies against \code{auth.uid()} (the JWT's subject claim) and \code{auth.role()} (\code{anon} or \code{authenticated}). This is the entire security model for every Client Component in this app (Chapter~\ref{ch:architecture}) — there is no separate authorization layer in application code for ordinary data access, only for admin Server Actions (Chapter~\ref{ch:admin}), which add an \emph{additional} check on top of RLS, not instead of it.
+
+\section{The role hierarchy}
+
+\begin{lstlisting}[style=olkcodesql, caption={The only enum in the schema}]
+CREATE TYPE public.admin_role AS ENUM ('super_admin', 'moderator', 'viewer');
+\end{lstlisting}
+
+\begin{center}
+\begin{longtable}{@{}p{2.6cm} p{13.2cm}@{}}
+\toprule
+\textbf{Role} & \textbf{Can do} \\
+\midrule
+\endhead
+\codecell{viewer} & Pass \codecell{requireAdmin('viewer')} (Chapter~\ref{ch:admin}) — can view every \pathcell{/admin/*} page but is below every RLS check that specifically requires \codecell{is\_admin\_or\_mod()}, so most write actions still fail for a viewer at the database layer even if the frontend let them click a button. \\
+\codecell{moderator} & Everything \codecell{is\_admin\_or\_mod()} gates: ban/unban/warn users, hide/edit books, manage reports, moderate clubs, broadcast notifications, manage content (Chapter~\ref{ch:admin}). \\
+\codecell{super\_admin} & Everything above, plus everything \codecell{is\_super\_admin()} gates specifically: deleting books/clubs outright (not just hiding/deactivating), setting other users' admin roles, and writing to \codecell{platform\_settings}. \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+A profile only counts as an admin at all if \emph{both} \code{is\_admin = true} \textbf{and} \code{admin\_role} is non-null — the two-field check appears in \code{is\_admin()}, \code{is\_admin\_or\_mod()}, \code{is\_super\_admin()}, \code{requireAdmin()}, and \code{checkAdminAPI()} identically (Chapter~\ref{ch:functions}, Chapter~\ref{ch:admin}). Setting only one of the two fields (e.g. \code{admin\_role = 'moderator'} without \code{is\_admin = true}) grants nothing.
+
+\begin{olkhowto}
+Adding a fourth role (say \code{'support'}, between \code{viewer} and \code{moderator}) is more than a one-line enum edit:
+\begin{enumerate}
+  \item \code{ALTER TYPE public.admin\_role ADD VALUE 'support';} in a new migration (\code{npx supabase migration new add\_support\_role}) — Postgres enums can only be extended, never edited in place.
+  \item Decide which existing gate the new role should pass — probably widening \code{is\_admin\_or\_mod()}'s \code{admin\_role IN ('super\_admin', 'moderator')} check (Chapter~\ref{ch:functions}) to include \code{'support'}, in the same migration.
+  \item \code{requireAdmin()} and \code{checkAdminAPI()} (Chapter~\ref{ch:admin}) — wherever they whitelist role strings for a given \pathname{/admin/*} page or API route.
+\end{enumerate}
+Skip step 2 and the new role is assignable in \pathname{/admin/settings} but grants nothing at the database layer — every RLS policy still only recognises the three original roles.
+\end{olkhowto}
+
+\section{Policy summary, table by table}
+
+\begin{center}
+\begin{longtable}{@{}p{2.9cm} p{13.0cm}@{}}
+\toprule
+\textbf{Table} & \textbf{Who can do what} \\
+\midrule
+\endhead
+\codecell{profiles} & Any authenticated user SELECTs all profiles (community-visible by design); a user INSERTs/UPDATEs only their own row; admins SELECT all and UPDATE any (for bans/moderation). No DELETE policy — profiles cascade-delete only via \codecell{auth.users}. \\
+\codecell{books} & Authenticated users SELECT all; anon/public SELECT only \codecell{available}/\codecell{given}; owner INSERT/UPDATE/DELETE their own; admins SELECT all and UPDATE any; only \codecell{super\_admin} can DELETE any book outright. \\
+\codecell{book\_requests} & A user SELECTs requests where they are the requester \emph{or} own the requested book; requester INSERTs their own; the book's owner UPDATEs it; admins SELECT/UPDATE all. No DELETE policy — a request is never removed, only status-transitioned. \\
+\codecell{book\_progress} & Any authenticated user SELECTs all (community visibility of reading activity); only the reader themself INSERT/UPDATE/DELETEs their own row. \\
+\codecell{messages} & A user SELECTs/INSERTs only for requests where they are the requester or the book owner, and only ever as themself; admins SELECT all (moderation). No UPDATE/DELETE policy at all. \\
+\codecell{bookmarks}, \codecell{wishlists} & Fully self-service: SELECT/INSERT/UPDATE/DELETE restricted to \codecell{user\_id = auth.uid()}, no exceptions, no admin override. \\
+\codecell{ratings} & Authenticated users SELECT all; a user INSERTs only as \codecell{rater\_id = auth.uid()}; admins SELECT all. No UPDATE/DELETE — ratings are immutable once given. \\
+\codecell{book\_notes} & Any authenticated user SELECTs all; a user INSERT/UPDATE/DELETEs only their own note. \\
+\codecell{clubs} & Anyone (incl. anon) SELECTs active clubs; any authenticated user INSERTs as creator; the creator UPDATE/DELETEs their own; admins/mods UPDATE any, only \codecell{super\_admin} DELETEs any. \\
+\codecell{club\_members} & Any authenticated user SELECTs; a user INSERTs themself (join); a user DELETEs their own membership, the club's creator can remove anyone, admins/mods can too. \\
+\codecell{club\_posts} & Anyone SELECTs; only the club's creator INSERTs (posts); only the post's author DELETEs it. No UPDATE at all. \\
+\codecell{notifications} & A user SELECT/UPDATEs only their own; admins/mods INSERT for anyone explicitly — \textbf{but see the gotcha below}. \\
+\codecell{reports} & A reporter INSERTs as themself and SELECTs their own; admins/mods SELECT all and UPDATE any. No DELETE. \\
+\codecell{admin\_audit\_log}, \codecell{admin\_notes}, \codecell{user\_bans}, \codecell{user\_warnings} & Admin/mod-only SELECT and INSERT (as themself where an admin id is recorded). No UPDATE/DELETE on the audit log or notes; \codecell{user\_bans} allows admin UPDATE (for unbanning). \\
+\codecell{announcements}, \codecell{genres}, \codecell{areas}, \codecell{book\_of\_month} & Public/anon SELECT of active rows; admins/mods have full \codecell{ALL}-command management. \\
+\codecell{notification\_templates} & Admin/mod-only SELECT and full management — not readable by regular users at all. \\
+\codecell{platform\_settings} & Anyone (incl. anon) SELECTs all settings; only \codecell{super\_admin} can INSERT/UPDATE/DELETE. \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\section{Two RLS looseness gotchas — since tightened}
+
+\begin{olknote}
+\textbf{\code{notifications} INSERT policy.} There used to be a separate, broader policy (alongside the explicit "admins/mods can INSERT for anyone" one) allowing \emph{any} authenticated user to INSERT a notification row, checked only against \code{auth.uid() IS NOT NULL} — with no restriction on whose \code{user\_id} the notification targets. That policy has been replaced with \code{"Users insert own notifications"}, requiring \code{auth.uid() = user\_id}. Since most of the app's real notification flows are cross-user by design (a request being accepted notifies the \emph{other} party, not the actor), \code{createNotification} (Chapter~\ref{ch:server-actions}) now writes through the service-role client instead of the calling user's session — it remains the one trusted, server-side gate for cross-user notification creation, after first confirming the caller is authenticated. A direct, unauthenticated-of-relationship REST call to \pathname{/notifications} can no longer insert a row addressed to an arbitrary other user.
+\end{olknote}
+
+\begin{olknote}
+\textbf{Duplicate legacy/new policy pairs — removed.} Both \code{profiles} and \code{reports} used to carry two separate, overlapping sets of admin policies — one written against the older inline pattern (\code{EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is\_admin = true)}) from before the \code{admin\_role} hierarchy existed, and a newer set written against \code{is\_admin\_or\_mod()}. Both were harmless (Postgres OR-combines multiple permissive policies for the same command), but were dead weight to keep in sync. The legacy \code{"Admins update profiles"}, \code{"Admins update reports"}, and \code{"Admins view all reports"} policies have been dropped; the \code{is\_admin\_or\_mod()}-based policies are now the only ones for those operations.
+\end{olknote}
+
+\begin{olktask}
+Log into the local Studio SQL editor (Chapter~\ref{ch:local-env}) as the anon role would see it — run \code{SET ROLE anon;} then \code{SELECT * FROM public.profiles;} and \code{SELECT * FROM public.books;} in the same session, and compare row counts against running the same two queries as an authenticated test user. This is the fastest way to build real intuition for what RLS is actually restricting, versus what you'd assume from reading policy SQL alone.
+\end{olktask}

@@ -1,0 +1,50 @@
+\chapter{Environment Variables Reference}
+\label{ch:envvars}
+
+Every environment variable actually read anywhere in \pathname{src/}, in one place. \code{NEXT\_PUBLIC\_*}-prefixed variables are inlined into the browser bundle at build time by Next.js convention — never put a secret behind that prefix.
+
+\begin{center}
+\begin{longtable}{@{}p{4.6cm} p{1.6cm} p{9.4cm}@{}}
+\toprule
+\textbf{Variable} & \textbf{Required?} & \textbf{Purpose \& where it's read} \\
+\midrule
+\endhead
+\codecell{NEXT\_PUBLIC\_SUPABASE\_URL} & Yes & The Supabase API gateway URL. Read in \pathcell{src/lib/supabase/client.ts}, \pathcell{server.ts}, \pathcell{proxy.ts}, and both service-role clients. Points at \codecell{http://127.0.0.1:54321} locally (Chapter~\ref{ch:local-env}) or your hosted project's URL in production. \\
+\codecell{NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY} & Yes & The public, RLS-constrained anon key. Safe to expose in the browser bundle by design — it grants nothing RLS doesn't independently allow (Chapter~\ref{ch:rls}). \\
+\codecell{SUPABASE\_SERVICE\_ROLE\_KEY} & Only for email \& digest & Bypasses RLS entirely. Read only in \pathcell{src/lib/send-notification-email.ts} and \pathcell{src/app/api/digest/route.ts}, both server-only files, to resolve a user's email address by id via \codecell{auth.admin.getUserById}. \textbf{Never} prefix this with \codecell{NEXT\_PUBLIC\_}. \\
+\codecell{RESEND\_API\_KEY} & No & If unset, both \pathcell{send-notification-email.ts} and the digest route silently no-op (Chapter~\ref{ch:server-actions}) — this is the default, safe state in local development. Set it to enable real transactional email. \\
+\codecell{RESEND\_FROM\_EMAIL} & No & Defaults to \codecell{"OLK <notifications@olkashmir.com>"} if unset. Must be a domain verified in your Resend account before real sends will succeed. \\
+\codecell{NEXT\_PUBLIC\_SITE\_URL} & No & Defaults to \codecell{https://olkashmir.com} if unset. Used to build the "View on OLK" link inside notification and digest emails — set this explicitly for any non-production deployment (a staging URL, a preview deploy) so emails sent from that environment link back to the right place instead of the production domain. \\
+\codecell{CRON\_SECRET} & Only for the digest & The shared-secret bearer token \pathcell{/api/digest} checks (Chapter~\ref{ch:server-actions}). Generate a long random string once; it has no relationship to Supabase at all. \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\section{Local vs. production, side by side}
+
+\begin{center}
+\begin{longtable}{@{}p{4.6cm} p{5.5cm} p{5.5cm}@{}}
+\toprule
+\textbf{Variable} & \textbf{Local (\pathname{.env.local})} & \textbf{Production (Vercel dashboard)} \\
+\midrule
+\endhead
+\codecell{NEXT\_PUBLIC\_SUPABASE\_URL} & \codecell{http://127.0.0.1:54321} & Your hosted project's URL \\
+\codecell{NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY} & The demo key \code{supabase start} prints & Your hosted project's anon key \\
+\codecell{SUPABASE\_SERVICE\_ROLE\_KEY} & Usually omitted (email/digest just no-op) & Your hosted project's service role key \\
+\codecell{RESEND\_API\_KEY} & Usually omitted & Set, for real email \\
+\codecell{CRON\_SECRET} & Any placeholder string, for manual \code{curl} testing (Chapter~\ref{ch:server-actions}) & A real, long random secret \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\begin{olktip}
+Chapter~\ref{ch:local-env} recommended keeping a second, gitignored \pathname{.env.remote} file with the hosted project's \code{URL}/\code{ANON\_KEY} pair, precisely so switching \pathname{.env.local} between local and hosted development is a two-line copy-paste rather than a trip back to the Supabase dashboard every time.
+\end{olktip}
+
+\begin{olkhowto}
+An unset \code{NEXT\_PUBLIC\_SITE\_URL} silently falls back to the production domain — the line \code{const siteUrl = process.env.NEXT\_PUBLIC\_SITE\_URL || 'https://olkashmir.com'} appears in \emph{both} \pathname{src/lib/send-notification-email.ts} and \pathname{src/app/api/digest/route.ts}. Deploying a staging environment without setting the variable doesn't error — it just quietly links every email's "View on OLK" button back to production. Set \code{NEXT\_PUBLIC\_SITE\_URL} explicitly for that environment rather than changing the fallback in code, which would flip the default for production too.
+\end{olkhowto}
+
+\begin{olktask}
+Grep the entire \pathname{src/} tree for \code{process.env} (\code{grep -rn "process.env" src/}) and confirm the result set matches exactly the seven variables in this chapter — no more, no fewer. If you ever add an eighth, this chapter needs a matching new row in the same pull request (Chapter~\ref{ch:workflow}'s rule about keeping this manual in sync applies here too).
+\end{olktask}
