@@ -18,7 +18,9 @@ Count the tables against Chapter~\ref{ch:schema} (24, as of this edition). Fewer
 This is almost always RLS (Chapter~\ref{ch:rls}), not a bug in the query itself. Ask: is this table's SELECT policy restricted to \code{auth.uid() = user\_id} (or similar)? If you need to see \emph{other users'} rows for a legitimate reason, you need a \code{SECURITY DEFINER} RPC (Chapter~\ref{ch:functions}), not a wider client-side query — widening a table's RLS policy to work around one screen is usually the wrong fix and a security regression.
 
 \section*{"A migration fails to apply"}
+\begin{olkhowto}
 Read the actual Postgres error — \code{supabase db reset} prints it inline, referencing the specific migration file and statement. Common causes in this codebase's style: a \code{CREATE POLICY} without an \code{IF NOT EXISTS} guard re-running against a database that already has it (wrap in the \code{DO \$\$ ... EXCEPTION WHEN duplicate\_object THEN NULL; END \$\$;} pattern used throughout \pathname{20260627095459\_admin\_comprehensive.sql}, Chapter~\ref{ch:schema}), or a \code{DROP FUNCTION} missing before a \code{CREATE OR REPLACE} that changes a return type (Postgres disallows changing a function's return type via \code{CREATE OR REPLACE} alone — Chapter~\ref{ch:functions}'s note on \code{get\_books\_nearby} explains this exact situation).
+\end{olkhowto}
 
 \section*{"Realtime (chat / notification bell) isn't updating live"}
 Check, in order: (1) is the local Supabase Realtime container actually healthy (\code{docker ps --filter name=\_olk}, Chapter~\ref{ch:local-env})? (2) does the channel's \code{filter} string exactly match the row you expect (\code{request\_id=eq.\$\{requestId\}}, Chapter~\ref{ch:pages}) — a mismatched id silently subscribes to nothing? (3) in dev, did Fast Refresh leave a duplicate/stale subscription — check for the instance-unique channel-naming pattern in Chapter~\ref{ch:components} and confirm your own new code follows it if you're adding a new realtime subscription elsewhere.
@@ -36,7 +38,11 @@ Expected, for now — see Chapter~\ref{ch:proxy} for the full explanation and th
 Something — often a dev server or Supabase stack from a previous session — is still running. \code{ss -ltnp | grep <port>} or \code{lsof -i :<port>} to identify the process; for a stray \code{next dev}, killing it and restarting is safe and stateless. For Supabase container ports, prefer \code{npx supabase stop} over killing Docker containers directly, so the CLI's own bookkeeping stays consistent.
 
 \section*{"I'm not sure if something is really blocked by RLS or just by the UI"}
-This distinction matters enough that it recurs as its own exercise in Chapters~\ref{ch:pages},~\ref{ch:wishlists-clubs}, and~\ref{ch:admin}. The reliable test: open the browser devtools network tab (or Studio's SQL editor with \code{SET ROLE authenticated;} / \code{SET ROLE anon;}), and try the operation directly against the REST API or SQL editor rather than through the app's UI. If it succeeds there despite the UI normally preventing it, the gate is UI-only.
+This distinction matters enough that it recurs as its own exercise in Chapters~\ref{ch:pages},~\ref{ch:wishlists-clubs}, and~\ref{ch:admin}.
+
+\begin{olkhowto}
+The reliable test: open the browser devtools network tab (or Studio's SQL editor with \code{SET ROLE authenticated;} / \code{SET ROLE anon;}), and try the operation directly against the REST API or SQL editor rather than through the app's UI. If it succeeds there despite the UI normally preventing it, the gate is UI-only.
+\end{olkhowto}
 
 \begin{olktask}
 Deliberately break something small and practice diagnosing it with this chapter alone: temporarily rename a column referenced by \code{get\_books\_nearby} in a scratch migration, run \code{supabase db reset}, and work through the resulting error using only the "a migration fails to apply" entry above. Then revert the scratch migration. This builds the single most useful skill for maintaining this codebase — reading a real Postgres error and knowing where in the six-migration, twenty-four-table schema it's actually pointing.

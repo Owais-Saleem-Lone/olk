@@ -33,7 +33,7 @@ Do not treat \pathname{schema.sql} as the source of truth if it disagrees with \
 npm run lint
 \end{lstlisting}
 
-The config (\pathname{eslint.config.mjs}) is Next.js's flat-config defaults (\code{core-web-vitals} + \code{typescript}) with no project-specific rules added. \pathname{.github/workflows/ci.yml} runs \code{npm run lint} and \code{npm test} on every push and pull request against \code{main}, and both pass cleanly.
+The config (\pathname{eslint.config.mjs}) is Next.js's flat-config defaults (\code{core-web-vitals} + \code{typescript}), plus one project-specific override: \code{react-hooks/exhaustive-deps} is configured with \code{additionalHooks: "useAsyncEffect"} so the custom hook described in the note below gets the same missing-dependency checking as a native \code{useEffect} call, rather than going unchecked because its name doesn't match what the rule looks for by default. \pathname{.github/workflows/ci.yml} runs \code{npm run lint} and \code{npm test} on every push and pull request against \code{main}, and both pass cleanly.
 
 \begin{olknote}
 \code{eslint-config-next}'s React-Compiler-era rules (\code{react-hooks/immutability}, \code{react-hooks/purity}, \code{react-hooks/set-state-in-effect}, among others) are stricter than what most of this codebase's pages were originally written against — a large number of pages used the ordinary \code{useEffect(() => \{ loadX() \}, [deps])} pattern with \code{loadX} declared below the effect, which several of these newer rules flag. Wiring up CI surfaced this pre-existing lint debt (roughly 70 errors across some twenty files); it has since been fixed, mechanically, file by file:
@@ -46,6 +46,10 @@ The config (\pathname{eslint.config.mjs}) is Next.js's flat-config defaults (\co
 \end{itemize}
 
 The remaining lint output — 37 warnings, \code{react-hooks/exhaustive-deps} and \code{@next/next/no-img-element} — has since been closed out too; \code{npm run lint} is now silent (Chapter~\ref{ch:known-issues}).
+\end{olknote}
+
+\begin{olknote}
+The \code{queueMicrotask(() => fn())} fix above was applied file by file, by hand, in roughly twenty places — leaving \code{useEffect(() => \{ queueMicrotask(() => fn()) \}, deps)} duplicated verbatim across every one of them. A later code-quality pass consolidated the identical seventeen of those call sites into a shared hook, \code{useAsyncEffect(fn, deps)} (\pathname{src/hooks/use-async-effect.ts}), that wraps exactly that pattern once. The remaining handful of call sites were deliberately \emph{not} folded in: \pathname{browse/page.tsx} and \pathname{clubs/page.tsx} each pair a mount-only effect (now using \code{useAsyncEffect}) with a second, differently-shaped effect that skips its first invocation via a \code{mounted} ref before refetching on a specific dependency change — a distinct pattern, not the same one, so it was left as a direct \code{useEffect}/\code{queueMicrotask} call rather than forced into an abstraction that didn't quite fit. \pathname{messages/[id]/page.tsx}'s effect mixes the fetch with a realtime subscription setup in the same effect body, for the same reason.
 \end{olknote}
 
 \section{Automated tests: a minimal but real foundation}

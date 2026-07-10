@@ -1,7 +1,7 @@
 \chapter{Shared Components Library}
 \label{ch:components}
 
-All fourteen files in \pathname{src/components} (plus \pathname{admin/admin-nav.tsx}) are listed in Chapter~\ref{ch:project-structure}. This chapter covers the handful with logic worth understanding, not just using.
+Every shared file directly in \pathname{src/components} is listed in Chapter~\ref{ch:project-structure}, along with the newer \pathname{browse/}, \pathname{my-books/}, and \pathname{requests/} subdirectories of page-specific extractions that same chapter deliberately doesn't enumerate flatly. This chapter covers the handful with logic worth understanding, not just using.
 
 \section{The ISBN scanner — \pathname{isbn-scanner.tsx}}
 
@@ -113,5 +113,48 @@ Start a new modal from \pathname{confirm-modal.tsx} — at 46 lines, the smalles
 \end{olkhowto}
 
 \begin{olknote}
-Don't read this as "the app is now fully consistent about error/confirm UX everywhere" — plain \code{alert()} is still the normal way several pages report a failed action (\pathname{browse/page.tsx}, \pathname{requests/page.tsx}, \pathname{my-books/page.tsx}, \pathname{messages/[id]/page.tsx}, \pathname{clubs/create/page.tsx}). \pathname{rating-modal.tsx} and the clubs delete confirmation were the two instances flagged in Chapter~\ref{ch:known-issues}; the broader pattern of \code{alert()} for one-off error messages across the rest of the app is a separate, larger consistency project, not something this fix addressed.
+\pathname{rating-modal.tsx}'s and the clubs delete confirmation's \code{alert()}/\code{confirm()} instances were fixed first, in isolation, leaving the broader pattern — five more pages still using raw \code{alert()} for one-off error messages — flagged as separate, open debt (Chapter~\ref{ch:known-issues}). That debt has since been closed out too, by the toast pattern below, rather than by converting each site to its own inline error message.
 \end{olknote}
+
+\section{Toasts: a global notice, without a Context Provider}
+
+\pathname{browse/page.tsx}, \pathname{requests/page.tsx}, \pathname{my-books/page.tsx}, \pathname{messages/[id]/page.tsx}, and \pathname{clubs/create/page.tsx} used to call the browser's native \code{alert()} for eleven different failed-action messages between them — a rate limit hit, a duplicate request, a failed save. \code{alert()} blocks the entire tab on a native OS dialog until dismissed, which is jarring compared to every other error surface in the app, and it's the one UX pattern in this codebase that a screenshot or design review would never catch, because it doesn't render as part of the page.
+
+\begin{lstlisting}[caption={src/hooks/use-toast.ts — module-level state, no Provider}]
+type Toast = { id: number; message: string; variant: 'error' | 'success' }
+
+let toasts: Toast[] = []
+let nextId = 0
+const listeners = new Set<() => void>()
+
+function show(message: string, variant: Toast['variant']) {
+  const id = nextId++
+  toasts = [...toasts, { id, message, variant }]
+  listeners.forEach((l) => l())
+  setTimeout(() => {
+    toasts = toasts.filter((t) => t.id !== id)
+    listeners.forEach((l) => l())
+  }, 5000)
+}
+
+export const toast = {
+  error: (message: string) => show(message, 'error'),
+  success: (message: string) => show(message, 'success'),
+}
+
+export function useToasts() {
+  return useSyncExternalStore(
+    (onChange) => { listeners.add(onChange); return () => listeners.delete(onChange) },
+    () => toasts,
+    () => toasts
+  )
+}
+\end{lstlisting}
+
+The state lives in a plain module-level variable, not \code{useState} or React Context — \code{toast.error(...)} is a function you can call from anywhere (an event handler, a \code{.catch()}, deep inside a nested component) without that call site needing to be a descendant of any Provider, and without prop-drilling a \code{showToast} callback down through component trees the way the pre-extraction pages would otherwise have needed. \code{useSyncExternalStore} is what makes this safe to read from a React component despite the mutation happening entirely outside React's own state system: it's the hook React itself recommends specifically for subscribing a component to external, mutable state (browser APIs, module-level variables like this one) without risking tearing under concurrent rendering — the alternative, \code{useState} plus a manual \code{useEffect} subscription, is the same idea with more boilerplate and without that safety guarantee.
+
+A single \code{<Toaster />} (\pathname{src/components/toaster.tsx}) is mounted once, in the authenticated branch of \pathname{app/(dashboard)/layout.tsx}, fixed to the bottom-right corner; it subscribes via \code{useToasts()} and renders nothing when the list is empty. Every call site that used to say \code{alert('Some message')} now says \code{toast.error('Some message')} — a mechanical, one-line-per-callsite change, styled to match the app's existing red-for-error/teal-for-success convention rather than introducing a new color scheme.
+
+\begin{olkhowto}
+Need a third toast variant (say \code{'info'})? Add it to the \code{Toast['variant']} union in \pathname{use-toast.ts}, add a matching \code{toast.info(...)} export next to \code{error}/\code{success}, and add its background/border/text classes to the ternary in \pathname{toaster.tsx}'s \code{className}. Nothing else needs to change — the store, the 5-second auto-dismiss timer, and the \code{useSyncExternalStore} plumbing are all variant-agnostic.
+\end{olkhowto}

@@ -8,6 +8,7 @@ olk/
 |-- src/
 |   |-- app/                  Next.js App Router: every route lives here
 |   |-- components/           Shared React components, used across routes
+|   |-- hooks/                Small reusable client hooks (see below)
 |   |-- lib/                  Server actions, Supabase clients, small utilities
 |   `-- proxy.ts               The Proxy layer (see Chapter 7)
 |-- supabase/
@@ -94,6 +95,29 @@ Route groups in parentheses, e.g. \pathname{(dashboard)}, do not appear in the U
 \pathcell{report-modal.tsx} & Report a user or book. \\
 \pathcell{request-card.tsx} & Shared card layout for incoming/outgoing requests. \\
 \pathcell{request-stepper.tsx} & Visual lifecycle stepper (lend vs. donate, declined short-circuit). \\
+\pathcell{genre-select.tsx} & The genre \code{<optgroup>} \code{<select>} markup, shared by My Books' add/edit forms and Browse's genre filter (Chapter~\ref{ch:pages}) — promoted here from a my-books-only component once a second page needed it. \\
+\pathcell{toaster.tsx} & Renders the active toast queue (Chapter~\ref{ch:components}); mounted once in the dashboard layout. \\
+\bottomrule
+\end{longtable}
+\end{center}
+
+\begin{olknote}
+\pathname{src/components/browse/}, \pathname{my-books/}, and \pathname{requests/} are three newer subdirectories not listed in the table above — they hold page-specific components extracted out of what used to be three very large single-file pages (\pathname{browse}, \pathname{my-books}, \pathname{requests/page.tsx}), not components meant to be reused across unrelated routes the way everything above is. Chapter~\ref{ch:pages} covers each of those splits where it covers the page it came from, which is the more useful place to read about them than a flat file listing here.
+\end{olknote}
+
+\section{\pathname{src/hooks} — small reusable client hooks}
+
+A newer, small directory — before it existed, the codebase's one reusable hook (\code{useFeatureFlags}) lived in \pathname{src/lib} alongside plain server utilities, which is where you'll still find it (below). Everything genuinely hook-shaped added since goes here instead.
+
+\begin{center}
+\begin{longtable}{@{}p{5.0cm} p{10.4cm}@{}}
+\toprule
+\textbf{File} & \textbf{Purpose} \\
+\midrule
+\endhead
+\pathcell{use-async-effect.ts} & \code{useAsyncEffect(fn, deps)} — the shared \code{useEffect(() => \{ queueMicrotask(() => fn()) \}, deps)} shape (Chapter~\ref{ch:workflow}), used across most dashboard pages' fetch-on-mount effects. \\
+\pathcell{use-toast.ts} & \code{toast.error(...)} / \code{toast.success(...)} plus the \code{useToasts()} subscription hook behind \pathname{toaster.tsx} (Chapter~\ref{ch:components}). \\
+\pathcell{use-requests.ts} & All data fetching and mutations for the Requests page (Chapter~\ref{ch:pages}) — \code{fetchRequests} plus six \code{handle*} mutation functions, extracted from \pathname{requests/page.tsx} into a single hook. \\
 \bottomrule
 \end{longtable}
 \end{center}

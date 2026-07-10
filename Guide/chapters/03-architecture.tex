@@ -76,3 +76,7 @@ Migrations & \code{supabase db reset} replays every file in \pathname{supabase/m
 \end{center}
 
 The two columns are deliberately structured to be as close to identical as possible — the same migrations, the same RLS policies, the same functions — so that "it works locally" is a meaningful, trustworthy signal before you ever touch the hosted database. Chapter~\ref{ch:local-env} is the practical walkthrough of the left column.
+
+\begin{olktask}
+Pick one concrete action — requesting a book from Browse is a good one — and trace it through Figure~\ref{fig:architecture} by name, using only this chapter and the cross-references it points to, \emph{before} reading the chapters that cover each hop in detail. Which box first receives the click (Client Components — \pathname{browse/page.tsx} is \code{"use client"}, Chapter~\ref{ch:pages})? What talks to Postgres, and as which role (Chapter~\ref{ch:rls})? What inside the Supabase box might reject the request even though your code is correct (Chapter~\ref{ch:functions})? Does the Proxy box get involved for this specific action, or only for the page load that preceded it (Chapter~\ref{ch:proxy})? Write the chain of boxes down, left to right, then go verify it as you read those chapters. Getting this wrong on the first attempt and correcting it teaches you the system's shape far faster than reading the right answer first would.
+\end{olktask}

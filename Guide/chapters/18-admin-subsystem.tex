@@ -32,6 +32,8 @@ The Quick Actions panel's ban action used to always call \code{banUser(userId, r
   \item \code{revalidatePath('/admin')}.
 \end{enumerate}
 
+These six steps are still exactly what happens, but as of a code-quality pass, steps 1, 5, and 6 are no longer written inside \code{banUser} itself — \code{banUser} is now a handler passed to a shared \code{withAdminAction('moderator', 'ban\_user', handler)} wrapper that performs the guard \emph{before} calling the handler and the log/revalidate \emph{after} it returns, identically for all 24 admin actions (Chapter~\ref{ch:server-actions} has the full code). Steps 2–4 above are the part that's genuinely specific to banning someone, and are all that's left inside \code{banUser}'s own handler body.
+
 The very next time that banned user makes any request to a protected route, \pathname{src/proxy.ts} (Chapter~\ref{ch:proxy}) reads \code{profiles.is\_banned}/\code{ban\_expires\_at} and redirects them to \pathname{/profile} — the one page a banned user can still reach, so they can at least see the ban reason rather than being stuck on an opaque redirect loop.
 
 \section{The audit log is the whole point}

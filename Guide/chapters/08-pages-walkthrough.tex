@@ -22,6 +22,10 @@ The \code{profiles!books\_owner\_id\_fkey(...)} syntax is PostgREST's way of nam
 
 The main discovery surface: search, genre/type/condition/area filters, a distance radius slider, request/bookmark actions, and entry points into the notes and report modals. It calls the \code{get\_books\_nearby} RPC (Chapter~\ref{ch:functions}) when the viewer has a location set, and falls back to a plain ordered query otherwise.
 
+\begin{olknote}
+This page used to be a single 683-line file mixing data fetching, the search/filter bar, and the per-book grid card all in one component. A code-quality pass split the presentational pieces out: \pathname{src/components/browse/search-filters.tsx} (the search bar, filter toggle, and all four filter controls) and \pathname{src/components/browse/book-card.tsx} (one grid item: cover, badges, owner info, and the request/bookmark/notes/report action row). \pathname{page.tsx} itself is now a 336-line orchestrator that keeps the location-aware fetching logic below and hands rendering to those two components — the sample below is unchanged and still lives directly in \pathname{page.tsx}, since search sanitisation is a data-fetching concern, not a presentational one.
+\end{olknote}
+
 \begin{lstlisting}[caption={Sanitising free-text search before building a PostgREST .or() filter}]
 function sanitizeSearchQuery(query: string): string {
   return query.replace(/[%_\\,().]/g, '\\$&')
@@ -42,7 +46,11 @@ This is a genuinely good, easy-to-miss defensive pattern worth understanding rat
 Add/edit/delete your own listings, the ISBN scanner integration (Chapter~\ref{ch:components}), and — for books currently out on loan or donation — a "books in your possession" panel with a reading-progress slider and a "Pass It On" flow that calls the \code{complete\_donated\_book\_reading} RPC (Chapter~\ref{ch:functions}).
 
 \begin{olknote}
-This page used to guess the id of a just-inserted book by re-querying \code{books} filtered by \code{owner\_id} and the just-typed \code{title}, ordered by \code{created\_at desc limit 1} — a rapid double-submission of a book with the same title could have matched the wrong row. It now uses \code{.insert(...).select('id').single()} and passes the returned id directly to \code{match\_wishlists\_for\_book}.
+This page used to guess the id of a just-inserted book by re-querying \code{books} filtered by \code{owner\_id} and the just-typed \code{title}, ordered by \code{created\_at desc limit 1} — a rapid double-submission of a book with the same title could have matched the wrong row. It now uses \code{.insert(...).select('id').single()} and passes the returned id directly to \code{match\_wishlists\_for\_book}. That code now lives in \pathname{src/components/my-books/add-book-form.tsx} rather than \pathname{page.tsx} itself — see the note below.
+\end{olknote}
+
+\begin{olknote}
+This was the single largest page in the frontend before a code-quality pass split it: 905 lines covering the add-book form, the listed-books table with inline editing, and the received-books/progress panel, all in one component. It's now five files under \pathname{src/components/my-books/}: \code{AddBookForm}, \code{MyBooksList} (with its own inline-edit state), \code{ReceivedBooksList} (progress + "Pass It On"), and two small shared pieces, \code{CoverInput} and \code{GenreSelect} — the latter promoted to \pathname{src/components/genre-select.tsx} once Browse's filter bar needed the same genre \code{<select>} markup that used to be duplicated verbatim between this page's add and edit forms. \pathname{page.tsx} itself is now a 75-line orchestrator: it owns the two top-level fetches (\code{fetchMyBooks}, \code{fetchReceivedBooks}) and passes data and refetch callbacks down.
 \end{olknote}
 
 \section{Requests — \pathname{app/(dashboard)/requests/page.tsx}}
@@ -69,6 +77,10 @@ if (outgoingData) {
 \end{lstlisting}
 
 The underlying fact worth internalising: \code{books.owner\_id} is a foreign key to \code{auth.users(id)}, \emph{not} to \code{public.profiles(id)} (Chapter~\ref{ch:schema}). PostgREST can only auto-embed a related table across an actual foreign-key edge that its schema cache knows about, and it does not reach across \code{auth.users} into \code{public.profiles} for you — even though every \code{profiles.id} \emph{is} an \code{auth.users.id} by construction (Chapter~\ref{ch:functions}'s \code{handle\_new\_user} trigger guarantees the pairing exists). Whenever you need "the book owner's profile" rather than "the requester's profile" (whose FK to \code{profiles} does exist and embeds fine), you need a second, manual, batched query like the one above — never a per-row query in a loop.
+
+\begin{olknote}
+That comment and the fetch logic around it now live in \pathname{src/hooks/use-requests.ts}, not \pathname{page.tsx} — a code-quality pass extracted every data fetch and mutation (\code{fetchRequests} plus the six \code{handle*} functions for accept/decline/handover/return/complete-reading/progress) into a \code{useRequests()} hook, and the near-duplicated incoming/outgoing action-button JSX into \pathname{src/components/requests/request-actions.tsx} (one component, taking a \code{kind: 'incoming' | 'outgoing'} prop, since the two share every button except the incoming-only Accept/Decline pair) and \pathname{reading-progress-footer.tsx} (the outgoing-only progress slider and "Complete Reading" flow). \pathname{page.tsx} dropped from 522 lines to 183 and is now purely: call the hook, map two arrays through \code{RequestCard}. The institutional-memory comment above moved with its code, unchanged — extraction is not an excuse to lose a comment like that.
+\end{olknote}
 
 \section{Messages — list and detail}
 

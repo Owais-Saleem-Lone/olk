@@ -34,6 +34,15 @@ Nearly every function in this codebase is \code{SECURITY DEFINER}, and that is t
 \code{SECURITY DEFINER} is exactly as dangerous as it is useful: a bug in a \code{SECURITY DEFINER} function's SQL body is a bug that runs with elevated privilege, bypassing the RLS policies that would otherwise contain it. Every such function in this codebase is deliberately narrow — it returns only specific, chosen columns (never \code{SELECT *} on a sensitive table), and several (\code{match\_wishlists\_for\_book}, the \code{admin\_get\_*} analytics functions) explicitly \code{REVOKE}/\code{GRANT} execute permission rather than relying on the default. If you add a new \code{SECURITY DEFINER} function, that same discipline — narrow return columns, explicit grants — is not optional.
 \end{olkwarn}
 
+\begin{olkhowto}
+Building a new feature and unsure whether it needs a query-builder call or a new RPC? Ask, in order:
+\begin{enumerate}
+  \item Does a plain \code{.from(...).select(...)} under the \emph{current user's own} RLS policies return everything you need? If yes, use the query builder — it's simpler, and every future reader sees exactly what's being fetched without also opening a separate SQL file.
+  \item If not: is the gap "I need to see rows RLS would normally hide from this user" (a cross-user aggregate, a fuzzy match across everyone's data)? That's a \code{SECURITY DEFINER} RPC — but keep its return columns as narrow as the feature actually needs, per the warning above, never \code{SELECT *}.
+  \item If the gap is instead "this needs to happen atomically, or enforce a rule no client should be able to bypass" (a rate limit, an eligibility check) — that's a trigger the database enforces on every write, not an RPC the client has to remember to call. Chapter~\ref{ch:functions} covers both patterns side by side.
+\end{enumerate}
+\end{olkhowto}
+
 \section{\code{auth.users} vs. \code{public.profiles}}
 
 Supabase Auth owns a schema called \code{auth}, and \code{auth.users} is its user table — email, hashed password, confirmation status, and so on. Application code is not supposed to touch \code{auth.users} directly (and mostly can't, through the query builder — RLS on \code{auth} tables is Supabase's own concern, not this project's). Instead, OLK's own \code{public.profiles} table holds everything the app actually needs to display or query (display name, area, bio, admin role, ban state), with \code{profiles.id} equal to \code{auth.users.id}.

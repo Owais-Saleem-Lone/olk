@@ -7,68 +7,87 @@ A file starting with the string \code{'use server'} exports functions that Next.
 
 \section{The admin action pattern: guard, act, log, revalidate}
 
-Every one of the roughly 30 functions in \pathname{admin-actions.ts} follows the identical four-step shape:
+Every one of the 24 functions in \pathname{admin-actions.ts} follows the identical four-step shape — but as of a code-quality pass across the whole codebase, that shape now lives in exactly one place, a higher-order function named \code{withAdminAction}, instead of being copy-pasted into every function body:
 
-\begin{lstlisting}[caption={src/lib/admin-actions.ts — the shared shape, illustrated with banUser}]
-async function guardRole(minRole: AdminRole = 'moderator') {
-  const admin = await checkAdminAPI(minRole)
-  if (!admin) throw new Error('Unauthorized')
-  return admin
+\begin{lstlisting}[caption={src/lib/admin-actions.ts — the shared wrapper, illustrated with banUser}]
+function withAdminAction<Args extends unknown[]>(
+  minRole: AdminRole,
+  action: string,
+  handler: (ctx: AdminActionCtx, ...args: Args) => Promise<AuditMeta>
+): (...args: Args) => Promise<ActionResult> {
+  return async (...args: Args) => {
+    try {
+      const admin = await guardRole(minRole)                    // 1. GUARD
+      const supabase = await createClient()
+      const { targetType, targetId, details } =
+        await handler({ admin, supabase }, ...args)              // 2. ACT
+      await auditLog(admin.id, action, targetType, targetId, details)  // 3. LOG
+      revalidatePath('/admin')                                   // 4. REVALIDATE
+      return { success: true }
+    } catch (e) {
+      return { success: false, error: (e as Error).message }
+    }
+  }
 }
 
-export async function banUser(
-  userId: string, reason: string, isPermanent: boolean, durationDays?: number
-): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')                 // 1. GUARD
-    const supabase = await createClient()
-
+export const banUser = withAdminAction(
+  'moderator', 'ban_user',
+  async ({ admin, supabase }, userId: string, reason: string, isPermanent: boolean, durationDays?: number) => {
     const expiresAt = !isPermanent && durationDays
       ? new Date(Date.now() + durationDays * 86400000).toISOString() : null
 
     await supabase.from('user_bans').insert({ user_id: userId, admin_id: admin.id, reason, is_permanent: isPermanent, expires_at: expiresAt })
     await supabase.from('profiles').update({ is_banned: true, ban_reason: reason, ban_expires_at: expiresAt }).eq('id', userId)
-    await supabase.from('notifications').insert({ user_id: userId, type: 'admin', title: /* ... */ '', link: '/profile' })  // 2. ACT
+    await supabase.from('notifications').insert({ user_id: userId, type: 'admin', title: /* ... */ '', link: '/profile' })
 
-    await auditLog(admin.id, 'ban_user', 'user', userId, { reason, isPermanent, durationDays })  // 3. LOG
-    revalidatePath('/admin')                                    // 4. REVALIDATE
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'user', targetId: userId, details: { reason, isPermanent, durationDays } }
   }
-}
+)
 \end{lstlisting}
 
 \begin{enumerate}
-  \item \textbf{Guard} — \code{guardRole(minRole)} calls \code{checkAdminAPI} (Chapter~\ref{ch:rls}) and throws if the caller doesn't meet the role floor. This is a check made on top of RLS, not instead of it — the subsequent Supabase calls in the function body still go through RLS as whatever role the Server Action's own Supabase client authenticates as (the calling user's session, via \pathname{src/lib/supabase/server.ts}), so a bug in \code{guardRole} would still have to also defeat RLS to cause real damage.
-  \item \textbf{Act} — the actual mutation(s): update rows, and near-always insert a \code{notifications} row telling the affected user what just happened to them.
-  \item \textbf{Log} — every action writes exactly one row to \code{admin\_audit\_log} (Chapter~\ref{ch:schema}) recording who did what, to what, with what details, as structured \code{jsonb}. This is not optional or conditional anywhere in the file — it is the mechanism that makes the platform's moderation history fully reconstructable after the fact.
+  \item \textbf{Guard} — \code{guardRole(minRole)} calls \code{checkAdminAPI} (Chapter~\ref{ch:rls}) and throws if the caller doesn't meet the role floor. This is a check made on top of RLS, not instead of it — the subsequent Supabase calls in the handler still go through RLS as whatever role the Server Action's own Supabase client authenticates as (the calling user's session, via \pathname{src/lib/supabase/server.ts}), so a bug in \code{guardRole} would still have to also defeat RLS to cause real damage.
+  \item \textbf{Act} — the handler passed to \code{withAdminAction} does the actual mutation(s), near-always inserting a \code{notifications} row telling the affected user what just happened to them, then returns \emph{what to audit-log} rather than performing the log itself.
+  \item \textbf{Log} — the wrapper writes exactly one row to \code{admin\_audit\_log} (Chapter~\ref{ch:schema}) per call, built from the handler's return value plus the wrapper's own \code{action} string. This is not optional or conditional anywhere — a handler cannot forget it, because it isn't the handler's job to call it.
   \item \textbf{Revalidate} — \code{revalidatePath('/admin')} tells Next.js's cache that server-rendered data under \pathname{/admin} may be stale and should be refetched on next navigation.
 \end{enumerate}
 
 \begin{olktip}
-Every function returns \code{\{ success: boolean, error?: string \}} rather than throwing across the server/client boundary, and every function's entire body is wrapped in \code{try/catch}. When you add a new admin action, match this shape exactly — calling code throughout the admin pages (Chapter~\ref{ch:pages}) uniformly checks \code{result.success} rather than using \code{try/catch} at the call site.
+Every action still resolves to \code{\{ success: boolean, error?: string \}} rather than throwing across the server/client boundary — that contract is unchanged, only where the \code{try/catch} lives has moved. Calling code throughout the admin pages (Chapter~\ref{ch:pages}) still uniformly checks \code{result.success} rather than using \code{try/catch} at the call site.
 \end{olktip}
 
 \begin{olkhowto}
-Adding action \#31 to \pathname{admin-actions.ts}? Copy \code{banUser}'s shape exactly rather than starting from a blank function:
+Adding action \#25 to \pathname{admin-actions.ts}? Wrap it with \code{withAdminAction} rather than hand-writing the guard/log/revalidate scaffolding:
 \begin{enumerate}
-  \item Signature returns \code{Promise<ActionResult>}, whole body inside one \code{try/catch}.
-  \item First line inside the \code{try}: \code{const admin = await guardRole('moderator')} (or \code{'super\_admin'} for anything platform-settings-adjacent, per Chapter~\ref{ch:admin}).
-  \item Mutate, then insert a \code{notifications} row for whichever user should be told what just happened.
-  \item \code{await auditLog(admin.id, 'your\_action\_name', 'target\_type', targetId, \{ ...details \})} — never optional, never conditional.
-  \item \code{revalidatePath('/admin')} as the last line before \code{return \{ success: true \}}.
+  \item \code{export const yourAction = withAdminAction(minRole, 'your\_action\_name', async (\{ admin, supabase \}, ...yourArgs) => \{ ... \})} — \code{minRole} is \code{'moderator'} for anything reversible, \code{'super\_admin'} for anything destructive or platform-settings-adjacent (Chapter~\ref{ch:admin}).
+  \item Inside the handler: mutate, then insert a \code{notifications} row for whichever user should be told what just happened.
+  \item End the handler with \code{return \{ targetType: 'your\_target\_type', targetId, details: \{ ...whatever's worth auditing \} \}} — this is what becomes the \code{admin\_audit\_log} row; there is no way to skip it, since it's also the handler's only return value.
 \end{enumerate}
-Skip step 4 and the action still works end to end, but it becomes invisible to \pathname{admin/settings/page.tsx}'s audit log — the one place a \code{super\_admin} can answer "who did this."
+The old failure mode — an action that works but is invisible to \pathname{admin/settings/page.tsx}'s audit log because a developer forgot the \code{auditLog(...)} call — is now structurally harder to hit, since logging happens in the wrapper rather than being one more line a handler author has to remember.
 \end{olkhowto}
 
 \section{Notifications: in-app row first, email best-effort second}
 
 \begin{lstlisting}[caption={src/lib/notifications.ts — in full}]
-export async function createNotification({ userId, type, title, link }: NotificationPayload) {
+type NotificationContext =
+  | { kind: 'request'; id: string }
+  | { kind: 'club_join'; id: string }
+  | { kind: 'club_announcement'; id: string }
+  | { kind: 'wishlist_match'; id: string }
+
+export async function createNotification({ userId, type, title, link, context }: NotificationPayload) {
   const supabase = await createServerClient()          // the calling user's session
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
+
+  const { data: allowed, error: guardError } = await supabase.rpc('can_notify', {
+    p_target_user: userId,
+    p_context_type: context.kind,
+    p_context_id: context.id,
+  })
+  if (guardError || !allowed) {
+    throw new Error('Forbidden: no valid relationship to notify this user')
+  }
 
   const supabaseAdmin = createAdminClient(              // service-role client
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -91,6 +110,10 @@ The in-app notification row is written first and its failure is a hard error (th
 
 \begin{olknote}
 This function used to insert with the calling user's own session client, which worked only because the \code{notifications} INSERT policy was, at the time, wide open to any authenticated user (Chapter~\ref{ch:rls}). Now that policy only allows \code{auth.uid() = user\_id}, and most calls here are inherently cross-user (the \emph{other} party in a request/message/club gets notified, not the caller) — so this action switched to the service-role client, after first confirming the caller has a valid session. It is now the trusted server-side gate for every cross-user notification the app creates outside the admin actions in Chapter~\ref{ch:admin} (which have their own, separate "admins/mods can insert for anyone" policy).
+\end{olknote}
+
+\begin{olknote}
+\textbf{That gate used to check only "is the caller logged in," not "does the caller actually have a reason to notify this specific person."} Since every call here goes through the service-role client, an authenticated-only check meant any user could call this Server Action directly (it's a plain exported async function, reachable from any client) with an arbitrary \code{userId}, \code{title}, and \code{link} — spamming or phishing an unrelated user with a fake notification. The fix is the \code{context} parameter and the \code{can\_notify(p\_target\_user, p\_context\_type, p\_context\_id)} RPC shown above: a \code{SECURITY DEFINER} SQL function (Chapter~\ref{ch:functions}) that verifies the caller and \code{userId} are the two real parties on the referenced \code{book\_requests}/\code{clubs}/\code{club\_members}/\code{wishlists} row, before the insert is allowed to proceed. It needs to be \code{SECURITY DEFINER} for at least one case that RLS alone can't express: a book owner adding a new listing that matches someone else's wishlist has no RLS-visible relationship to that wishlist row (\code{"Users can view own wishlists"} would otherwise hide it from them entirely), so the verification has to run with elevated privilege and check the real underlying fact — that the wishlist's \code{matched\_book\_id} now points to a book the caller owns — rather than relying on what the caller's own session is allowed to \code{SELECT}. All six call sites (\pathname{browse}, \pathname{my-books}, \pathname{requests}, \pathname{messages/[id]}, \pathname{clubs/[id]} $\times$2) now pass a \code{context} identifying which real-world relationship justifies the notification.
 \end{olknote}
 
 \section{Sending the actual email: a service-role client, on purpose}
@@ -122,6 +145,7 @@ A brand-new notification \code{type} (say \code{'club\_invite'}) touches more th
   \item There is no enum or TypeScript union constraining \code{type} — it's a plain string column (Chapter~\ref{ch:schema}). A typo here doesn't fail at write time; it fails silently at read time, as step 2 below.
   \item \pathname{src/components/notification-bell.tsx} and \pathname{src/app/(dashboard)/notifications/page.tsx} both index into an \code{ICONS} lookup object keyed by \code{n.type}, falling back to a generic bell emoji when the key is missing — add your new type as a key in \emph{each} file's \code{ICONS} object, or it silently falls back to that generic icon rather than erroring.
   \item If \code{title} ever includes user-typed text for this new type, route it through \code{escapeHtml} before it can reach \pathname{send-notification-email.ts} (the warning above) — easy to forget for a brand-new call site since nothing enforces it.
+  \item Decide which existing \code{context.kind} the new call site's relationship maps to (\code{'request'}, \code{'club\_join'}, \code{'club\_announcement'}, or \code{'wishlist\_match'}) — or, if it's a genuinely new kind of relationship, add a new branch to \code{can\_notify()} (Chapter~\ref{ch:rls}) \emph{before} wiring up the call site. \code{createNotification} throws \code{"Forbidden"} if \code{can\_notify} doesn't recognise the \code{context.kind} or can't verify the relationship, so a new notification type with no matching branch fails loudly for every caller rather than silently succeeding.
 \end{enumerate}
 \end{olkhowto}
 
