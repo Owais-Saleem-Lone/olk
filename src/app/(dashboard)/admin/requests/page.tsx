@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { cancelRequest, forceReturnBook } from '@/lib/admin-actions'
 
 type Request = {
@@ -89,8 +90,8 @@ export default function AdminRequestsPage() {
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => {
-    queueMicrotask(() => { if (tab === 'all') loadRequests(); else loadOverdue() })
+  useAsyncEffect(() => {
+    if (tab === 'all') loadRequests(); else loadOverdue()
   }, [tab, loadRequests, loadOverdue])
 
   async function handleCancel(requestId: string) {

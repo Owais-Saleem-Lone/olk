@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import Link from 'next/link'
 import { NOTIFICATION_ICONS as ICONS } from '@/lib/notification-icons'
 
@@ -48,7 +49,7 @@ export default function NotificationsPage() {
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => { queueMicrotask(() => fetchAll()) }, [fetchAll])
+  useAsyncEffect(() => fetchAll(), [fetchAll])
 
   const markAllRead = async () => {
     const ids = notifications.filter(n => !n.read).map(n => n.id)

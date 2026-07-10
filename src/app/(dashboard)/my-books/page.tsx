@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { compressImage, validateImageUrl } from '@/lib/image-utils'
 import { createNotification } from '@/lib/notifications'
 import { dueDaysLeft } from '@/lib/date-utils'
@@ -125,7 +126,7 @@ export default function MyBooksPage() {
     }
   }, [supabase])
 
-  useEffect(() => { queueMicrotask(() => { fetchMyBooks(); fetchReceivedBooks() }) }, [fetchMyBooks, fetchReceivedBooks])
+  useAsyncEffect(() => { fetchMyBooks(); fetchReceivedBooks() }, [fetchMyBooks, fetchReceivedBooks])
 
   // ── Cover helpers ──
   const makeFileHandler = (

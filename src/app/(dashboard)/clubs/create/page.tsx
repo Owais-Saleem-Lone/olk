@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -82,7 +83,7 @@ export default function CreateClubPage() {
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => { queueMicrotask(() => checkEligibility()) }, [checkEligibility])
+  useAsyncEffect(() => checkEligibility(), [checkEligibility])
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 
 export default function ProfilePage() {
   const supabase = createClient()
@@ -40,9 +41,7 @@ export default function ProfilePage() {
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => {
-    queueMicrotask(() => fetchProfile())
-  }, [fetchProfile])
+  useAsyncEffect(() => fetchProfile(), [fetchProfile])
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {

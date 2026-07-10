@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { createNotification } from '@/lib/notifications'
 import { formatDistance } from '@/lib/geo'
 import Link from 'next/link'
@@ -195,12 +196,10 @@ export default function BrowsePage() {
     }
   }
 
-  useEffect(() => {
-    queueMicrotask(() => fetchBooks(searchQuery))
-    // Intentionally run once on mount with the initial searchQuery; typing updates
-    // searchQuery on every keystroke and search is otherwise triggered explicitly via handleSearch.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // Intentionally run once on mount with the initial searchQuery; typing updates
+  // searchQuery on every keystroke and search is otherwise triggered explicitly via handleSearch.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useAsyncEffect(() => fetchBooks(searchQuery), [])
 
   useEffect(() => {
     if (!mounted.current) { mounted.current = true; return }

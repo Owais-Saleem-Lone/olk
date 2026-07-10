@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { createAnnouncement, deleteAnnouncement, manageGenre, manageArea, saveBotm } from '@/lib/admin-actions'
 
 type Announcement = { id: string; title: string; body: string | null; type: string; is_banner: boolean; active: boolean; starts_at: string; ends_at: string | null; created_at: string }
@@ -67,13 +68,11 @@ export default function AdminContentPage() {
     }
   }, [supabase])
 
-  useEffect(() => {
-    queueMicrotask(() => {
-      if (tab === 'announcements') loadAnnouncements()
-      if (tab === 'genres') loadGenres()
-      if (tab === 'areas') loadAreas()
-      if (tab === 'botm') loadBotm()
-    })
+  useAsyncEffect(() => {
+    if (tab === 'announcements') loadAnnouncements()
+    if (tab === 'genres') loadGenres()
+    if (tab === 'areas') loadAreas()
+    if (tab === 'botm') loadBotm()
   }, [tab, loadAnnouncements, loadGenres, loadAreas, loadBotm])
 
   async function handleCreateAnnouncement() {

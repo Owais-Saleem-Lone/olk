@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import Link from 'next/link'
 
 type Conversation = {
@@ -130,7 +131,7 @@ export default function MessagesPage() {
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => { queueMicrotask(() => fetchConversations()) }, [fetchConversations])
+  useAsyncEffect(() => fetchConversations(), [fetchConversations])
 
   if (loading) return <p className="text-slate-400">Loading messages...</p>
 

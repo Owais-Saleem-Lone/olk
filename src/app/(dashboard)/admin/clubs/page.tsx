@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { deactivateClub, reactivateClub, removeClubMember, transferClubOwnership } from '@/lib/admin-actions'
 
 type Club = {
@@ -50,7 +51,7 @@ export default function AdminClubsPage() {
     setLoading(false)
   }, [supabase, filter])
 
-  useEffect(() => { queueMicrotask(() => loadClubs()) }, [loadClubs])
+  useAsyncEffect(() => loadClubs(), [loadClubs])
 
   async function selectClub(club: Club) {
     setSelected(club)

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { updateReportStatus, addAdminNote, updateReportCategory, banUser, warnUser, hideBook } from '@/lib/admin-actions'
 
 type Report = {
@@ -85,7 +86,7 @@ export default function AdminReportsPage() {
     setLoading(false)
   }, [supabase, filter, filterCat])
 
-  useEffect(() => { queueMicrotask(() => loadReports()) }, [loadReports])
+  useAsyncEffect(() => loadReports(), [loadReports])
 
   async function selectReport(r: Report) {
     setSelected(r)

@@ -1,10 +1,12 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { checkAdminAPI, type AdminRole } from '@/lib/admin'
+import { checkAdminAPI, type AdminRole, type AdminUser } from '@/lib/admin'
 import { revalidatePath } from 'next/cache'
 
 type ActionResult = { success: boolean; error?: string }
+type AuditMeta = { targetType: string; targetId: string | null; details?: Record<string, unknown> }
+type AdminActionCtx = { admin: AdminUser; supabase: Awaited<ReturnType<typeof createClient>> }
 
 async function auditLog(
   adminId: string,
@@ -29,20 +31,36 @@ async function guardRole(minRole: AdminRole = 'moderator') {
   return admin
 }
 
+// Collapses the guardRole -> createClient -> try/catch -> auditLog -> revalidatePath
+// skeleton shared by every admin action below. `handler` does the action-specific
+// work and returns what to record in the audit log.
+function withAdminAction<Args extends unknown[]>(
+  minRole: AdminRole,
+  action: string,
+  handler: (ctx: AdminActionCtx, ...args: Args) => Promise<AuditMeta>
+): (...args: Args) => Promise<ActionResult> {
+  return async (...args: Args) => {
+    try {
+      const admin = await guardRole(minRole)
+      const supabase = await createClient()
+      const { targetType, targetId, details } = await handler({ admin, supabase }, ...args)
+      await auditLog(admin.id, action, targetType, targetId, details)
+      revalidatePath('/admin')
+      return { success: true }
+    } catch (e) {
+      return { success: false, error: (e as Error).message }
+    }
+  }
+}
+
 // ═══════════════════════════════════════════
 // USER MANAGEMENT
 // ═══════════════════════════════════════════
 
-export async function banUser(
-  userId: string,
-  reason: string,
-  isPermanent: boolean,
-  durationDays?: number
-): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const banUser = withAdminAction(
+  'moderator',
+  'ban_user',
+  async ({ admin, supabase }, userId: string, reason: string, isPermanent: boolean, durationDays?: number) => {
     const expiresAt = !isPermanent && durationDays
       ? new Date(Date.now() + durationDays * 86400000).toISOString()
       : null
@@ -71,19 +89,14 @@ export async function banUser(
       link: '/profile',
     })
 
-    await auditLog(admin.id, 'ban_user', 'user', userId, { reason, isPermanent, durationDays })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'user', targetId: userId, details: { reason, isPermanent, durationDays } }
   }
-}
+)
 
-export async function unbanUser(userId: string): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const unbanUser = withAdminAction(
+  'moderator',
+  'unban_user',
+  async ({ admin, supabase }, userId: string) => {
     await supabase.from('profiles').update({
       is_banned: false,
       ban_reason: null,
@@ -102,19 +115,14 @@ export async function unbanUser(userId: string): Promise<ActionResult> {
       link: '/profile',
     })
 
-    await auditLog(admin.id, 'unban_user', 'user', userId)
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'user', targetId: userId }
   }
-}
+)
 
-export async function warnUser(userId: string, reason: string): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const warnUser = withAdminAction(
+  'moderator',
+  'warn_user',
+  async ({ admin, supabase }, userId: string, reason: string) => {
     await supabase.from('user_warnings').insert({
       user_id: userId,
       admin_id: admin.id,
@@ -138,19 +146,14 @@ export async function warnUser(userId: string, reason: string): Promise<ActionRe
       link: '/profile',
     })
 
-    await auditLog(admin.id, 'warn_user', 'user', userId, { reason })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'user', targetId: userId, details: { reason } }
   }
-}
+)
 
-export async function resetUserProfile(userId: string, field: 'display_name' | 'area_name'): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const resetUserProfile = withAdminAction(
+  'moderator',
+  'reset_profile',
+  async ({ supabase }, userId: string, field: 'display_name' | 'area_name') => {
     await supabase.from('profiles')
       .update({ [field]: null })
       .eq('id', userId)
@@ -162,19 +165,14 @@ export async function resetUserProfile(userId: string, field: 'display_name' | '
       link: '/profile',
     })
 
-    await auditLog(admin.id, 'reset_profile', 'user', userId, { field })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'user', targetId: userId, details: { field } }
   }
-}
+)
 
-export async function setAdminRole(userId: string, role: AdminRole | null): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('super_admin')
-    const supabase = await createClient()
-
+export const setAdminRole = withAdminAction(
+  'super_admin',
+  'set_admin_role',
+  async ({ supabase }, userId: string, role: AdminRole | null) => {
     if (role) {
       await supabase.from('profiles')
         .update({ is_admin: true, admin_role: role })
@@ -185,23 +183,18 @@ export async function setAdminRole(userId: string, role: AdminRole | null): Prom
         .eq('id', userId)
     }
 
-    await auditLog(admin.id, 'set_admin_role', 'user', userId, { role })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'user', targetId: userId, details: { role } }
   }
-}
+)
 
 // ═══════════════════════════════════════════
 // BOOK MANAGEMENT
 // ═══════════════════════════════════════════
 
-export async function hideBook(bookId: string, reason: string): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const hideBook = withAdminAction(
+  'moderator',
+  'hide_book',
+  async ({ supabase }, bookId: string, reason: string) => {
     const { data: book } = await supabase
       .from('books')
       .select('owner_id, title')
@@ -225,19 +218,14 @@ export async function hideBook(bookId: string, reason: string): Promise<ActionRe
       })
     }
 
-    await auditLog(admin.id, 'hide_book', 'book', bookId, { reason })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'book', targetId: bookId, details: { reason } }
   }
-}
+)
 
-export async function unhideBook(bookId: string): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const unhideBook = withAdminAction(
+  'moderator',
+  'unhide_book',
+  async ({ supabase }, bookId: string) => {
     await supabase.from('books').update({
       hidden_by_admin: false,
       admin_hide_reason: null,
@@ -245,36 +233,23 @@ export async function unhideBook(bookId: string): Promise<ActionResult> {
       status: 'available',
     }).eq('id', bookId)
 
-    await auditLog(admin.id, 'unhide_book', 'book', bookId)
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'book', targetId: bookId }
   }
-}
+)
 
-export async function editBook(
-  bookId: string,
-  updates: { title?: string; author?: string; genre?: string }
-): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const editBook = withAdminAction(
+  'moderator',
+  'edit_book',
+  async ({ supabase }, bookId: string, updates: { title?: string; author?: string; genre?: string }) => {
     await supabase.from('books').update(updates).eq('id', bookId)
-    await auditLog(admin.id, 'edit_book', 'book', bookId, updates)
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'book', targetId: bookId, details: updates }
   }
-}
+)
 
-export async function bulkHideBooks(bookIds: string[], reason: string): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const bulkHideBooks = withAdminAction(
+  'moderator',
+  'bulk_hide_books',
+  async ({ supabase }, bookIds: string[], reason: string) => {
     await supabase.from('books').update({
       hidden_by_admin: true,
       admin_hide_reason: reason,
@@ -282,23 +257,18 @@ export async function bulkHideBooks(bookIds: string[], reason: string): Promise<
       status: 'unavailable',
     }).in('id', bookIds)
 
-    await auditLog(admin.id, 'bulk_hide_books', 'book', null, { bookIds, reason })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'book', targetId: null, details: { bookIds, reason } }
   }
-}
+)
 
 // ═══════════════════════════════════════════
 // REQUEST MANAGEMENT
 // ═══════════════════════════════════════════
 
-export async function cancelRequest(requestId: string, reason: string): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const cancelRequest = withAdminAction(
+  'moderator',
+  'cancel_request',
+  async ({ supabase }, requestId: string, reason: string) => {
     const { data: req } = await supabase
       .from('book_requests')
       .select('requester_id, book_id, books(owner_id, title, status)')
@@ -327,19 +297,14 @@ export async function cancelRequest(requestId: string, reason: string): Promise<
       })
     }
 
-    await auditLog(admin.id, 'cancel_request', 'request', requestId, { reason })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'request', targetId: requestId, details: { reason } }
   }
-}
+)
 
-export async function forceReturnBook(requestId: string): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const forceReturnBook = withAdminAction(
+  'moderator',
+  'force_return',
+  async ({ supabase }, requestId: string) => {
     await supabase.from('book_requests').update({
       status: 'returned',
       completed_at: new Date().toISOString(),
@@ -357,26 +322,18 @@ export async function forceReturnBook(requestId: string): Promise<ActionResult> 
         .eq('id', req.book_id)
     }
 
-    await auditLog(admin.id, 'force_return', 'request', requestId)
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'request', targetId: requestId }
   }
-}
+)
 
 // ═══════════════════════════════════════════
 // REPORTS & MODERATION
 // ═══════════════════════════════════════════
 
-export async function updateReportStatus(
-  reportId: string,
-  status: string
-): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const updateReportStatus = withAdminAction(
+  'moderator',
+  'update_report',
+  async ({ admin, supabase }, reportId: string, status: string) => {
     const updates: Record<string, unknown> = { status }
     if (status === 'resolved' || status === 'dismissed') {
       updates.resolved_at = new Date().toISOString()
@@ -384,140 +341,100 @@ export async function updateReportStatus(
     }
 
     await supabase.from('reports').update(updates).eq('id', reportId)
-    await auditLog(admin.id, 'update_report', 'report', reportId, { status })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'report', targetId: reportId, details: { status } }
   }
-}
+)
 
-export async function assignReport(reportId: string, assigneeId: string): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const assignReport = withAdminAction(
+  'moderator',
+  'assign_report',
+  async ({ supabase }, reportId: string, assigneeId: string) => {
     await supabase.from('reports').update({ assigned_to: assigneeId }).eq('id', reportId)
-    await auditLog(admin.id, 'assign_report', 'report', reportId, { assigneeId })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'report', targetId: reportId, details: { assigneeId } }
   }
-}
+)
 
-export async function addAdminNote(reportId: string, content: string): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const addAdminNote = withAdminAction(
+  'moderator',
+  'add_note',
+  async ({ admin, supabase }, reportId: string, content: string) => {
     await supabase.from('admin_notes').insert({
       report_id: reportId,
       admin_id: admin.id,
       content,
     })
 
-    await auditLog(admin.id, 'add_note', 'report', reportId)
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'report', targetId: reportId }
   }
-}
+)
 
-export async function updateReportCategory(reportId: string, category: string): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const updateReportCategory = withAdminAction(
+  'moderator',
+  'categorize_report',
+  async ({ supabase }, reportId: string, category: string) => {
     await supabase.from('reports').update({ category }).eq('id', reportId)
-    await auditLog(admin.id, 'categorize_report', 'report', reportId, { category })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'report', targetId: reportId, details: { category } }
   }
-}
+)
 
 // ═══════════════════════════════════════════
 // CLUB MANAGEMENT
 // ═══════════════════════════════════════════
 
-export async function deactivateClub(clubId: string): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const deactivateClub = withAdminAction(
+  'moderator',
+  'deactivate_club',
+  async ({ supabase }, clubId: string) => {
     await supabase.from('clubs').update({ active: false }).eq('id', clubId)
-    await auditLog(admin.id, 'deactivate_club', 'club', clubId)
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'club', targetId: clubId }
   }
-}
+)
 
-export async function reactivateClub(clubId: string): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const reactivateClub = withAdminAction(
+  'moderator',
+  'reactivate_club',
+  async ({ supabase }, clubId: string) => {
     await supabase.from('clubs').update({ active: true }).eq('id', clubId)
-    await auditLog(admin.id, 'reactivate_club', 'club', clubId)
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'club', targetId: clubId }
   }
-}
+)
 
-export async function removeClubMember(clubId: string, userId: string): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const removeClubMember = withAdminAction(
+  'moderator',
+  'remove_club_member',
+  async ({ supabase }, clubId: string, userId: string) => {
     await supabase.from('club_members')
       .delete()
       .eq('club_id', clubId)
       .eq('user_id', userId)
 
-    await auditLog(admin.id, 'remove_club_member', 'club', clubId, { userId })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'club', targetId: clubId, details: { userId } }
   }
-}
+)
 
-export async function transferClubOwnership(clubId: string, newOwnerId: string): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('super_admin')
-    const supabase = await createClient()
-
+export const transferClubOwnership = withAdminAction(
+  'super_admin',
+  'transfer_club',
+  async ({ supabase }, clubId: string, newOwnerId: string) => {
     await supabase.from('clubs').update({ creator_id: newOwnerId }).eq('id', clubId)
-    await auditLog(admin.id, 'transfer_club', 'club', clubId, { newOwnerId })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'club', targetId: clubId, details: { newOwnerId } }
   }
-}
+)
 
 // ═══════════════════════════════════════════
 // CONTENT MANAGEMENT
 // ═══════════════════════════════════════════
 
-export async function createAnnouncement(data: {
-  title: string
-  body?: string
-  type: string
-  isBanner: boolean
-  endsAt?: string
-}): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const createAnnouncement = withAdminAction(
+  'moderator',
+  'create_announcement',
+  async ({ admin, supabase }, data: {
+    title: string
+    body?: string
+    type: string
+    isBanner: boolean
+    endsAt?: string
+  }) => {
     if (data.isBanner) {
       await supabase.from('announcements')
         .update({ is_banner: false })
@@ -533,77 +450,57 @@ export async function createAnnouncement(data: {
       ends_at: data.endsAt || null,
     })
 
-    await auditLog(admin.id, 'create_announcement', 'announcement', null, data)
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'announcement', targetId: null, details: data }
   }
-}
+)
 
-export async function deleteAnnouncement(id: string): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const deleteAnnouncement = withAdminAction(
+  'moderator',
+  'delete_announcement',
+  async ({ supabase }, id: string) => {
     await supabase.from('announcements').delete().eq('id', id)
-    await auditLog(admin.id, 'delete_announcement', 'announcement', id)
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'announcement', targetId: id }
   }
-}
+)
 
-export async function manageGenre(action: 'add' | 'toggle', name: string, active?: boolean): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const manageGenre = withAdminAction(
+  'moderator',
+  'genre_manage',
+  async ({ supabase }, action: 'add' | 'toggle', name: string, active?: boolean) => {
     if (action === 'add') {
       await supabase.from('genres').insert({ name, active: true })
     } else {
       await supabase.from('genres').update({ active: active ?? false }).eq('name', name)
     }
 
-    await auditLog(admin.id, `genre_${action}`, 'genre', null, { name, active })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'genre', targetId: null, details: { action, name, active } }
   }
-}
+)
 
-export async function manageArea(action: 'add' | 'toggle', name: string, district?: string, active?: boolean): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const manageArea = withAdminAction(
+  'moderator',
+  'area_manage',
+  async ({ supabase }, action: 'add' | 'toggle', name: string, district?: string, active?: boolean) => {
     if (action === 'add') {
       await supabase.from('areas').insert({ name, district: district || null, active: true })
     } else {
       await supabase.from('areas').update({ active: active ?? false }).eq('name', name)
     }
 
-    await auditLog(admin.id, `area_${action}`, 'area', null, { name, district, active })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'area', targetId: null, details: { action, name, district, active } }
   }
-}
+)
 
-export async function saveBotm(data: {
-  title: string
-  author?: string
-  description?: string
-  coverUrl?: string
-  monthLabel?: string
-}): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const saveBotm = withAdminAction(
+  'moderator',
+  'set_botm',
+  async ({ supabase }, data: {
+    title: string
+    author?: string
+    description?: string
+    coverUrl?: string
+    monthLabel?: string
+  }) => {
     await supabase.from('book_of_month')
       .update({ active: false })
       .eq('active', true)
@@ -617,28 +514,18 @@ export async function saveBotm(data: {
       active: true,
     })
 
-    await auditLog(admin.id, 'set_botm', 'botm', null, data)
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'botm', targetId: null, details: data }
   }
-}
+)
 
 // ═══════════════════════════════════════════
 // NOTIFICATIONS & COMMUNICATION
 // ═══════════════════════════════════════════
 
-export async function sendBroadcastNotification(
-  title: string,
-  body?: string,
-  link?: string,
-  filterArea?: string
-): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const sendBroadcastNotification = withAdminAction(
+  'moderator',
+  'broadcast_notification',
+  async ({ supabase }, title: string, body?: string, link?: string, filterArea?: string) => {
     let query = supabase.from('profiles').select('id')
     if (filterArea) {
       query = query.eq('area_name', filterArea)
@@ -656,25 +543,18 @@ export async function sendBroadcastNotification(
       await supabase.from('notifications').insert(notifications)
     }
 
-    await auditLog(admin.id, 'broadcast_notification', 'notification', null, {
-      title, recipientCount: users?.length ?? 0, filterArea
-    })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return {
+      targetType: 'notification',
+      targetId: null,
+      details: { title, recipientCount: users?.length ?? 0, filterArea },
+    }
   }
-}
+)
 
-export async function sendDirectNotification(
-  userId: string,
-  title: string,
-  body?: string
-): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('moderator')
-    const supabase = await createClient()
-
+export const sendDirectNotification = withAdminAction(
+  'moderator',
+  'direct_notification',
+  async ({ supabase }, userId: string, title: string, body?: string) => {
     await supabase.from('notifications').insert({
       user_id: userId,
       type: 'admin',
@@ -683,31 +563,22 @@ export async function sendDirectNotification(
       link: '/notifications',
     })
 
-    await auditLog(admin.id, 'direct_notification', 'notification', userId, { title })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'notification', targetId: userId, details: { title } }
   }
-}
+)
 
 // ═══════════════════════════════════════════
 // PLATFORM SETTINGS
 // ═══════════════════════════════════════════
 
-export async function updatePlatformSetting(key: string, value: string): Promise<ActionResult> {
-  try {
-    const admin = await guardRole('super_admin')
-    const supabase = await createClient()
-
+export const updatePlatformSetting = withAdminAction(
+  'super_admin',
+  'update_setting',
+  async ({ admin, supabase }, key: string, value: string) => {
     await supabase.from('platform_settings')
       .update({ value: JSON.stringify(value), updated_at: new Date().toISOString(), updated_by: admin.id })
       .eq('key', key)
 
-    await auditLog(admin.id, 'update_setting', 'setting', null, { key, value })
-    revalidatePath('/admin')
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: (e as Error).message }
+    return { targetType: 'setting', targetId: null, details: { key, value } }
   }
-}
+)

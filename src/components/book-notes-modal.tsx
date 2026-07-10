@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { wordCount } from '@/lib/text-limits'
 
 type Note = {
@@ -51,7 +52,7 @@ export default function BookNotesModal({
     setLoading(false)
   }, [bookId, currentUserId])
 
-  useEffect(() => { queueMicrotask(() => fetchNotes()) }, [fetchNotes])
+  useAsyncEffect(() => fetchNotes(), [fetchNotes])
 
   const otherNotesCount = notes.filter(n => n.user_id !== currentUserId).length
   const hasMyNote = myNoteId !== null

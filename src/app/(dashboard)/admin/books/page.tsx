@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { hideBook, unhideBook, editBook, bulkHideBooks } from '@/lib/admin-actions'
 
 type Book = {
@@ -47,7 +48,7 @@ export default function AdminBooksPage() {
     if (data) setGenres(data.map(g => g.name))
   }, [supabase])
 
-  useEffect(() => { queueMicrotask(() => loadGenres()) }, [loadGenres])
+  useAsyncEffect(() => loadGenres(), [loadGenres])
 
   useEffect(() => {
     const t = setTimeout(() => { loadBooks() }, 300)

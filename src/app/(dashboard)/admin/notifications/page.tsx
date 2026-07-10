@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { sendBroadcastNotification, sendDirectNotification } from '@/lib/admin-actions'
 
 type Template = { id: string; name: string; title: string; body: string | null; type: string }
@@ -40,9 +41,7 @@ export default function AdminNotificationsPage() {
     setTemplates(data || [])
   }, [supabase])
 
-  useEffect(() => {
-    queueMicrotask(() => { loadAreas(); loadTemplates() })
-  }, [loadAreas, loadTemplates])
+  useAsyncEffect(() => { loadAreas(); loadTemplates() }, [loadAreas, loadTemplates])
 
   useEffect(() => {
     if (bArea) {

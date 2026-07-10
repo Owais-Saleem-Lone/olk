@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import Link from 'next/link'
 
 type WishlistItem = {
@@ -38,7 +39,7 @@ export default function WishlistPage() {
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => { queueMicrotask(() => fetchWishlist()) }, [fetchWishlist])
+  useAsyncEffect(() => fetchWishlist(), [fetchWishlist])
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -41,7 +42,7 @@ export default function SavedBooksPage() {
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => { queueMicrotask(() => fetchSaved()) }, [fetchSaved])
+  useAsyncEffect(() => fetchSaved(), [fetchSaved])
 
   const handleRemove = async (bookmarkId: string) => {
     await supabase.from('bookmarks').delete().eq('id', bookmarkId)

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { formatDistance } from '@/lib/geo'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -109,12 +110,10 @@ export default function ClubsPage() {
     setLoading(false)
   }
 
-  useEffect(() => {
-    queueMicrotask(() => fetchClubs())
-    // Intentionally run once on mount; searchQuery updates on every keystroke and
-    // search is otherwise triggered explicitly via handleSearch.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // Intentionally run once on mount; searchQuery updates on every keystroke and
+  // search is otherwise triggered explicitly via handleSearch.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useAsyncEffect(() => fetchClubs(), [])
 
   useEffect(() => {
     if (!mounted.current) { mounted.current = true; return }

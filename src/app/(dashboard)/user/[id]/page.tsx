@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -87,9 +88,7 @@ export default function UserProfilePage() {
     setLoading(false)
   }, [supabase, userId])
 
-  useEffect(() => {
-    queueMicrotask(() => fetchUserProfile())
-  }, [fetchUserProfile])
+  useAsyncEffect(() => fetchUserProfile(), [fetchUserProfile])
 
   if (loading) {
     return <p className="text-slate-400 text-center py-20">Loading profile...</p>

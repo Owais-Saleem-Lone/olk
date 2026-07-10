@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { updatePlatformSetting } from '@/lib/admin-actions'
 
 type Setting = { key: string; value: string; description: string | null; updated_at: string }
@@ -45,8 +46,8 @@ export default function AdminSettingsPage() {
     setAudit((data || []) as unknown as AuditEntry[])
   }, [supabase, auditPage, auditFilter])
 
-  useEffect(() => {
-    queueMicrotask(() => { if (tab === 'settings') loadSettings(); else loadAudit() })
+  useAsyncEffect(() => {
+    if (tab === 'settings') loadSettings(); else loadAudit()
   }, [tab, loadSettings, loadAudit])
 
   async function handleSaveSetting(key: string) {

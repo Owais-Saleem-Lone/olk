@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { createNotification } from '@/lib/notifications'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -112,7 +113,7 @@ export default function ClubDetailPage() {
     setLoading(false)
   }, [supabase, clubId])
 
-  useEffect(() => { queueMicrotask(() => fetchClub()) }, [fetchClub])
+  useAsyncEffect(() => fetchClub(), [fetchClub])
 
   const handleJoin = async () => {
     if (!currentUserId || !club) return

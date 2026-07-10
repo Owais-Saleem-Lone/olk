@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { createNotification } from '@/lib/notifications'
 import { useRouter } from 'next/navigation'
 import RatingModal from '@/components/rating-modal'
@@ -131,9 +132,7 @@ export default function RequestsPage() {
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => {
-    queueMicrotask(() => fetchRequests())
-  }, [fetchRequests])
+  useAsyncEffect(() => fetchRequests(), [fetchRequests])
 
   const handleUpdateStatus = async (requestId: string, newStatus: string) => {
     const { error } = await supabase
