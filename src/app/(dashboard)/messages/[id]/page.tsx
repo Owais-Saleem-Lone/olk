@@ -152,6 +152,7 @@ export default function ChatPage() {
             type: 'new_message',
             title: `${myProfile?.display_name || 'Someone'} sent a message about "${bookTitle}"`,
             link: `/messages/${requestId}`,
+            context: { kind: 'request', id: requestId },
           })
         }
       }

@@ -231,11 +231,11 @@ export default function BrowsePage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { error } = await supabase.from('book_requests').insert({
+    const { data: newRequest, error } = await supabase.from('book_requests').insert({
       book_id: bookId,
       requester_id: user.id,
       status: 'pending',
-    })
+    }).select('id').single()
 
     if (error) {
       if (error.code === '23505') {
@@ -250,7 +250,7 @@ export default function BrowsePage() {
       setRequestedBooks((prev) => new Set(prev).add(bookId))
 
       const book = books.find(b => b.id === bookId)
-      if (book) {
+      if (book && newRequest) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('display_name')
@@ -262,6 +262,7 @@ export default function BrowsePage() {
           type: 'book_requested',
           title: `${profile?.display_name || 'Someone'} requested your book "${book.title}"`,
           link: '/requests',
+          context: { kind: 'request', id: newRequest.id },
         })
       }
     }

@@ -198,6 +198,7 @@ export default function MyBooksPage() {
             type: 'book_requested',
             title: `A book on your wishlist is now available: "${title}"`,
             link: `/browse?q=${encodeURIComponent(title)}`,
+            context: { kind: 'wishlist_match', id: match.id },
           })
         }
       }

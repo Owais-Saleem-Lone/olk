@@ -153,6 +153,7 @@ export default function RequestsPage() {
             ? `Your request for "${req.books?.title}" was accepted!`
             : `Your request for "${req.books?.title}" was declined`,
           link: '/requests',
+          context: { kind: 'request', id: requestId },
         })
       }
       fetchRequests()
@@ -190,6 +191,7 @@ export default function RequestsPage() {
         type: 'handover_confirmed',
         title: `Handover confirmed for "${req.books?.title}"`,
         link: '/requests',
+        context: { kind: 'request', id: req.id },
       })
     }
 
@@ -214,6 +216,7 @@ export default function RequestsPage() {
         type: 'book_returned',
         title: `"${req.books?.title}" has been marked as returned`,
         link: '/requests',
+        context: { kind: 'request', id: req.id },
       })
     }
 

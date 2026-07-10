@@ -127,6 +127,7 @@ export default function ClubDetailPage() {
       type: 'club_joined',
       title: `Someone joined your club "${club.name}"`,
       link: `/clubs/${clubId}`,
+      context: { kind: 'club_join', id: clubId },
     })
 
     fetchClub()
@@ -160,6 +161,7 @@ export default function ClubDetailPage() {
           type: 'club_announcement',
           title: `New announcement in "${club?.name}"`,
           link: `/clubs/${clubId}`,
+          context: { kind: 'club_announcement', id: clubId },
         })
       }
 

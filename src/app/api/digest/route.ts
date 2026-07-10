@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto'
 import { Resend } from 'resend'
 import { createClient } from '@supabase/supabase-js'
 import { escapeHtml } from '@/lib/html-escape'
@@ -5,9 +6,18 @@ import { EMAIL_BRAND } from '@/lib/email-brand'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
+function isAuthorized(authHeader: string | null): boolean {
+  const expected = `Bearer ${process.env.CRON_SECRET}`
+  const provided = authHeader ?? ''
+  const expectedBuf = Buffer.from(expected)
+  const providedBuf = Buffer.from(provided)
+  if (expectedBuf.length !== providedBuf.length) return false
+  return timingSafeEqual(expectedBuf, providedBuf)
+}
+
 async function handleDigest(request: Request) {
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorized(authHeader)) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
