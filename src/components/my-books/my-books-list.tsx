@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { compressImage } from '@/lib/image-utils'
-import GenreSelect from './genre-select'
+import GenreSelect from '@/components/genre-select'
 import CoverInput from './cover-input'
 import type { Book } from './types'
 

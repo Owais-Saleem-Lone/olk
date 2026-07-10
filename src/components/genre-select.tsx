@@ -10,10 +10,13 @@ export default function GenreSelect({
   value,
   onChange,
   className,
+  allOptionLabel,
 }: {
   value: string
   onChange: (v: string) => void
   className?: string
+  // When set, renders a leading "unset" option (e.g. "All Genres" for a filter) with value=""
+  allOptionLabel?: string
 }) {
   return (
     <select
@@ -21,6 +24,7 @@ export default function GenreSelect({
       onChange={(e) => onChange(e.target.value)}
       className={className ?? 'w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-brand-teal'}
     >
+      {allOptionLabel && <option value="" className="bg-brand-slate">{allOptionLabel}</option>}
       {GENRE_GROUPS.map((group) => (
         <optgroup key={group.label} label={group.label} className="bg-brand-slate">
           {group.options.map((opt) => (

@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { compressImage } from '@/lib/image-utils'
 import { createNotification } from '@/lib/notifications'
 import ISBNScanner from '@/components/isbn-scanner'
-import GenreSelect from './genre-select'
+import GenreSelect from '@/components/genre-select'
 import CoverInput from './cover-input'
 
 // Kept outside the component: Date.now() is an impure call the React
