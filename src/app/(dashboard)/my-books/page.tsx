@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { useAsyncEffect } from '@/hooks/use-async-effect'
+import { toast } from '@/hooks/use-toast'
 import { compressImage, validateImageUrl } from '@/lib/image-utils'
 import { createNotification } from '@/lib/notifications'
 import { dueDaysLeft } from '@/lib/date-utils'
@@ -296,7 +297,7 @@ export default function MyBooksPage() {
   const handlePassItOn = async (requestId: string) => {
     setPassingOnId(requestId)
     const { error } = await supabase.rpc('complete_donated_book_reading', { p_request_id: requestId })
-    if (error) { alert('Error: ' + error.message) }
+    if (error) { toast.error('Error: ' + error.message) }
     else { setConfirmPassOnId(null); fetchMyBooks(); fetchReceivedBooks() }
     setPassingOnId(null)
   }

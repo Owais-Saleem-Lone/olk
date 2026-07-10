@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import DashboardShell from '@/components/dashboard-shell'
 import AnnouncementBanner from '@/components/announcement-banner'
+import Toaster from '@/components/toaster'
 import { FEATURE_FLAG_KEYS, parseFeatureFlags } from '@/lib/platform-settings'
 
 export default async function DashboardLayout({
@@ -64,6 +65,7 @@ export default async function DashboardLayout({
   return (
     <DashboardShell displayName={displayName} email={user.email ?? null} isAdmin={profile?.is_admin ?? false} featureFlags={featureFlags}>
       {children}
+      <Toaster />
     </DashboardShell>
   )
 }

@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAsyncEffect } from '@/hooks/use-async-effect'
+import { toast } from '@/hooks/use-toast'
 import { createNotification } from '@/lib/notifications'
 import { useRouter } from 'next/navigation'
 import RatingModal from '@/components/rating-modal'
@@ -141,7 +142,7 @@ export default function RequestsPage() {
       .eq('id', requestId)
 
     if (error) {
-      alert('Error updating request: ' + error.message)
+      toast.error('Error updating request: ' + error.message)
     } else {
       const req = incomingRequests.find(r => r.id === requestId)
       if (req) {
@@ -174,7 +175,7 @@ export default function RequestsPage() {
       .update(updates)
       .eq('id', req.id)
 
-    if (error) { alert('Error: ' + error.message); return }
+    if (error) { toast.error('Error: ' + error.message); return }
 
     if (req.books?.listing_type === 'donate') {
       await supabase.from('books').update({ status: 'given' }).eq('id', req.book_id)
@@ -203,7 +204,7 @@ export default function RequestsPage() {
       .update({ status: 'returned', completed_at: new Date().toISOString() })
       .eq('id', req.id)
 
-    if (error) { alert('Error: ' + error.message); return }
+    if (error) { toast.error('Error: ' + error.message); return }
 
     await supabase.from('books').update({ status: 'available' }).eq('id', req.book_id)
 
@@ -225,7 +226,7 @@ export default function RequestsPage() {
   const handleCompleteReading = async (requestId: string) => {
     setCompletingRequest(requestId)
     const { error } = await supabase.rpc('complete_donated_book_reading', { p_request_id: requestId })
-    if (error) alert('Error: ' + error.message)
+    if (error) toast.error('Error: ' + error.message)
     else { setConfirmComplete(null); fetchRequests() }
     setCompletingRequest(null)
   }
@@ -241,7 +242,7 @@ export default function RequestsPage() {
       progress_pct: pct,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'request_id' })
-    if (error) alert('Error saving progress: ' + error.message)
+    if (error) toast.error('Error saving progress: ' + error.message)
     setProgressSaving(null)
   }
 

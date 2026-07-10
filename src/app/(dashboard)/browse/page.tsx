@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAsyncEffect } from '@/hooks/use-async-effect'
+import { toast } from '@/hooks/use-toast'
 import { createNotification } from '@/lib/notifications'
 import { formatDistance } from '@/lib/geo'
 import Link from 'next/link'
@@ -238,12 +239,12 @@ export default function BrowsePage() {
 
     if (error) {
       if (error.code === '23505') {
-        alert('You already have an active request for this book.')
+        toast.error('You already have an active request for this book.')
       } else if (error.message.startsWith('RATE_LIMIT_EXCEEDED:')) {
-        alert("You've reached your daily request limit. Try again tomorrow.")
+        toast.error("You've reached your daily request limit. Try again tomorrow.")
       } else {
         console.error('Error requesting book:', error)
-        alert('Could not request book: ' + error.message)
+        toast.error('Could not request book: ' + error.message)
       }
     } else {
       setRequestedBooks((prev) => new Set(prev).add(bookId))

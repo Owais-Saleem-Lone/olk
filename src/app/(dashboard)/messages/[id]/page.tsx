@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { toast } from '@/hooks/use-toast'
 import { createNotification } from '@/lib/notifications'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
@@ -122,7 +123,7 @@ export default function ChatPage() {
     if (error) {
       setContent(msgContent)
       if (error.message.startsWith('RATE_LIMIT_EXCEEDED:')) {
-        alert("You've sent too many messages this hour. Please wait a bit before sending more.")
+        toast.error("You've sent too many messages this hour. Please wait a bit before sending more.")
       }
     } else if (inserted) {
       setMessages(prev =>

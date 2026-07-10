@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAsyncEffect } from '@/hooks/use-async-effect'
+import { toast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -104,7 +105,7 @@ export default function CreateClubPage() {
     }).select().single()
 
     if (error) {
-      alert('Error creating club: ' + error.message)
+      toast.error('Error creating club: ' + error.message)
       setCreating(false)
       return
     }
