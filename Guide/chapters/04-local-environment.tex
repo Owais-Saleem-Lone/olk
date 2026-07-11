@@ -121,7 +121,8 @@ Next.js does \textbf{not} hot-reload \code{NEXT\_PUBLIC\_*} environment variable
 \midrule
 \code{npx supabase start} & Start the local Docker stack (containers persist between restarts via a Docker volume). \\
 \code{npx supabase stop} & Stop all containers. Data is preserved in the volume — a subsequent \code{start} restores it, it does not wipe it. \\
-\code{npx supabase db reset} & Drop and recreate the local database, then replay every migration from scratch. The single most useful command when local state is in doubt. \\
+\code{npx supabase db reset} (or \code{npm run db:reset}) & Drop and recreate the local database, then replay every migration from scratch. Schema-only — wipes local data; use when iterating quickly on a migration and you don't need real data yet. \\
+\code{npm run db:reset-full} & The same reset, followed automatically by \code{db:pull-data} (\S\ref{sec:reset-full}). The one to reach for by default — schema \emph{and} real data, in one command, never stale. \\
 \code{npx supabase status} & Reprint the local credentials block without restarting anything. \\
 \code{npx supabase migration new <name>} & Scaffold a new, correctly-timestamped empty migration file (see Chapter~\ref{ch:workflow} — never hand-create migration files). \\
 \code{npx supabase migration list} & Compare local migration files against the linked hosted project's applied history — the first check to run when confirming local and cloud are in sync. \\
@@ -134,6 +135,7 @@ Next.js does \textbf{not} hot-reload \code{NEXT\_PUBLIC\_*} environment variable
 \end{center}
 
 \section{The intended workflow: develop locally, push when it works}
+\label{sec:workflow}
 
 The point of all of the above is a specific loop: write and test migrations and features entirely against the local Docker stack, where mistakes are free (\code{db reset} throws it all away and replays from scratch in seconds) — then, once satisfied, run \code{npm run db:push} to apply the same migrations to the hosted project. Never develop directly against hosted data; never run \code{db reset} against a linked remote project (it has no \code{--linked} form for exactly this reason — \code{reset} is a local-only concept).
 
@@ -175,17 +177,25 @@ This is a read-only sanity check, not a repair tool. If it finds drift, the fix 
 \end{olknote}
 
 \subsection{When "cloud" becomes "our own server"}
+\label{sec:cloud-becomes-server}
 
 Nothing about either check is Supabase-Cloud-specific — both \code{supabase migration list} and \code{supabase db query --linked} work against any Postgres the project is linked to via \code{supabase link}, hosted or self-hosted. When OLK eventually moves off Supabase Cloud onto a self-hosted stack (Chapter~\ref{ch:welcome}), the same two commands, pointed at the new project ref, are how you'll confirm a migration tested locally landed correctly there too — this verification workflow is not something to relearn later.
 
 \section{Pulling the hosted project's data into local}
+\label{sec:pull-data}
 
 A fresh \code{db reset} gives you correct \emph{schema} with zero rows — no test account, no books, nothing to click through. \code{npm run db:pull-data} (\pathname{scripts/pull-remote-data.sh}) closes that gap by copying real data down from the linked hosted project:
 
 \begin{lstlisting}[style=olkcodebash, language=bash, caption={scripts/pull-remote-data.sh — the whole script}]
-npx supabase db dump --data-only --linked --schema public,auth -f supabase/.temp/remote_data.sql
-npx supabase db query --local -f supabase/.temp/remote_data.sql
+npx supabase db dump --data-only --linked --schema public,auth \
+  -f supabase/.temp/remote_data.sql
+docker exec -i supabase_db_olk psql -U postgres -d postgres \
+  < supabase/.temp/remote_data.sql
 \end{lstlisting}
+
+\begin{olkgotcha}
+The obvious version of that second line, \code{npx supabase db query --local -f <file>}, fails on this exact dump with \code{cannot insert multiple commands into a prepared statement} — that command wraps the whole file in a single prepared statement, and \code{pg\_dump}'s output is dozens of separate statements. Piping the file straight into \code{psql} inside the \code{supabase\_db\_olk} container (Postgres's own client, with no such restriction) is what actually works; this is what the script has done since.
+\end{olkgotcha}
 
 Two things worth understanding about what this does and doesn't do:
 
@@ -196,6 +206,53 @@ Two things worth understanding about what this does and doesn't do:
 
 \begin{olkwarn}
 Storage \emph{objects} (uploaded cover images) are not part of this data pull — only \code{public}/\code{auth} schema rows are copied, not files sitting in Supabase Storage's blob backend. In practice this rarely matters for viewing existing content: \code{cover\_url} values are stored as full \code{https://*.supabase.co/storage/v1/object/public/...} URLs (Chapter~\ref{ch:schema}), so a browser fetches them directly from the hosted project regardless of which database the app is talking to. It only becomes a real gap for \emph{new} uploads made against the local stack, which land in local Storage and would need a separate, manual copy to appear elsewhere.
+\end{olkwarn}
+
+\section{The daily-safe protocol: resetting without losing local data}
+\label{sec:reset-full}
+
+The \code{db reset} gotcha earlier in this chapter (\S\ref{sec:workflow}, three sections up) is not a one-time story — it is the single most common way a productive local session ends with an empty homepage: you reset to test a migration, the reset does exactly what it promises (wipe, then replay migrations), and the test account and books you'd been clicking through all afternoon are gone. Recovering them meant remembering a second, separate command afterward. This section turns that two-step, easy-to-forget manual recovery into one command that cannot be forgotten because there is nothing left to remember.
+
+\subsection{The tempting wrong answer: a committed \pathname{supabase/seed.sql}}
+
+The Supabase CLI has a built-in answer to "give me data back after every reset": drop a \pathname{supabase/seed.sql} file in the project, and \code{db reset} runs it automatically, every time, after replaying migrations — no second command at all. For most Supabase projects this is exactly the right tool.
+
+\begin{olkwarn}
+It is the \emph{wrong} tool here, specifically because of what \S\ref{sec:pull-data}'s data-pull step above actually copies. \code{scripts/pull-remote-data.sh} dumps \code{--schema public,auth} — not just \code{public.profiles}, but \code{auth.users} itself: real email addresses and real bcrypt password hashes for every account that has ever registered. A \pathname{supabase/seed.sql} generated from that dump and committed to git would put live users' credentials into version-control history permanently — recoverable by anyone with repo access, on every clone, forever, even if the file is later deleted (git does not forget). \pathname{supabase/.temp/} — where today's dump actually lands — is git-ignored for exactly this reason (check \pathname{.gitignore} yourself if in doubt). Never move a real data dump out of \pathname{.temp/} and into a committed path.
+\end{olkwarn}
+
+The other reason a static snapshot is wrong for OLK specifically: the hosted project gets written to from more than one machine, so any committed snapshot is stale the moment a teammate adds a book from a different laptop. A file that is both a security liability \emph{and} perpetually out of date is worth ruling out explicitly, once, rather than reinventing later.
+
+\subsection{The actual answer: chain the two commands that already exist}
+
+Nothing new needs to be built — \code{db reset} and \code{db:pull-data} both already exist and both already work; the fix is making the second one impossible to forget by making it not a separate step:
+
+\begin{olkhowto}
+\pathname{package.json}'s \code{scripts} block gains one line, chaining the two commands you would otherwise have to remember to run in sequence:
+\begin{lstlisting}[caption={package.json — the new script, alongside the two it reuses}]
+"db:reset": "npx supabase db reset",
+"db:reset-full": "npx supabase db reset && npm run db:pull-data",
+"db:push": "npx supabase db push",
+\end{lstlisting}
+Then run the one command instead of two:
+\begin{lstlisting}[style=olkcodebash, caption={The whole daily-safe reset, start to finish}]
+npm run db:reset-full
+\end{lstlisting}
+What happens, in order, and why it's safe to walk away from mid-run:
+\begin{enumerate}
+  \item \textbf{\code{npx supabase db reset}} — wipes the local Postgres volume and replays every file in \pathname{supabase/migrations} from scratch (Step 4 above). This is the part that discards local data; it is unavoidable and correct, since verifying a migration applies cleanly \emph{from zero} is the entire point of testing locally before \code{db:push}.
+  \item \code{\&\&} — the second command only runs if the first exited successfully. A migration that fails to apply leaves the database in a known-bad state; silently loading real user data on top of that would hide the actual failure. No data pull happens until the schema is confirmed clean.
+  \item \textbf{\code{npm run db:pull-data}} — dumps \code{public}/\code{auth} from the linked hosted project and loads it into the now-freshly-migrated local database (the section immediately above this one). The four "duplicate key" errors on \code{areas}/\code{genres}/\code{notification\_templates}/\code{platform\_settings} are expected here too, for the same reason: those tables were already seeded by step 1.
+\end{enumerate}
+The net effect: one command, and local ends up with correct schema \emph{and} current real data, pulled live from whichever machine most recently touched the hosted project — never stale, never committed anywhere, because it only ever exists transiently in the git-ignored \pathname{supabase/.temp/} directory and inside your local Docker volume.
+\end{olkhowto}
+
+\begin{olktip}
+Reach for plain \code{npm run db:reset} instead, without the data pull, when you're mid-loop rapidly iterating on a single migration file and resetting many times in a row — the data pull needs a live connection to the hosted project and takes several seconds each time, which adds up across a dozen quick resets. Switch to \code{db:reset-full} once for the final check before you move on, or any time you actually want something to click through in the browser.
+\end{olktip}
+
+\begin{olkwarn}
+\code{db:reset-full} is exactly as local-only as the plain \code{db reset} it wraps (\S\ref{sec:cloud-becomes-server}'s "when cloud becomes our own server" note applies here word for word). The day OLK's own machine is what \code{supabase link} points at instead of Supabase Cloud, that machine \emph{is} production — running \code{db:reset-full}, or even plain \code{db reset}, against it would wipe every real user's account and every real book listing with no undo. At that point, schema changes only ever move forward via \code{migration new} + \code{db push} (\S\ref{sec:workflow}'s workflow, unchanged), and this whole section stops applying to that machine entirely — it remains exactly what it is today: a \emph{local} developer-machine command, run against a \emph{local} Docker volume, never against whatever \code{supabase link} currently points at in production.
 \end{olkwarn}
 
 \section{Useful local endpoints}

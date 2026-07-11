@@ -15,6 +15,10 @@ echo "Dumping data from the linked remote project..."
 npx supabase db dump --data-only --linked --schema public,auth -f "$DUMP_FILE"
 
 echo "Loading it into the local database..."
-npx supabase db query --local -f "$DUMP_FILE"
+# `supabase db query --local -f` rejects this file with "cannot insert
+# multiple commands into a prepared statement" (pg_dump emits multi-statement
+# batches; that command wraps each file in a single prepared statement).
+# psql inside the db container has no such restriction.
+docker exec -i supabase_db_olk psql -U postgres -d postgres < "$DUMP_FILE"
 
 echo "Done. Local Docker Supabase now mirrors remote's data."

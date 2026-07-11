@@ -10,8 +10,9 @@
     "test": "vitest run",
     "env:local": "cp .env.docker .env.local && echo 'Switched .env.local to the local Docker Supabase stack -- restart npm run dev.'",
     "env:remote": "cp .env.remote .env.local && echo 'Switched .env.local to the remote Supabase project -- restart npm run dev.'",
-    "db:reset": "supabase db reset",
-    "db:push": "supabase db push",
+    "db:reset": "npx supabase db reset",
+    "db:reset-full": "npx supabase db reset && npm run db:pull-data",
+    "db:push": "npx supabase db push",
     "db:pull-data": "bash scripts/pull-remote-data.sh"
   },
   "dependencies": {
