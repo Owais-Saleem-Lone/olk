@@ -166,6 +166,66 @@ $$;
 ALTER FUNCTION "public"."admin_get_top_contributors"("lim" integer) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."can_notify"("p_target_user" "uuid", "p_context_type" "text", "p_context_id" "uuid") RETURNS boolean
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_caller uuid := auth.uid();
+  v_requester uuid;
+  v_owner uuid;
+  v_creator uuid;
+BEGIN
+  IF v_caller IS NULL OR v_caller = p_target_user OR p_context_id IS NULL THEN
+    RETURN false;
+  END IF;
+
+  IF p_context_type = 'request' THEN
+    SELECT br.requester_id, b.owner_id INTO v_requester, v_owner
+    FROM public.book_requests br
+    JOIN public.books b ON b.id = br.book_id
+    WHERE br.id = p_context_id;
+
+    RETURN v_requester IS NOT NULL
+      AND ((v_caller = v_requester AND p_target_user = v_owner)
+        OR (v_caller = v_owner AND p_target_user = v_requester));
+
+  ELSIF p_context_type = 'club_join' THEN
+    SELECT creator_id INTO v_creator FROM public.clubs WHERE id = p_context_id;
+
+    RETURN v_creator IS NOT NULL
+      AND v_creator = p_target_user
+      AND EXISTS (
+        SELECT 1 FROM public.club_members
+        WHERE club_id = p_context_id AND user_id = v_caller
+      );
+
+  ELSIF p_context_type = 'club_announcement' THEN
+    SELECT creator_id INTO v_creator FROM public.clubs WHERE id = p_context_id;
+
+    RETURN v_creator IS NOT NULL
+      AND v_caller = v_creator
+      AND EXISTS (
+        SELECT 1 FROM public.club_members
+        WHERE club_id = p_context_id AND user_id = p_target_user
+      );
+
+  ELSIF p_context_type = 'wishlist_match' THEN
+    RETURN EXISTS (
+      SELECT 1 FROM public.wishlists w
+      JOIN public.books b ON b.id = w.matched_book_id
+      WHERE w.id = p_context_id AND w.user_id = p_target_user AND b.owner_id = v_caller
+    );
+  END IF;
+
+  RETURN false;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."can_notify"("p_target_user" "uuid", "p_context_type" "text", "p_context_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."check_book_notes_limits"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -279,6 +339,8 @@ DECLARE
   v_limit int;
   v_count int;
 BEGIN
+  PERFORM pg_advisory_xact_lock(hashtext('message_rate_limit:' || NEW.sender_id::text)::bigint);
+
   v_limit := public.get_platform_setting_int('max_messages_per_hour', 30);
 
   SELECT count(*) INTO v_count
@@ -306,6 +368,8 @@ DECLARE
   v_limit int;
   v_count int;
 BEGIN
+  PERFORM pg_advisory_xact_lock(hashtext('request_rate_limit:' || NEW.requester_id::text)::bigint);
+
   v_limit := public.get_platform_setting_int('max_requests_per_day', 10);
 
   SELECT count(*) INTO v_count
@@ -409,6 +473,41 @@ $$;
 
 
 ALTER FUNCTION "public"."get_platform_setting_int"("p_key" "text", "p_default" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."guard_profile_privileged_columns"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  -- NULL auth.uid() means there's no end-user JWT in play at all (service-role
+  -- key, or a superuser/backend script) — not a role an end user can spoof,
+  -- since a real authenticated-role JWT from Supabase Auth always carries a
+  -- sub claim. Trust it, same as RLS already implicitly does for service_role.
+  IF auth.uid() IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF (NEW.is_admin IS DISTINCT FROM OLD.is_admin OR
+      NEW.admin_role IS DISTINCT FROM OLD.admin_role)
+     AND NOT public.is_super_admin() THEN
+    RAISE EXCEPTION 'Only super admins can change is_admin/admin_role';
+  END IF;
+
+  IF (NEW.is_banned IS DISTINCT FROM OLD.is_banned OR
+      NEW.ban_reason IS DISTINCT FROM OLD.ban_reason OR
+      NEW.ban_expires_at IS DISTINCT FROM OLD.ban_expires_at OR
+      NEW.warning_count IS DISTINCT FROM OLD.warning_count)
+     AND NOT public.is_admin_or_mod() THEN
+    RAISE EXCEPTION 'Only admins can change ban/warning fields';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."guard_profile_privileged_columns"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
@@ -1063,11 +1162,55 @@ CREATE INDEX "idx_bans_user" ON "public"."user_bans" USING "btree" ("user_id");
 
 
 
+CREATE INDEX "idx_book_requests_book" ON "public"."book_requests" USING "btree" ("book_id");
+
+
+
+CREATE INDEX "idx_book_requests_requester" ON "public"."book_requests" USING "btree" ("requester_id");
+
+
+
+CREATE INDEX "idx_book_requests_status" ON "public"."book_requests" USING "btree" ("status");
+
+
+
 CREATE INDEX "idx_books_title_trgm" ON "public"."books" USING "gin" ("title" "public"."gin_trgm_ops");
 
 
 
 CREATE INDEX "idx_notifications_user" ON "public"."notifications" USING "btree" ("user_id", "created_at" DESC);
+
+
+
+CREATE INDEX "idx_ratings_rated_user" ON "public"."ratings" USING "btree" ("rated_user_id");
+
+
+
+CREATE INDEX "idx_ratings_rater" ON "public"."ratings" USING "btree" ("rater_id");
+
+
+
+CREATE INDEX "idx_ratings_request" ON "public"."ratings" USING "btree" ("request_id");
+
+
+
+CREATE INDEX "idx_reports_assigned_to" ON "public"."reports" USING "btree" ("assigned_to");
+
+
+
+CREATE INDEX "idx_reports_reported_book" ON "public"."reports" USING "btree" ("reported_book_id");
+
+
+
+CREATE INDEX "idx_reports_reported_user" ON "public"."reports" USING "btree" ("reported_user_id");
+
+
+
+CREATE INDEX "idx_reports_reporter" ON "public"."reports" USING "btree" ("reporter_id");
+
+
+
+CREATE INDEX "idx_reports_status" ON "public"."reports" USING "btree" ("status");
 
 
 
@@ -1104,6 +1247,10 @@ CREATE OR REPLACE TRIGGER "trg_enforce_message_rate_limit" BEFORE INSERT ON "pub
 
 
 CREATE OR REPLACE TRIGGER "trg_enforce_request_rate_limit" BEFORE INSERT ON "public"."book_requests" FOR EACH ROW EXECUTE FUNCTION "public"."enforce_request_rate_limit"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_guard_profile_privileged_columns" BEFORE UPDATE ON "public"."profiles" FOR EACH ROW EXECUTE FUNCTION "public"."guard_profile_privileged_columns"();
 
 
 
@@ -1422,12 +1569,6 @@ CREATE POLICY "Admins can view templates" ON "public"."notification_templates" F
 
 
 
-CREATE POLICY "Admins delete books" ON "public"."books" FOR DELETE USING ((EXISTS ( SELECT 1
-   FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true)))));
-
-
-
 CREATE POLICY "Admins manage book_of_month" ON "public"."book_of_month" USING ((EXISTS ( SELECT 1
    FROM "public"."profiles"
   WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true)))));
@@ -1566,7 +1707,10 @@ CREATE POLICY "Users can insert own profile" ON "public"."profiles" FOR INSERT T
 
 
 
-CREATE POLICY "Users can insert own ratings" ON "public"."ratings" FOR INSERT WITH CHECK (("auth"."uid"() = "rater_id"));
+CREATE POLICY "Users can insert own ratings" ON "public"."ratings" FOR INSERT TO "authenticated" WITH CHECK ((("auth"."uid"() = "rater_id") AND ("rater_id" <> "rated_user_id") AND (EXISTS ( SELECT 1
+   FROM ("public"."book_requests" "br"
+     JOIN "public"."books" "b" ON (("b"."id" = "br"."book_id")))
+  WHERE (("br"."id" = "ratings"."request_id") AND (("br"."status")::"text" = ANY ((ARRAY['handed_over'::character varying, 'returned'::character varying])::"text"[])) AND ((("br"."requester_id" = "ratings"."rater_id") AND ("b"."owner_id" = "ratings"."rated_user_id")) OR (("b"."owner_id" = "ratings"."rater_id") AND ("br"."requester_id" = "ratings"."rated_user_id"))))))));
 
 
 
@@ -1767,6 +1911,13 @@ GRANT ALL ON FUNCTION "public"."admin_get_top_contributors"("lim" integer) TO "s
 
 
 
+REVOKE ALL ON FUNCTION "public"."can_notify"("p_target_user" "uuid", "p_context_type" "text", "p_context_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."can_notify"("p_target_user" "uuid", "p_context_type" "text", "p_context_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."can_notify"("p_target_user" "uuid", "p_context_type" "text", "p_context_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."can_notify"("p_target_user" "uuid", "p_context_type" "text", "p_context_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."check_book_notes_limits"() TO "anon";
 GRANT ALL ON FUNCTION "public"."check_book_notes_limits"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."check_book_notes_limits"() TO "service_role";
@@ -1818,6 +1969,12 @@ GRANT ALL ON FUNCTION "public"."get_community_stats"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."get_platform_setting_int"("p_key" "text", "p_default" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_platform_setting_int"("p_key" "text", "p_default" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_platform_setting_int"("p_key" "text", "p_default" integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."guard_profile_privileged_columns"() TO "anon";
+GRANT ALL ON FUNCTION "public"."guard_profile_privileged_columns"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."guard_profile_privileged_columns"() TO "service_role";
 
 
 

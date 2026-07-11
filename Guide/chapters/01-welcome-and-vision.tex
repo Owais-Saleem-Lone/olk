@@ -39,6 +39,36 @@ That second goal is why Chapter~\ref{ch:local-env} is not a throwaway "how to ru
 As of this edition, the project already keeps a working local Docker/Supabase environment side-by-side with the hosted one, switched with a single environment variable (see Chapter~\ref{ch:local-env}). This exists specifically so that day-to-day development does not have to touch the production database at all.
 \end{olknote}
 
+\section{A friend's infrastructure audit, and what we did with it}
+\label{sec:infra-audit}
+
+In July 2026, a friend of the founder reviewed the project and wrote up a full self-hosting migration plan: VPS + PM2 + Caddy in place of Vercel, a self-hosted Supabase Docker stack (Postgres, GoTrue, PostgREST, Realtime, Storage) in place of the managed cloud project, PgBouncer for connection pooling, a self-hosted mail server (Postfix/Mailu) in place of Resend, and system cron in place of Vercel Cron — all sized for a projected \textbf{100,000} users.
+
+\begin{olknote}
+The plan's individual pieces were technically sound — PM2+Caddy, PgBouncer, cron, \code{pg\_dump} backups are all conventional, correct choices. The problems were in the framing, not the components:
+\begin{itemize}
+  \item \textbf{The 100k figure had no basis.} At the time of the audit this project was pre-launch — no \pathname{/messages} page yet, no real users. Designing connection pooling and disaster recovery around a user count you don't have yet is solving a problem before it exists.
+  \item \textbf{"Zero code changes" for the Supabase swap is true narrowly, misleading broadly.} \pathname{src/lib/supabase/server.ts} and \pathname{client.ts} do just read environment variables, so the client code claim holds. But self-hosting Supabase means \emph{you} now own Postgres backups, GoTrue config, the Kong gateway, Realtime, and Storage as running services with their own upgrade cadence and CVEs — a real ongoing burden for a single-developer project, not a config change.
+  \item \textbf{Self-hosted email is the highest-risk item and the report understated it.} A fresh VPS IP gets throttled or spam-foldered by Gmail/Outlook regardless of correct SPF/DKIM/DMARC — sending reputation is built over months, not configured. For a notifications/digest feature, landing in spam defeats the point. Resend's free tier is cheap insurance against this failure mode; self-hosting email is a false economy at this stage.
+\end{itemize}
+\end{olknote}
+
+\textbf{Decision (2026-07-11): none of this ships now.} The project stays on Vercel + managed Supabase + Resend until there's a second developer and evidence of real load. The first-year planning target is \textbf{10,000} users, not 100k — reasonable for a regional community platform and not a number that stresses the current managed stack.
+
+\begin{olkwarn}
+A VPS is \textbf{not} automatically a step toward the Kashmir data-sovereignty goal stated earlier in this chapter. Renting a generic VPS (Hetzner, DigitalOcean, AWS, ...) just swaps one third party's control (Vercel/Supabase Inc.) for another's — the data still lives on hardware you don't own, in a jurisdiction you didn't choose. It only becomes a genuine step \emph{toward} sovereignty if it's treated as a rehearsal: running the same self-hosted Docker stack already exercised locally (Chapter~\ref{ch:local-env}) on rented infrastructure first, to prove the operational playbook — backups, upgrades, monitoring, TLS — before ever committing to physical hardware in-region. Stopping at "we rent a VPS instead of Vercel" and calling it done would be a lateral move, not progress on the actual goal.
+\end{olkwarn}
+
+\textbf{What's parked for later}, revisited once there's more than one developer and/or real signs of load (not before):
+\begin{itemize}
+  \item VPS-hosted compute (PM2 + Caddy) — as a rehearsal step per the note above, not a cost-cutting move.
+  \item Self-hosted Supabase Docker stack, including PgBouncer once connection limits are actually observed rather than assumed.
+  \item Self-hosted mail — only if Resend's pricing or limits actually become a problem; deliverability risk needs a real plan first, not just DNS records.
+  \item Automated off-site backups (\code{pg\_dump} to self-hosted MinIO or similar) — worth doing earlier than the rest of this list, independent of the hosting question, once there's real user data worth losing.
+\end{itemize}
+
+\textbf{What shipped immediately instead}: indexes on the foreign-key and status columns the audit correctly flagged as missing — \pathname{supabase/migrations/20260711093615\_index\_fk\_and\_status\_columns.sql} adds eleven \code{btree} indexes across \code{book\_requests} (\code{book\_id}, \code{requester\_id}, \code{status}), \code{ratings} (\code{request\_id}, \code{rater\_id}, \code{rated\_user\_id}), and \code{reports} (\code{reporter\_id}, \code{reported\_user\_id}, \code{reported\_book\_id}, \code{status}, \code{assigned\_to} — Chapter~\ref{ch:schema}). A cheap, reversible fix with no architectural bet attached, unlike everything else on this list.
+
 \section{A tour of the rest of this manual, in one paragraph}
 
 You will set up the project locally with Docker (Part II), learn how the Next.js frontend is organised page by page and component by component (Part III), learn the Supabase/Postgres backend table by table, function by function, and policy by policy (Part IV), then watch those two halves work together across three real user journeys — exchanging a book, matching a wishlist, moderating a report — traced start to finish (Part V). Part VI is what to do once this is live: deploying, the environment variables that matter, a maintenance playbook organised as "if you need to do X, start here," and a candid accounting of what is still broken or unfinished. Let's begin.
