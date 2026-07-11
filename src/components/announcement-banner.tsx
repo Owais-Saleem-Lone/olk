@@ -45,7 +45,7 @@ export default function AnnouncementBanner() {
             <span className="text-lg flex-shrink-0 mt-0.5">{style.icon}</span>
             <div className="flex-1 min-w-0">
               <p className={`text-sm font-semibold ${style.text}`}>{a.title}</p>
-              {a.body && <p className="text-xs text-slate-400 mt-0.5">{a.body}</p>}
+              {a.body && <p className="text-xs text-slate-300 mt-0.5">{a.body}</p>}
             </div>
           </div>
         )

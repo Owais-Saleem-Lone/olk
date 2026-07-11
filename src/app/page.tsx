@@ -66,17 +66,17 @@ export default async function Home() {
     .limit(6)
 
   return (
-    <div className="min-h-screen bg-[#020817] text-white overflow-x-hidden">
+    <div className="min-h-screen bg-[#0f172a] text-white overflow-x-hidden">
 
       {/* Ambient background glow — decorative only */}
       <div className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-brand-teal/[0.07] rounded-full blur-[120px]" />
-        <div className="absolute top-[40%] left-[10%] w-[400px] h-[400px] bg-cyan-600/[0.04] rounded-full blur-[100px]" />
+        <div className="absolute top-[40%] left-[10%] w-[400px] h-[400px] bg-amber-500/[0.05] rounded-full blur-[100px]" />
         <div className="absolute top-[60%] right-[5%] w-[350px] h-[350px] bg-brand-teal-light/[0.04] rounded-full blur-[90px]" />
       </div>
 
       {/* ── Navbar ── */}
-      <header className="sticky top-0 z-50 border-b border-white/[0.06] backdrop-blur-md bg-[#020817]/80">
+      <header className="sticky top-0 z-50 border-b border-white/[0.06] backdrop-blur-md bg-[#0f172a]/80">
         <div className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2.5">
@@ -93,7 +93,7 @@ export default async function Home() {
             <AboutModal />
             <Link
               href={user ? "/clubs" : "/login"}
-              className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-1.5"
+              className="text-sm text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"
             >
               🏘️ Clubs
             </Link>
@@ -110,7 +110,7 @@ export default async function Home() {
               <>
                 <Link
                   href="/login"
-                  className="text-sm text-slate-400 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-white/5"
+                  className="text-sm text-slate-300 hover:text-white transition-colors px-4 py-2 rounded-lg hover:bg-white/5"
                 >
                   Login
                 </Link>
@@ -144,7 +144,7 @@ export default async function Home() {
         <form action="/browse" method="GET" className="flex items-center gap-2 max-w-lg mx-auto mb-12">
           <div className="relative flex-1">
             <svg
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
               xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
               fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
             >
@@ -154,7 +154,7 @@ export default async function Home() {
               name="q"
               type="text"
               placeholder="Search a book or author"
-              className="w-full bg-white/[0.06] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal/60 focus:border-brand-teal/40 transition-all"
+              className="w-full bg-white/[0.06] border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-teal/60 focus:border-brand-teal/40 transition-all"
             />
           </div>
           <button
@@ -180,7 +180,7 @@ export default async function Home() {
           </span>
         </h1>
 
-        <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="text-lg md:text-xl text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed">
           OLK connects readers across regions. Donate or lend your used books,
           find your next read from someone nearby — all with maximum privacy and zero cost.
         </p>
@@ -202,7 +202,7 @@ export default async function Home() {
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <AnimatedCounter value={stat.value} className={`text-4xl md:text-5xl font-bold ${stat.color}`} />
-                <p className="text-xs text-slate-500 mt-1.5">{stat.label}</p>
+                <p className="text-xs text-slate-400 mt-1.5">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -252,7 +252,7 @@ export default async function Home() {
               <div className="relative">
                 <span className="inline-block text-brand-teal-light text-xs font-bold uppercase tracking-widest mb-4">{item.step}</span>
                 <h3 className="text-lg font-semibold mb-3">{item.title}</h3>
-                <p className="text-sm text-slate-400 leading-relaxed">{item.desc}</p>
+                <p className="text-sm text-slate-300 leading-relaxed">{item.desc}</p>
               </div>
             </div>
           ))}
@@ -285,9 +285,9 @@ export default async function Home() {
                     <span className="text-white font-medium">{name}</span>
                     {' '}{item.listing_type === 'donate' ? 'donated' : 'listed'}{' '}
                     <span className="text-brand-teal-light font-medium">{item.title}</span>
-                    {area && <span className="text-slate-500"> in {area}</span>}
+                    {area && <span className="text-slate-400"> in {area}</span>}
                   </p>
-                  <span className="text-xs text-slate-600 flex-shrink-0">{ago}</span>
+                  <span className="text-xs text-slate-500 flex-shrink-0">{ago}</span>
                 </div>
               )
             })}
@@ -304,7 +304,7 @@ export default async function Home() {
           </div>
           <Link
             href="/browse"
-            className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-brand-teal-light transition-colors group"
+            className="flex items-center gap-1.5 text-sm text-slate-300 hover:text-brand-teal-light transition-colors group"
           >
             See all books
             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-0.5 transition-transform">
@@ -331,10 +331,10 @@ export default async function Home() {
                     />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-4">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500">
                         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
                       </svg>
-                      <span className="text-slate-600 text-xs text-center leading-tight">{book.title}</span>
+                      <span className="text-slate-500 text-xs text-center leading-tight">{book.title}</span>
                     </div>
                   )}
                   {/* Listing type badge */}
@@ -360,13 +360,13 @@ export default async function Home() {
                   {book.title}
                 </h3>
                 {book.author && (
-                  <p className="text-xs text-slate-500 truncate">by {book.author}</p>
+                  <p className="text-xs text-slate-400 truncate">by {book.author}</p>
                 )}
               </Link>
             ))}
           </div>
         ) : (
-          <div className="border border-dashed border-white/[0.08] rounded-2xl py-16 text-center text-slate-600">
+          <div className="border border-dashed border-white/[0.08] rounded-2xl py-16 text-center text-slate-500">
             <p>Books will appear here once the community starts sharing.</p>
             <Link href="/register" className="inline-block mt-4 text-sm text-brand-teal hover:text-brand-teal-light">
               Be the first to add one →
@@ -385,7 +385,7 @@ export default async function Home() {
             </div>
             <Link
               href={user ? "/clubs" : "/login"}
-              className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-brand-teal-light transition-colors group"
+              className="flex items-center gap-1.5 text-sm text-slate-300 hover:text-brand-teal-light transition-colors group"
             >
               {user ? 'Browse all clubs' : 'Join to explore'}
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-0.5 transition-transform">
@@ -409,7 +409,7 @@ export default async function Home() {
                     {club.name}
                   </h3>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-slate-500">
+                <div className="flex items-center gap-3 text-xs text-slate-400">
                   {club.interest && (
                     <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full">
                       {club.interest}
@@ -427,12 +427,12 @@ export default async function Home() {
       <section className="relative z-10 max-w-5xl mx-auto px-6 pb-28">
         <div className="relative rounded-3xl overflow-hidden border border-brand-teal/20 bg-gradient-to-br from-brand-teal/10 via-cyan-500/5 to-transparent p-14 text-center">
           {/* inner glow */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#020817] via-transparent to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-transparent to-transparent pointer-events-none" />
           <div className="relative">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Ready to share your first book?
             </h2>
-            <p className="text-slate-400 mb-8 max-w-md mx-auto leading-relaxed">
+            <p className="text-slate-300 mb-8 max-w-md mx-auto leading-relaxed">
               Join readers across Kashmir already sharing knowledge, one book at a time.
             </p>
             <Link
@@ -457,12 +457,12 @@ export default async function Home() {
               unoptimized
               className="rounded-full"
             />
-            <span className="text-sm text-slate-400 font-medium">Open Library Kashmir</span>
+            <span className="text-sm text-slate-300 font-medium">Open Library Kashmir</span>
           </div>
 
-          <p className="text-sm text-slate-600">Built with ❤️ for the people of Kashmir</p>
+          <p className="text-sm text-slate-500">Built with ❤️ for the people of Kashmir</p>
 
-          <div className="flex items-center gap-6 text-sm text-slate-500">
+          <div className="flex items-center gap-6 text-sm text-slate-400">
             <Link href="/browse" className="hover:text-white transition-colors">Browse</Link>
             <Link href="/login" className="hover:text-white transition-colors">Login</Link>
             <Link href="/register" className="hover:text-white transition-colors">Register</Link>

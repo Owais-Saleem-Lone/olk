@@ -57,13 +57,13 @@ export default function BookOfMonthCard({ book }: { book: BookOfMonth }) {
             <div className="flex items-center gap-2 mb-3">
               <span className="text-amber-400 text-xs font-bold uppercase tracking-widest">✦ Book of the Month</span>
               {book.month_label && (
-                <span className="text-xs text-slate-500">— {book.month_label}</span>
+                <span className="text-xs text-slate-400">— {book.month_label}</span>
               )}
             </div>
 
             <h3 className="text-2xl font-bold text-white leading-tight mb-1">{book.title}</h3>
             {book.author && (
-              <p className="text-slate-400 text-sm mb-4">by {book.author}</p>
+              <p className="text-slate-300 text-sm mb-4">by {book.author}</p>
             )}
             {book.description && (
               <p className="text-slate-300 text-sm leading-relaxed line-clamp-3 mb-5">
@@ -135,7 +135,7 @@ export default function BookOfMonthCard({ book }: { book: BookOfMonth }) {
                   )}
                   <h2 className="text-xl font-bold text-white leading-tight mb-1">{book.title}</h2>
                   {book.author && (
-                    <p className="text-slate-400 text-sm">by {book.author}</p>
+                    <p className="text-slate-300 text-sm">by {book.author}</p>
                   )}
                 </div>
               </div>
@@ -147,7 +147,7 @@ export default function BookOfMonthCard({ book }: { book: BookOfMonth }) {
               {book.description ? (
                 <p className="relative text-slate-200 text-sm leading-relaxed">{book.description}</p>
               ) : (
-                <p className="relative text-slate-500 text-sm italic">No description added yet.</p>
+                <p className="relative text-slate-400 text-sm italic">No description added yet.</p>
               )}
             </div>
           </div>

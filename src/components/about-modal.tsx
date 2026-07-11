@@ -39,13 +39,13 @@ export default function AboutModal() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="text-sm text-slate-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"
+        className="text-sm text-slate-300 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"
       >
         About
       </button>
 
       {open && createPortal(
-        <div className="fixed inset-0 z-[9999] overflow-y-auto bg-[#020817]/96 backdrop-blur-xl">
+        <div className="fixed inset-0 z-[9999] overflow-y-auto bg-[#0f172a]/96 backdrop-blur-xl">
 
           {/* Ambient glows — fixed so they stay while scrolling */}
           <div className="pointer-events-none fixed inset-0">
@@ -57,7 +57,7 @@ export default function AboutModal() {
           {/* Fixed close button */}
           <button
             onClick={() => setOpen(false)}
-            className="fixed top-5 right-5 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-white/[0.06] hover:bg-white/10 border border-white/10 text-slate-500 hover:text-white transition-colors"
+            className="fixed top-5 right-5 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-white/[0.06] hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white transition-colors"
             aria-label="Close"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -74,7 +74,7 @@ export default function AboutModal() {
                 OLK
               </div>
               <h1 className="text-4xl md:text-5xl font-bold mb-3 tracking-tight">About Us</h1>
-              <p className="text-slate-600 text-sm tracking-widest uppercase">Open Library Kashmir</p>
+              <p className="text-slate-500 text-sm tracking-widest uppercase">Open Library Kashmir</p>
             </div>
 
             {/* ── I. Vision ── */}
@@ -124,7 +124,7 @@ export default function AboutModal() {
 
               <div className="bg-brand-teal/[0.04] border border-brand-teal/[0.12] rounded-2xl p-7">
                 <h3 className="text-sm font-bold text-brand-teal-light uppercase tracking-widest mb-4">Join the Community</h3>
-                <div className="space-y-4 text-[15px] text-slate-400 leading-relaxed">
+                <div className="space-y-4 text-[15px] text-slate-300 leading-relaxed">
                   <p>This is a space where we actively support the dreamer who wants to write, the traveler who wants to document, and the student who wants to understand <em>why</em> before they learn <em>how</em>.</p>
                   <p className="text-slate-200 font-medium">OLK is not just a library. It is a living ecosystem of enlightenment.</p>
                 </div>
@@ -152,9 +152,9 @@ export default function AboutModal() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-white leading-snug">{member.name}</p>
-                        <p className="text-xs text-slate-500 mt-0.5 mb-4">{member.role}</p>
+                        <p className="text-xs text-slate-400 mt-0.5 mb-4">{member.role}</p>
                         {member.bio
-                          ? <p className="text-sm text-slate-400 leading-relaxed">{member.bio}</p>
+                          ? <p className="text-sm text-slate-300 leading-relaxed">{member.bio}</p>
                           : <p className="text-xs text-brand-slate-muted italic">Biography coming soon.</p>
                         }
                         {member.website && (
