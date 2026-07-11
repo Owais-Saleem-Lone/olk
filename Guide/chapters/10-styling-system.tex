@@ -73,6 +73,38 @@ Swapping the brand teal (\code{\#14b8a6}) for a different accent touches two fil
 Change only \#1 and every screen in the app matches, but every notification email keeps shipping the old color.
 \end{olkhowto}
 
+Unlike the teal accent, the homepage's dark base tone is \emph{not} theme-token driven — it started life as \code{\#020817} typed directly into a handful of Tailwind arbitrary-value classes and was later lightened to \code{\#0f172a} (Tailwind's stock \code{slate-900}, which happens to already be \code{--color-brand-slate} in \pathname{globals.css}, though the homepage still references the literal hex rather than the token).
+
+\begin{olkhowto}
+Four call sites share the same hardcoded hex, across two files, because two of them need opacity suffixes (\code{/80}, \code{/96}) and one sits inside a \code{from-[...]} gradient stop — none of which read a \code{--color-brand-*} custom property. Find every occurrence before touching anything:
+\begin{lstlisting}[style=olkcodebash, caption={Locate every homepage background call site}]
+grep -rn "0f172a\]" src/app/page.tsx src/components/about-modal.tsx
+\end{lstlisting}
+That returns the page wrapper, the sticky navbar's backdrop, and the final-CTA glow gradient in \pathname{src/app/page.tsx}, plus the About modal's backdrop in \pathname{src/components/about-modal.tsx}. Since all four share the identical hex, a scoped find-and-replace across just those two files is safe and sufficient:
+\begin{lstlisting}[style=olkcodebash, caption={Swap the base tone in one shot}]
+sed -i 's/0f172a/1c1917/g' src/app/page.tsx src/components/about-modal.tsx
+\end{lstlisting}
+Then restart \code{npm run dev} and reload the homepage — Tailwind's JIT compiler resolves new arbitrary-value classes like \code{bg-[\#1c1917]} on the fly, so no other build step is needed. \pathname{Guide/main.tex}'s own \code{olkSlate} colour (\S\ref{ch:styling}'s preamble) is unrelated and does not need to change — it drives this PDF manual, not the website.
+
+A few stock Tailwind shades worth trying as the base, in place of \code{\#0f172a}:
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}l l Y@{}}
+\toprule
+\textbf{Theme} & \textbf{Hex} & \textbf{Feel} \\
+\midrule
+Slate Navy (current) & \code{\#0f172a} & Cool, neutral, current default — Tailwind \code{slate-900}. \\
+Slate Black & \code{\#020617} & Closest stock match to the original near-black — Tailwind \code{slate-950}. \\
+Warm Charcoal & \code{\#1c1917} & Neutral-warm, pairs well with the amber ambient glow added alongside the teal one — Tailwind \code{stone-900}. \\
+Zinc Dark & \code{\#18181b} & True neutral gray-black, no blue or warm cast — Tailwind \code{zinc-900}. \\
+Midnight Indigo & \code{\#1e1b4b} & Moodier, purple-leaning dark — Tailwind \code{indigo-950}. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+For a full light theme instead of a lighter dark one, swap \code{bg-[\#0f172a] text-white} for \code{bg-slate-50 text-slate-900} on the page wrapper and re-derive every secondary-text class in the opposite direction — a lighter background needs \emph{darker} secondary text (e.g.\ \code{text-slate-600} instead of \code{text-slate-300}). That is a bigger, more invasive change than the swaps above: not a one-line \code{sed}, since every text shade in \pathname{page.tsx}, \pathname{about-modal.tsx}, \pathname{book-of-month.tsx}, and \pathname{announcement-banner.tsx} would need to flip direction together or contrast breaks.
+\end{olkhowto}
+
 \section{Fonts}
 
 \pathname{src/app/layout.tsx} loads Geist Sans and Geist Mono via \code{next/font/google}, exposing them as the \code{--font-geist-sans}/\code{--font-geist-mono} CSS variables consumed by the \code{@theme inline} block above. \pathname{globals.css}'s \code{body} rule references \code{font-family: var(--font-sans)} — which resolves to Geist — rather than hard-coding a fallback stack, so the loaded Geist font is now actually the default body font, not just an opt-in Tailwind utility.
