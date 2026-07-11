@@ -31,7 +31,7 @@ This exact version of Next.js is \textbf{not} the Next.js in your training data 
 
 \section{The bigger picture: why this project exists}
 
-OLK's founder wants two things, in this order. First: get the platform live, publicly, on Vercel, serving real readers in Kashmir. Second, and this is the part worth stating explicitly because it will shape architectural decisions for years: \textbf{eventually run the platform's own infrastructure — including Supabase itself, since it is open source — on a local server physically located in Kashmir}, rather than depending indefinitely on a remote, foreign-hosted database.
+OLK wants two things, in this order. First: get the platform live, publicly, on Vercel, serving real readers in Kashmir. Second, and this is the part worth stating explicitly because it will shape architectural decisions for years: \textbf{eventually run the platform's own infrastructure — including Supabase itself, since it is open source — on a local server physically located in Kashmir}, rather than depending indefinitely on a remote, foreign-hosted database.
 
 That second goal is why Chapter~\ref{ch:local-env} is not a throwaway "how to run this on your laptop" section. Learning to run Supabase's full stack under Docker locally — Postgres, GoTrue auth, PostgREST, Realtime, Storage, Studio, all of it — is a rehearsal for the day that same stack runs on a physical machine in-region instead of on a developer's laptop. Every command in that chapter (\code{supabase start}, \code{supabase stop}, \code{supabase db reset}) is a command that will eventually run against real hardware, not a metaphor for it.
 
@@ -39,10 +39,10 @@ That second goal is why Chapter~\ref{ch:local-env} is not a throwaway "how to ru
 As of this edition, the project already keeps a working local Docker/Supabase environment side-by-side with the hosted one, switched with a single environment variable (see Chapter~\ref{ch:local-env}). This exists specifically so that day-to-day development does not have to touch the production database at all.
 \end{olknote}
 
-\section{A friend's infrastructure audit, and what we did with it}
+\section{An infrastructure audit, and what we did with it}
 \label{sec:infra-audit}
 
-In July 2026, a friend of the founder reviewed the project and wrote up a full self-hosting migration plan: VPS + PM2 + Caddy in place of Vercel, a self-hosted Supabase Docker stack (Postgres, GoTrue, PostgREST, Realtime, Storage) in place of the managed cloud project, PgBouncer for connection pooling, a self-hosted mail server (Postfix/Mailu) in place of Resend, and system cron in place of Vercel Cron — all sized for a projected \textbf{100,000} users.
+In July 2026, a colleague of the founder reviewed the project and wrote up a full self-hosting migration plan: VPS + PM2 + Caddy in place of Vercel, a self-hosted Supabase Docker stack (Postgres, GoTrue, PostgREST, Realtime, Storage) in place of the managed cloud project, PgBouncer for connection pooling, a self-hosted mail server (Postfix/Mailu) in place of Resend, and system cron in place of Vercel Cron — all sized for a projected \textbf{100,000} users.
 
 \begin{olknote}
 The plan's individual pieces were technically sound — PM2+Caddy, PgBouncer, cron, \code{pg\_dump} backups are all conventional, correct choices. The problems were in the framing, not the components:
