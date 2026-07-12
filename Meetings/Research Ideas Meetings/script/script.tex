@@ -1,0 +1,671 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{xcolor}
+\usepackage[skins,breakable]{tcolorbox}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{booktabs}
+
+% ---------------------------------------------------------------
+% Same palette as the slide deck, for visual continuity
+% ---------------------------------------------------------------
+\definecolor{sovDark}{RGB}{18,32,51}
+\definecolor{sovGold}{RGB}{214,164,64}
+\definecolor{sovRed}{RGB}{163,44,58}
+\definecolor{sovGrey}{RGB}{92,102,117}
+\definecolor{sovPaper}{RGB}{250,248,244}
+\definecolor{sovGreen}{RGB}{58,110,89}
+
+\hypersetup{
+  colorlinks=true,linkcolor=sovDark,urlcolor=sovDark,citecolor=sovDark,
+  pdftitle={Speaker Script -- Digital Sovereignty for Kashmir},
+  bookmarksopen=true
+}
+
+\titleformat{\section}{\normalfont\Large\bfseries\color{sovDark}}{\thesection}{0.6em}{}
+\titleformat{\subsection}[block]{\normalfont\large\bfseries\color{sovDark}}{}{0em}{}
+  [{\color{sovGold}\titlerule[1.2pt]}]
+\titlespacing*{\subsection}{0pt}{18pt}{6pt}
+
+\newtcolorbox{sayit}{
+  enhanced,breakable,colback=sovDark,colframe=sovGold,coltext=sovPaper,
+  boxrule=1pt,arc=2pt,left=8pt,right=8pt,top=6pt,bottom=6pt,
+  fonttitle=\bfseries,title={SAY THIS},before skip=6pt,after skip=10pt
+}
+
+\newcommand{\onscreen}[1]{\noindent\textbf{\color{sovGrey}On screen:} #1\par\vspace{4pt}}
+\newcommand{\timing}[2]{\hfill{\normalsize\color{sovGrey}[\,#1\ \textbar\ running total #2\,]}}
+
+\newenvironment{terms}
+  {\noindent\textbf{\color{sovGrey}Terms to know:}
+   \begin{description}[leftmargin=0pt,style=sameline,labelindent=0pt,itemsep=2pt,topsep=2pt,font=\normalfont\bfseries\color{sovDark}]}
+  {\end{description}\vspace{2pt}}
+
+\title{\color{sovDark}\textbf{Report on Script}\\[4pt]\Large Digital Sovereignty for Kashmir}
+
+\begin{document}
+\maketitle
+
+\clearpage
+\section{Section 0 --- Why This, Why Now}
+
+\subsection*{Slide 1 --- Title \timing{0:25}{0:25}}
+\onscreen{Title, subtitle, your name, ``Open Library Kashmir (OLK)'', July 2026.}
+\begin{sayit}
+Good evening, everyone. Thank you for coming. Tonight I want to talk about something
+we've touched on before in smaller conversations --- building our own digital
+infrastructure, right here, so that our data, our platforms, and our future don't have
+to live on someone else's servers, under someone else's laws. I'll walk through why this
+matters, what it actually takes technically, and end with a real, fundable first step we
+could start this year.
+\end{sayit}
+
+\subsection*{Slide 2 --- Tonight's Roadmap \timing{0:45}{1:10}}
+\onscreen{The table of contents: the six sections plus ``The Hope''.}
+\begin{sayit}
+Here's the shape of tonight's talk. We'll start with the ``why'' --- the motivation.
+Then we'll get practical: the internet and electricity we'd need, the physical room the
+servers live in, starting with a VPS as our on-ramp, the hardware for scaling to a
+hundred thousand users, and the software and skills we'd need to run it. And I'll close
+with a proposal --- a modest, real pilot we could begin, not a someday dream.
+\end{sayit}
+
+\subsection*{Slide 3 --- Divider: Why This, Why Now \timing{0:10}{1:20}}
+\onscreen{Section title only.}
+\begin{sayit}
+So --- why this, why now.
+\end{sayit}
+
+\subsection*{Slide 4 --- The cost of renting our own knowledge \timing{1:35}{2:55}}
+\onscreen{Bar chart of global cloud market share (AWS 30\%, Azure 24\%, Google 11\%,
+others 35\%); gold takeaway box on ``whose infrastructure, whose law''.}
+\begin{terms}
+  \item[CLOUD Act] A 2018 US law: any company headquartered in the US must hand
+    government-requested data to US authorities, even if the server holding it is
+    physically in another country.
+  \item[Hyperscaler] Industry term for a cloud provider operating at massive, global
+    scale (AWS, Azure, Google Cloud, Alibaba Cloud, etc.).
+\end{terms}
+\begin{sayit}
+Let's start with an uncomfortable fact. Roughly two-thirds of the world's cloud
+infrastructure spend sits with three American companies --- Amazon, Microsoft, and
+Google. And every one of them is bound by something called the CLOUD Act --- a US law
+that says a US company must hand over data on request, no matter which country the
+actual server sits in. So when we say our data is ``hosted in India'' on an American
+platform, that's a comforting label --- it is not sovereignty. The question was never
+whether we depend on cloud infrastructure. We already do, every day. The real question
+is: whose infrastructure, under whose law, and who profits from it.
+\end{sayit}
+
+\subsection*{Slide 5 --- OLK today: a working example, and its ceiling \timing{1:20}{4:15}}
+\onscreen{Two columns: ``What we already built'' vs.\ ``The ceiling''.}
+\begin{terms}
+  \item[Next.js / React] The open-source web framework OLK's interface is built with.
+  \item[PostgreSQL] The open-source database engine that stores every book, user, and
+    request.
+  \item[Supabase] An open-source platform that bundles Postgres with authentication,
+    file storage, and an API layer --- what OLK currently runs on.
+  \item[\texttt{ap-south-1}] Amazon's internal code for its Mumbai data center region.
+\end{terms}
+\begin{sayit}
+Now, here's where we already stand. Open Library Kashmir --- OLK --- is real. People are
+donating books, lending them, requesting them, right now. It's built entirely on
+open-source technology: Next.js and React for the interface, PostgreSQL as the
+database, all wired together through a platform called Supabase. Every layer of that
+software, we control. But here's the ceiling: today it physically runs inside Amazon's
+data center in Mumbai. Being geographically close isn't the same as being legally ours
+--- it's still Amazon's rack, Amazon's power, Amazon's law. The good news is that
+because everything is open-source, we don't need to rewrite a single line to change
+that. We just need to redeploy it onto infrastructure we actually own.
+\end{sayit}
+
+\subsection*{Slide 6 --- Beyond one app: why this could matter for millions \timing{1:05}{5:20}}
+\onscreen{Hub-and-spoke diagram: Open Source Infra at the centre, spokes to libraries,
+cooperatives, health records, schools.}
+\begin{sayit}
+And OLK is not the destination --- it's the first baby step. The exact same pattern ---
+a self-hosted database, authentication, storage, a web front end --- is the blueprint
+for every community institution that doesn't yet have a digital backbone of its own:
+farmer and artisan cooperatives, community health records, local school archives. If we
+get this right once, we've built a template the whole region can reuse.
+\end{sayit}
+
+\section{Section I --- Internet \& Electricity: The Foundation}
+
+\subsection*{Slide 7 --- Divider: Internet \& Electricity \timing{0:10}{5:30}}
+\begin{sayit}
+Let's talk foundations --- the internet and the electricity this would actually run on.
+\end{sayit}
+
+\subsection*{Slide 8 --- How much internet do we actually need? \timing{1:35}{7:05}}
+\onscreen{Bandwidth math worked out step by step; takeaway on CDN/edge caching.}
+\begin{terms}
+  \item[Gbps / Mbps] Gigabits and megabits per second --- units of network speed.
+    1 Gbps = 1000 Mbps.
+  \item[Concurrent users] People actively using the app \emph{at the same instant},
+    as opposed to total registered users.
+  \item[CDN / edge cache] A ``Content Delivery Network'' --- copies of your content
+    stored on servers closer to users, so they don't have to reach all the way back to
+    the origin server for every request.
+\end{terms}
+\begin{sayit}
+Let's do some real math. Say we reach a hundred thousand registered users. At any given
+moment, maybe eight percent are actively online --- that's eight thousand concurrent
+users. If each one is pulling around thirty kilobytes a second --- normal for a
+text-and-image app like ours --- that's roughly two hundred forty megabytes a second, or
+about two gigabits per second, sustained. Add burst headroom for peak load, and we're
+looking at eight to ten gigabits per second. A typical home or business fiber line here
+in Srinagar --- a hundred megabits to a gigabit --- is an order of magnitude short of
+that. We'd need datacenter-grade, redundant links --- multiple carriers, multiple
+physical paths. And given Kashmir's history with internet shutdowns, a single line isn't
+just slow, it's a single point of total failure. Our design principle: keep a cache
+outside the valley --- in Hong Kong or Singapore --- so people can still read even if a
+local shutdown stops new writes.
+\end{sayit}
+
+\subsection*{Slide 9 --- Electricity: the honest picture \timing{1:20}{8:25}}
+\onscreen{Two columns: where J\&K's grid stands vs.\ what that means for our design.}
+\begin{terms}
+  \item[RDSS] Revamped Distribution Sector Scheme --- the central government's ongoing
+    power-sector reform program that J\&K is implementing.
+  \item[KPDCL] Kashmir Power Distribution Corporation Limited --- the utility running
+    the local grid.
+  \item[Online double-conversion UPS] A battery backup that continuously converts
+    incoming power to DC and back to AC, so it can take over with \emph{zero}
+    switchover delay when grid power drops --- unlike cheaper ``standby'' UPS units.
+  \item[Auto-transfer switch] Hardware that automatically switches a building's power
+    source from grid to generator (and back) without a human flipping anything.
+\end{terms}
+\begin{sayit}
+On power: the grid here is genuinely improving. Billing efficiency has gone from
+fifty-six percent to seventy-seven percent under the RDSS reform program. But KPDCL
+still runs scheduled maintenance outages regularly, and unscheduled ones remain common,
+especially in winter. So our design has to treat grid power as supplementary, not
+primary, from day one. That means a rack-level online double-conversion UPS --- a
+battery system that instantly and seamlessly takes over the moment grid power drops ---
+sized for at least thirty to sixty minutes of runtime. Behind that, a diesel generator
+with an automatic transfer switch and enough fuel for a couple of days. Solar and
+battery can supplement over time, but never as the sole source --- Kashmir's winter sun
+just isn't reliable enough for that.
+\end{sayit}
+
+\section{Section II --- Physical Environment}
+
+\subsection*{Slide 10 --- Divider: Physical Environment \timing{0:10}{8:35}}
+\begin{sayit}
+Now --- where do these machines actually live?
+\end{sayit}
+
+\subsection*{Slide 11 --- The room the servers live in \timing{1:20}{9:55}}
+\onscreen{Cooling / safety on the left, physical security and a takeaway on the right.}
+\begin{terms}
+  \item[Free-air / economizer cooling] Using outside air directly to cool a server
+    room instead of running mechanical air-conditioning --- works whenever the outside
+    air is already cool and dry enough.
+  \item[FM-200 / Novec] Clean-agent fire suppression gases that put out fires without
+    leaving behind water or residue that would destroy electronics.
+  \item[Positive-pressure filtration] Keeping air pressure inside the room slightly
+    higher than outside, so filtered air leaks \emph{out} through any gap rather than
+    unfiltered dust leaking \emph{in}.
+\end{terms}
+\begin{sayit}
+Kashmir's climate is actually an asset here. Cool air most of the year means we can use
+free-air cooling --- essentially just letting outside air do the work --- and only need
+real air-conditioning during summer peaks and for humidity control. We'd seal the rack
+and use positive-pressure filtration to keep valley dust and pollen out. For safety,
+clean-agent fire suppression --- never water sprinklers over live electronics --- plus
+smoke and heat detectors wired to automatic shutdown. And physically: one
+access-controlled room, logged entry, CCTV, locking cabinets. For our pilot, this is
+genuinely one well-prepared room with a single rack --- not a purpose-built data center.
+That's a later, bigger project.
+\end{sayit}
+
+\section{Section III --- Starting with VPS: Our On-Ramp}
+
+\subsection*{Slide 12 --- Divider: Starting with VPS \timing{0:10}{10:05}}
+\begin{sayit}
+So how do we actually start? With a VPS --- our on-ramp.
+\end{sayit}
+
+\subsection*{Slide 13 --- Why VPS first: the staged path \timing{1:05}{11:10}}
+\onscreen{Three-stage diagram: VPS $\rightarrow$ Colocation $\rightarrow$ Owned facility.}
+\begin{terms}
+  \item[VPS] Virtual Private Server --- a slice of a shared physical machine, rented
+    by the hour or month, that behaves like your own private computer.
+  \item[Colocation (``colo'')] Renting rack space, power, and network connectivity
+    inside someone else's data center, while the physical server hardware inside it is
+    yours.
+  \item[Capex] Capital expenditure --- upfront money spent buying physical assets
+    (as opposed to ongoing rental/subscription costs).
+\end{terms}
+\begin{sayit}
+Think of this as three stages. Stage one: a VPS --- a virtual private server --- rented
+from a Chinese cloud provider. Near-zero upfront cost, and it's where we learn real
+operations: Linux, backups, monitoring. Stage two: colocation --- we rent rack space,
+power, and network in someone else's facility, but the hardware inside it is ours.
+That's exactly where our pilot lands. Stage three: our own facility, full physical
+control, based here in Kashmir, serving the region. Every one of these stages runs the
+exact same open-source software. Moving between them is a migration, not a rewrite.
+We're not choosing between a VPS and our own data center --- we're choosing the order in
+which we build confidence and capability.
+\end{sayit}
+
+\subsection*{Slide 14 --- The Chinese cloud landscape \timing{1:05}{12:15}}
+\onscreen{Four bullets on why Chinese providers specifically.}
+\begin{sayit}
+Why Chinese cloud providers specifically? Alibaba Cloud, Tencent Cloud, and Huawei Cloud
+are three of the largest cloud operators in the world by capacity --- mature, globally
+reachable, and entirely outside the reach of that US CLOUD Act we talked about earlier.
+All three run international sites in Hong Kong and Singapore built specifically for
+customers outside mainland China. And Huawei Cloud in particular runs on the same
+processor and operating system family --- Kunpeng and openEuler --- that we'd eventually
+deploy on our own hardware. One skill set covers both stages. And to be direct about it:
+everything from this point forward in the talk is Chinese-made. No AWS, no Azure, no
+Google.
+\end{sayit}
+
+\subsection*{Slide 15 --- Alibaba vs.\ Tencent vs.\ Huawei Cloud \timing{1:20}{13:35}}
+\onscreen{Comparison table across four rows; gold recommendation box.}
+\begin{terms}
+  \item[ECS] Elastic Compute Service --- Alibaba's (and Huawei's) name for a rentable
+    virtual server.
+  \item[CVM] Cloud Virtual Machine --- Tencent's name for the same idea.
+  \item[Lighthouse] Tencent's simplified, all-in-one VPS product aimed at small
+    projects --- easier to set up than a full CVM.
+  \item[Latency] The delay for a packet of data to travel from Srinagar to the server
+    and back, measured in milliseconds (ms).
+\end{terms}
+\begin{sayit}
+Comparing the three: Alibaba Cloud has the broadest footprint outside China and the most
+mature international billing. Tencent Cloud has a product called Lighthouse ---
+basically a simplified, all-in-one VPS --- perfect for a first pilot. Huawei Cloud's
+advantage is architectural continuity: Kunpeng and openEuler, the same stack as our
+future hardware. All three have a nearby region in Hong Kong or Singapore, with latency
+to Srinagar around forty to eighty milliseconds --- perfectly usable. My recommendation:
+start on Tencent Lighthouse or Alibaba's ECS for the cheapest, fastest first pilot, and
+plan our eventual on-premises hardware around Huawei's ecosystem for continuity.
+\end{sayit}
+
+\subsection*{Slide 16 --- Getting a Chinese VPS as a foreign user \timing{1:05}{14:40}}
+\onscreen{Five numbered practical steps; gold takeaway box.}
+\begin{terms}
+  \item[ICP license] A mainland Chinese government filing required for any website
+    physically hosted on mainland Chinese servers --- avoided entirely by choosing a
+    Hong Kong or Singapore region instead.
+  \item[Pay-as-you-go vs.\ reserved instance] Paying by actual usage/hour, versus
+    committing upfront to a fixed term (e.g.\ one year) for a discount.
+\end{terms}
+\begin{sayit}
+Practically, here's how we'd actually get one of these as outsiders. Register on the
+international site --- not the mainland Chinese site. Choose a Hong Kong or Singapore
+region --- that alone avoids China's mainland ICP licensing requirement, which only
+applies to websites physically hosted inside mainland China. Identity verification is
+just a passport and organization documents --- we'd register OLK formally to do this
+cleanly. Payment works with an ordinary international credit card. And critically: start
+pay-as-you-go on a small instance before committing to any annual plan, so we validate
+our actual workload first. None of this requires setting up a China-based business. It
+requires an afternoon of paperwork.
+\end{sayit}
+
+\section{Section IV --- Hardware for Full Scale: 100,000 Users}
+
+\subsection*{Slide 17 --- Divider: Hardware for Full Scale \timing{0:10}{14:50}}
+\begin{sayit}
+Now let's talk about the hardware we'd need to actually scale to a hundred thousand
+users.
+\end{sayit}
+
+\subsection*{Slide 18 --- Storage 101: what we need, how much \timing{1:20}{16:10}}
+\onscreen{SSD vs.\ NVMe on the left, sizing math for 100k users on the right.}
+\begin{terms}
+  \item[SATA SSD] A solid-state drive connected over the older SATA interface,
+    capped around 550 MB/s.
+  \item[NVMe] A storage protocol that lets SSDs talk directly over the same
+    high-speed PCIe lanes as the processor --- much faster than SATA.
+  \item[IOPS] Input/Output Operations Per Second --- how many individual read or
+    write operations a drive can handle each second; more important than raw speed for
+    databases doing lots of small operations.
+  \item[WAL] Write-Ahead Log --- PostgreSQL's record of every change, written before
+    it's applied, used to guarantee no data is lost in a crash.
+\end{terms}
+\begin{sayit}
+Two storage technologies matter here. SATA SSDs are fast and cheap but capped around
+five hundred fifty megabytes a second by their interface. NVMe drives talk directly over
+the same high-speed lanes as the processor --- multiple gigabytes per second, and far
+more importantly, far higher IOPS, which just means how many small read-and-write
+operations it can handle per second. That matters enormously for a database like ours
+doing thousands of tiny random reads and writes. For sizing: at a hundred thousand
+users, with about five megabytes of data each, plus book cover images, plus database
+overhead like indexes and write-ahead logs and backups, we land on a design target of
+two to five terabytes of fast NVMe storage, with a separate cheaper tier for older,
+archived data.
+\end{sayit}
+
+\subsection*{Slide 19 --- RAID: redundancy is not optional \timing{1:20}{17:30}}
+\onscreen{Table of RAID 0/1/5/6/10 with fault tolerance and usable capacity; recommendation
+box.}
+\begin{terms}
+  \item[RAID] Redundant Array of Independent Disks --- combining multiple physical
+    drives so data survives one (or more) drive failures, and/or goes faster.
+  \item[Striping] Splitting data across multiple drives so reads/writes happen in
+    parallel --- faster, but no protection on its own.
+  \item[Mirroring] Writing the same data to two drives simultaneously --- if one dies,
+    the other has an exact copy.
+  \item[Parity] Extra, mathematically-derived data stored alongside the real data,
+    which lets the array reconstruct a lost drive's contents.
+\end{terms}
+\begin{sayit}
+RAID is how we protect against a hard truth: drives fail. RAID zero just spreads data
+across disks for speed, with zero protection --- if one drive dies, everything's gone.
+RAID one mirrors two drives --- simple, but you lose half your capacity. RAID five and
+six add parity data so the array survives one or two drive failures respectively. RAID
+ten mirrors pairs of drives and then stripes across those pairs --- it gives you the best
+of both speed and redundancy, at the cost of losing half your raw capacity. Our pick:
+RAID ten for the live database --- it's the system of record, worth the extra cost.
+RAID six is fine for the bulk image and backup archive, where raw capacity matters more
+than speed.
+\end{sayit}
+
+\subsection*{Slide 20 --- ECC RAM: why a bit-flip matters \timing{1:05}{18:35}}
+\onscreen{Why ECC matters, then sizing guidance for 10--20k and 100k scale.}
+\begin{terms}
+  \item[ECC RAM] Error-Correcting Code memory --- detects and automatically fixes
+    single-bit errors as they happen, instead of silently corrupting data.
+  \item[DIMM] Dual In-line Memory Module --- the physical memory stick that plugs
+    into a server.
+  \item[\texttt{shared\_buffers}] A PostgreSQL setting controlling how much RAM the
+    database reserves for its own working cache.
+\end{terms}
+\begin{sayit}
+Here's something people don't think about: ordinary consumer memory has zero protection
+against random bit-flips --- caused by things like cosmic rays or electrical noise.
+Rare, yes, but real, and it gets worse the more memory chips you run and the longer they
+run. ECC --- error-correcting code --- RAM detects and silently fixes single-bit errors
+in real time. For a system of record --- who owns which book, who borrowed what --- a
+silently corrupted database row is far worse than a slow page load. This is not where we
+cut costs. For sizing, a hundred twenty-eight gigabytes gives PostgreSQL comfortable
+room for our ten-to-twenty-thousand-user pilot. Full hundred-thousand-user scale would
+mean two hundred fifty-six to five hundred twelve gigabytes, or splitting the load
+across multiple machines instead.
+\end{sayit}
+
+\subsection*{Slide 21 --- The Chinese hardware stack, end to end \timing{1:20}{19:55}}
+\onscreen{Table: CPU, chassis, storage, OS, networking, all Chinese vendors; market-share
+takeaway.}
+\begin{terms}
+  \item[Kunpeng] Huawei's family of ARM-based server processors.
+  \item[ARM64] A processor architecture (as opposed to the more familiar x86 used by
+    Intel/AMD) --- power-efficient, and what Kunpeng chips use.
+  \item[TaiShan / Inspur / XFusion] Chinese server manufacturers that build rack
+    servers certified to run Kunpeng processors and openEuler.
+  \item[YMTC / ZhiTai] Yangtze Memory Technologies Corp --- China's domestic NAND
+    flash memory manufacturer; ZhiTai is its consumer/enterprise SSD brand.
+  \item[openEuler] Huawei's open-source Linux distribution, built natively for ARM64.
+  \item[GbE] Gigabit Ethernet --- wired networking speed, e.g.\ ``10 GbE'' = 10
+    gigabits per second.
+\end{terms}
+\begin{sayit}
+So what does an all-Chinese hardware stack actually look like? On the processor side:
+Huawei's Kunpeng chips --- ARM-based, with their newest generation shipping up to a
+hundred ninety-two cores per chip. Server chassis from Huawei's TaiShan line, or from
+Inspur and XFusion --- all of them ship servers certified for Kunpeng and openEuler.
+Storage from YMTC, under their ZhiTai brand --- that's China's homegrown 3D NAND flash
+memory manufacturer, with their newest drives hitting ten to fifteen gigabytes a second.
+And the operating system: openEuler, Huawei's open-source Linux, which already holds
+over half the market for newly deployed server operating systems in China. This isn't a
+fringe, unproven stack --- Kunpeng-based servers already hold over twenty percent of
+China's server market. This is mainstream infrastructure we can simply choose to use.
+\end{sayit}
+
+\subsection*{Slide 22 --- A concrete Bill of Materials \timing{1:05}{21:00}}
+\onscreen{Parts list table for a 100k-scale node.}
+\begin{terms}
+  \item[BOM] Bill of Materials --- the itemised parts list for building something.
+  \item[PSU] Power Supply Unit.
+  \item[RDIMM] Registered DIMM --- an enterprise-grade memory module (more reliable,
+    supports larger capacities than consumer memory).
+  \item[PDU] Power Distribution Unit --- the rack-mounted power strip that feeds all
+    the servers in a rack.
+  \item[2U] A unit of rack server height (``2U'' = 2 rack units, about 3.5 inches).
+\end{terms}
+\begin{sayit}
+Putting that into an actual parts list for a hundred-thousand-user-scale machine: a
+two-U rack server chassis from TaiShan or XFusion with dual power supplies, one or two
+Kunpeng processors, two hundred fifty-six gigabytes of ECC memory, a small mirrored boot
+drive, and the real workhorse --- six NVMe drives in RAID ten for the database, giving
+us five to eight terabytes of usable, protected space. Dual ten-or-twenty-five-gigabit
+networking, openEuler as the operating system, and proper rack-level UPS support. Exact
+pricing moves with the currency exchange rate, so treat this as a specification to take
+to a reseller for a quote, not a fixed price.
+\end{sayit}
+
+\section{Section V --- Software \& the Skills We Need}
+
+\subsection*{Slide 23 --- Divider: Software \& Skills \timing{0:10}{21:10}}
+\begin{sayit}
+Now --- the software running on top of all that hardware, and the skills our team needs.
+\end{sayit}
+
+\subsection*{Slide 24 --- The software stack: what changes \timing{1:20}{22:30}}
+\onscreen{``Stays the same'' vs.\ ``New, Chinese, and worth knowing''.}
+\begin{terms}
+  \item[openGauss] Huawei's own open-source fork of PostgreSQL, built for
+    distributed, petabyte-scale workloads.
+  \item[TiDB] An open-source distributed SQL database from PingCAP, wire-compatible
+    with MySQL, that scales horizontally across many machines.
+  \item[OceanBase] Ant Group's distributed database, built for financial-grade
+    transaction processing at extreme concurrency.
+  \item[OLTP] Online Transaction Processing --- the kind of workload made of many
+    small, fast read/write transactions (as opposed to big analytical queries).
+\end{terms}
+\begin{sayit}
+Here's the reassuring part: the database layer doesn't need to change. PostgreSQL is
+what Supabase runs today, and what OLK already depends on --- open-source, portable,
+proven. Our whole application layer is already free to redeploy anywhere. But it's worth
+knowing what China's ecosystem offers if we ever outgrow a single machine: openGauss,
+which is actually Huawei's own fork of PostgreSQL, built for distributed, petabyte-scale
+workloads. TiDB, from a company called PingCAP, which speaks the same wire protocol as
+MySQL but scales horizontally. And OceanBase, from Ant Group, built for financial-grade
+transaction processing at extreme concurrency. Because openGauss is a PostgreSQL fork,
+that migration path exists --- but we don't need it urgently. We'd only reach for
+something like this once a single well-specced machine, like our pilot, stops being
+enough --- likely well past a hundred thousand users.
+\end{sayit}
+
+\subsection*{Slide 25 --- Supabase self-hosting \timing{1:05}{23:35}}
+\onscreen{Three bullets on what Supabase actually is; the ``headline point'' takeaway.}
+\begin{terms}
+  \item[PostgREST] Software that automatically turns a PostgreSQL database into a
+    web API.
+  \item[GoTrue] Supabase's authentication service (sign-up, login, sessions).
+  \item[Docker] A tool for packaging software (and everything it needs to run) into
+    portable containers that run identically on any machine.
+  \item[Apache / MIT license] Open-source software licenses that permit free use,
+    modification, and redeployment --- including for our own commercial or community
+    use.
+\end{terms}
+\begin{sayit}
+This is the headline point of the whole talk, honestly. Supabase itself is just a thin,
+open-source layer sitting on top of Postgres --- a piece called PostgREST that turns the
+database into an API, GoTrue for authentication, a realtime engine, a storage API, and a
+management dashboard called Studio. All open-source, all licensed permissively, all
+packaged as Docker containers. We already run this exact stack locally for development.
+Running it in production, for real, is the same containers --- just pointed at our own
+database, on our own machine, behind our own domain name. We do not need to rewrite Open
+Library Kashmir to make it sovereign. We need to redeploy it --- first onto a VPS, then
+onto our own hardware.
+\end{sayit}
+
+\subsection*{Slide 26 --- Skills matrix \timing{1:05}{24:40}}
+\onscreen{Table: skill, why it matters, whether we have it today.}
+\begin{terms}
+  \item[DBA] Database Administrator --- the role responsible for keeping a database
+    backed up, tuned, and running reliably.
+  \item[Firewalling] Configuring network rules that control what traffic is allowed
+    in and out of our servers.
+\end{terms}
+\begin{sayit}
+None of this runs itself --- here's what our team needs to build. Linux and openEuler
+administration, since everything runs on it. Docker and container orchestration ---
+we're already good here. PostgreSQL database administration --- backups, tuning,
+replication --- we're partway there. Networking and firewalling for shutdown-resilient
+connections, security practices like patching and encryption, and basic facilities
+knowledge for power and cooling --- those three, honestly, we don't have yet. This is as
+much a call for volunteers tonight as it is a call for hardware budget. Every gap in
+that ``no'' column is a role somebody in this room could take on.
+\end{sayit}
+
+\subsection*{Slide 27 --- Backups \& disaster recovery \timing{1:05}{25:45}}
+\onscreen{The 3-2-1 rule adapted for us; encryption takeaway.}
+\begin{terms}
+  \item[3-2-1 rule] A standard backup principle: 3 copies of data, on 2 different
+    media/locations, with 1 copy stored offsite.
+  \item[OSS / COS] Alibaba's ``Object Storage Service'' and Tencent's ``Cloud Object
+    Storage'' --- cheap, durable cloud storage for files, ideal for encrypted backup
+    archives (not for hosting a live database).
+\end{terms}
+\begin{sayit}
+Backups follow a simple, well-tested rule: three-two-one. Three copies of the data ---
+the live production copy plus two backups. Two different kinds of media or locations
+--- say, a local snapshot plus a separate physical disk or machine. And one copy offsite
+--- either a different city in Jammu and Kashmir, or an encrypted bucket on a Chinese
+cloud storage service like Alibaba OSS or Tencent COS, used strictly as cold backup,
+never as the live host. Everything is encrypted before it ever leaves our building. Used
+that way, an offsite Chinese cloud bucket carries none of the sovereignty compromise of
+actually hosting live traffic there.
+\end{sayit}
+
+\section{The Hope}
+
+\subsection*{Slide 28 --- Divider: The Hope \timing{0:15}{26:00}}
+\begin{sayit}
+And that brings me to the part I actually want to end on --- the hope.
+\end{sayit}
+
+\subsection*{Slide 29 --- The proposal: one machine, real capacity \timing{1:35}{27:35}}
+\onscreen{Pilot spec bullets, ``why this scope'', and the headroom calculation row.}
+\begin{sayit}
+Here's the ask, in concrete terms. A pilot serving ten to twenty thousand users, off a
+single, well-specced machine: five terabytes of usable NVMe storage in RAID ten, a
+hundred twenty-eight gigabytes of ECC memory, a Kunpeng-class processor, openEuler, and
+our own PostgreSQL and self-hosted Supabase stack --- Chinese hardware and hosting from
+the virtual machine all the way down to the silicon. This is deliberately modest: small
+enough to fund and run with the volunteer skills we can realistically build this year,
+but large enough to be a genuinely real platform, not a demo. It proves every single
+claim I've made tonight before we ever ask for datacenter-scale money. And the math
+backs it up --- twenty thousand users at roughly five megabytes each is only about a
+hundred gigabytes of active data. Against five terabytes, that's fifty times headroom.
+Years of growth, every book cover, every backup, without touching the hardware again.
+\end{sayit}
+
+\subsection*{Slide 30 --- The road from here (closing) \timing{1:35}{29:10}}
+\onscreen{Three-phase roadmap diagram; the closing ask; ``Our data. Our servers. Our
+region. Let's begin.''}
+\begin{terms}
+  \item[N+1 redundancy] Having one more of a critical component than the minimum
+    needed, so a single failure (of a power supply, a link, a cooling unit) doesn't
+    take the system down.
+\end{terms}
+\begin{sayit}
+So here's the road ahead, in three phases. Phase one, this year and next: this exact
+pilot, on Chinese VPS or colocation, serving ten to twenty thousand users --- proving the
+model works. Phase two, the year after: our own room, with real redundant power and
+cooling. Phase three, from twenty-twenty-eight onward: a multi-site data center here in
+Kashmir, serving well past a hundred thousand users, as a genuine regional model. What
+I'm asking for tonight is simple: a funding commitment for the phase-one parts list,
+volunteers against the skills we just went through, and eventually, a room we can call
+our own. This is buildable in months, not decades. It starts the moment we agree to
+start. Our data. Our servers. Our region. Let's begin. Thank you.
+\end{sayit}
+
+\clearpage
+\section*{Appendix: Full glossary, A--Z}
+\begin{description}[leftmargin=3.2cm,style=sameline,font=\normalfont\bfseries\color{sovDark}]
+\item[3-2-1 rule] Backup principle: 3 copies, on 2 media/locations, 1 offsite.
+\item[ARM64] A power-efficient processor architecture used by Kunpeng and most mobile
+  and modern server chips, as an alternative to x86.
+\item[Auto-transfer switch] Hardware that automatically switches power source from
+  grid to generator without human intervention.
+\item[BOM] Bill of Materials --- an itemised hardware parts list.
+\item[Capex] Capital expenditure --- upfront spending on physical assets.
+\item[CDN] Content Delivery Network --- cached copies of content served from
+  locations closer to the user.
+\item[CLOUD Act] US law compelling US companies to hand over data on request
+  regardless of where the server is physically located.
+\item[Colocation (``colo'')] Renting rack space/power/network in someone else's
+  facility while owning the server hardware yourself.
+\item[Concurrent users] Users actively using a system at the same moment.
+\item[CVM] Cloud Virtual Machine --- Tencent Cloud's rentable virtual server product.
+\item[DBA] Database Administrator.
+\item[DIMM] Dual In-line Memory Module --- a physical memory stick.
+\item[Docker] A tool for packaging software into portable, self-contained containers.
+\item[ECC RAM] Error-Correcting Code memory --- detects and fixes single-bit errors.
+\item[ECS] Elastic Compute Service --- Alibaba's/Huawei's rentable virtual server
+  product.
+\item[FM-200 / Novec] Clean-agent fire-suppression gases safe for use around live
+  electronics.
+\item[Free-air / economizer cooling] Cooling a server room using outside air directly
+  instead of mechanical air-conditioning.
+\item[Gbps / Mbps] Gigabits/megabits per second --- network speed units.
+\item[GbE] Gigabit Ethernet --- wired network speed (e.g.\ 10 GbE = 10 Gbps).
+\item[GoTrue] Supabase's authentication microservice.
+\item[Hyperscaler] A cloud provider operating at massive global scale.
+\item[ICP license] Mainland Chinese filing required only for websites physically
+  hosted inside mainland China; avoided by using a Hong Kong/Singapore region.
+\item[IOPS] Input/Output Operations Per Second --- how many read/write operations a
+  storage device can handle per second.
+\item[KPDCL] Kashmir Power Distribution Corporation Limited.
+\item[Kunpeng] Huawei's family of ARM-based server processors.
+\item[Latency] Round-trip delay for data to travel between two points, in
+  milliseconds.
+\item[Lighthouse] Tencent Cloud's simplified all-in-one VPS product.
+\item[Mirroring] Writing identical data to two drives simultaneously (RAID 1's basis).
+\item[N+1 redundancy] Having one spare unit beyond the minimum needed so a single
+  failure doesn't cause an outage.
+\item[Next.js / React] The open-source web framework and library OLK's front end is
+  built with.
+\item[NVMe] A storage protocol letting SSDs communicate over high-speed PCIe lanes.
+\item[OceanBase] Ant Group's distributed, financial-grade database.
+\item[OLTP] Online Transaction Processing --- many small, fast transactions.
+\item[openEuler] Huawei's open-source, ARM64-native Linux distribution.
+\item[openGauss] Huawei's open-source PostgreSQL fork for distributed workloads.
+\item[OSS / COS] Alibaba Object Storage Service / Tencent Cloud Object Storage ---
+  cloud file storage, suitable for encrypted backups only.
+\item[Parity] Derived data stored alongside real data, allowing reconstruction of a
+  failed drive.
+\item[Pay-as-you-go] Billing by actual usage rather than a fixed upfront commitment.
+\item[PDU] Power Distribution Unit --- rack-mounted power strip.
+\item[PostgREST] Software that exposes a PostgreSQL database as a web API.
+\item[PostgreSQL] The open-source relational database engine underlying OLK and
+  Supabase.
+\item[PSU] Power Supply Unit.
+\item[RAID] Redundant Array of Independent Disks --- combining drives for redundancy
+  and/or speed.
+\item[RDIMM] Registered DIMM --- enterprise-grade server memory.
+\item[RDSS] Revamped Distribution Sector Scheme --- India's power-sector reform
+  program.
+\item[SATA SSD] A solid-state drive using the older, slower SATA interface (capped
+  $\sim$550 MB/s).
+\item[\texttt{shared\_buffers}] A PostgreSQL setting for how much RAM it reserves as
+  its own cache.
+\item[Striping] Splitting data across multiple drives for parallel, faster
+  read/write.
+\item[Supabase] Open-source platform bundling Postgres with auth, storage, and an
+  API layer.
+\item[TaiShan / Inspur / XFusion] Chinese server manufacturers building
+  Kunpeng/openEuler-certified rack servers.
+\item[TiDB] PingCAP's open-source, MySQL-wire-compatible distributed SQL database.
+\item[UPS (online double-conversion)] A battery backup providing zero-delay
+  switchover when grid power fails.
+\item[VPS] Virtual Private Server --- a rented slice of a shared physical machine.
+\item[WAL] Write-Ahead Log --- PostgreSQL's crash-safety mechanism.
+\item[YMTC / ZhiTai] China's domestic NAND flash manufacturer and its SSD brand.
+\item[2U] A rack server height unit (2 rack units $\approx$ 3.5 inches).
+\end{description}
+
+\end{document}
