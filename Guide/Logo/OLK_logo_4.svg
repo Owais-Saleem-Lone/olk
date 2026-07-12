@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="512" height="512" viewBox="0 0 512 512" version="1.1"
+   id="svg_root" sodipodi:docname="OLK_logo.svg"
+   inkscape:version="1.4.4 (dcaf3e7d, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview id="namedview1" pagecolor="#ffffff" bordercolor="#000000"
+     borderopacity="0.25" inkscape:showpageshadow="2" inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0" inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1" inkscape:cx="256" inkscape:cy="256"
+     inkscape:current-layer="svg_root" showgrid="false" />
+  <defs id="defs_main">
+    <clipPath id="badgeClip" clipPathUnits="userSpaceOnUse">
+      <circle cx="256" cy="256" r="240" id="badgeClipCircle" />
+    </clipPath>
+    <radialGradient id="lampGlow" cx="50%" cy="42%" r="60%">
+      <stop offset="0%" stop-color="#FFF3D6" stop-opacity="0.95" id="s1"/>
+      <stop offset="55%" stop-color="#F6C453" stop-opacity="0.55" id="s2"/>
+      <stop offset="100%" stop-color="#F6C453" stop-opacity="0" id="s3"/>
+    </radialGradient>
+    <linearGradient id="glassGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFF3D6" stop-opacity="0.95" id="s4"/>
+      <stop offset="100%" stop-color="#F6C453" stop-opacity="0.85" id="s5"/>
+    </linearGradient>
+  </defs>
+
+  <g inkscape:label="background" inkscape:groupmode="layer" id="layer_bg">
+    <circle cx="256" cy="256" r="240" fill="#FBF8F1" id="bg_circle"/>
+  </g>
+  <g inkscape:label="mountains" inkscape:groupmode="layer" id="layer_mountains" clip-path="url(#badgeClip)">
+    <path id="mtn_outer-left" d="M 38.00,306.00 L 77.60,173.60 L 104.00,116.00 L 130.40,173.60 L 170.00,306.00 Z" fill="#1F3A34" fill-opacity="0.88"/>
+    <path id="mtn_outer-right" d="M 342.00,306.00 L 381.60,173.60 L 408.00,116.00 L 434.40,173.60 L 474.00,306.00 Z" fill="#1F3A34" fill-opacity="0.88"/>
+    <path id="mtn_shoulder-left" d="M 122.00,306.00 L 147.20,214.52 L 164.00,178.00 L 180.80,214.52 L 206.00,306.00 Z" fill="#1F3A34" fill-opacity="0.82"/>
+    <path id="mtn_shoulder-right" d="M 306.00,306.00 L 331.20,214.52 L 348.00,178.00 L 364.80,214.52 L 390.00,306.00 Z" fill="#1F3A34" fill-opacity="0.82"/>
+    <path id="mtn_inner-left" d="M 140.00,306.00 L 174.80,200.00 L 198.00,156.00 L 221.20,200.00 L 256.00,306.00 Z" fill="#1F3A34" fill-opacity="0.94"/>
+    <path id="mtn_inner-right" d="M 256.00,306.00 L 290.80,200.00 L 314.00,156.00 L 337.20,200.00 L 372.00,306.00 Z" fill="#1F3A34" fill-opacity="0.94"/>
+    <path id="snow_outer-left" d="M 104.00,116.00 L 90.93,136.20 L 98.77,129.07 L 104.00,125.03 L 109.23,129.07 L 117.07,136.20 Z" fill="#F5F0E3"/>
+    <path id="snow_outer-right" d="M 408.00,116.00 L 394.93,136.20 L 402.77,129.07 L 408.00,125.03 L 413.23,129.07 L 421.07,136.20 Z" fill="#F5F0E3"/>
+    <path id="snow_shoulder-left" d="M 164.00,178.00 L 155.68,190.85 L 160.67,186.32 L 164.00,183.75 L 167.33,186.32 L 172.32,190.85 Z" fill="#F5F0E3"/>
+    <path id="snow_shoulder-right" d="M 348.00,178.00 L 339.68,190.85 L 344.67,186.32 L 348.00,183.75 L 351.33,186.32 L 356.32,190.85 Z" fill="#F5F0E3"/>
+    <path id="snow_inner-left" d="M 198.00,156.00 L 186.52,173.75 L 193.41,167.48 L 198.00,163.93 L 202.59,167.48 L 209.48,173.75 Z" fill="#F5F0E3"/>
+    <path id="snow_inner-right" d="M 314.00,156.00 L 302.52,173.75 L 309.41,167.48 L 314.00,163.93 L 318.59,167.48 L 325.48,173.75 Z" fill="#F5F0E3"/>
+  </g>
+  <g inkscape:label="lantern" inkscape:groupmode="layer" id="layer_lantern">
+    <circle id="lantern_glow" cx="256" cy="127.0" r="62" fill="url(#lampGlow)"/>
+    <line id="ray_0" x1="282.79" y1="153.93" x2="311.16" y2="176.10" stroke="#F6C453" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
+    <line id="ray_1" x1="275.98" y1="160.51" x2="310.08" y2="207.43" stroke="#F6C453" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
+    <line id="ray_2" x1="267.63" y1="164.95" x2="282.68" y2="206.30" stroke="#F6C453" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
+    <line id="ray_3" x1="256.00" y1="167.00" x2="256.00" y2="233.00" stroke="#F6C453" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
+    <line id="ray_4" x1="244.37" y1="164.95" x2="229.32" y2="206.30" stroke="#F6C453" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
+    <line id="ray_5" x1="236.02" y1="160.51" x2="201.92" y2="207.43" stroke="#F6C453" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
+    <line id="ray_6" x1="229.21" y1="153.93" x2="200.84" y2="176.10" stroke="#F6C453" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
+    <path id="lantern_glass" d="M 226,110 L 286,110 L 284,144 L 228,144 Z" fill="url(#glassGrad)"/>
+    <path id="lantern_dome" d="M 256,80 C 250,82 233.6,86 224,102 C 240.0,106 272.0,106 288,102 C 278.4,86 262,82 256,80 Z" fill="#1F3A34"/>
+    <line id="dome_rib_0" x1="256" y1="83" x2="236.16" y2="99" stroke="#FBF8F1" stroke-width="1.4" opacity="0.6"/>
+    <line id="dome_rib_1" x1="256" y1="82" x2="256" y2="105" stroke="#FBF8F1" stroke-width="1.4" opacity="0.6"/>
+    <line id="dome_rib_2" x1="256" y1="83" x2="275.84" y2="99" stroke="#FBF8F1" stroke-width="1.4" opacity="0.6"/>
+    <path id="lantern_rim" d="M 218,106 C 240.8,112 271.2,112 294,106 L 288,102 C 268.8,105 243.2,105 224,102 Z" fill="#1F3A34"/>
+    <line id="mullion_0" x1="226.00" y1="110" x2="228.00" y2="144" stroke="#1F3A34" stroke-width="3.2" stroke-linecap="round"/>
+    <line id="mullion_1" x1="247.60" y1="110" x2="248.16" y2="144" stroke="#1F3A34" stroke-width="3.2" stroke-linecap="round"/>
+    <line id="mullion_2" x1="264.40" y1="110" x2="263.84" y2="144" stroke="#1F3A34" stroke-width="3.2" stroke-linecap="round"/>
+    <line id="mullion_3" x1="286.00" y1="110" x2="284.00" y2="144" stroke="#1F3A34" stroke-width="3.2" stroke-linecap="round"/>
+    <line id="cage_top_line" x1="226.00" y1="110" x2="286.00" y2="110" stroke="#1F3A34" stroke-width="3"/>
+    <line id="cage_bot_line" x1="228.00" y1="144" x2="284.00" y2="144" stroke="#1F3A34" stroke-width="3"/>
+    <path id="lantern_collar" d="M 228,144 L 284,144 C 278,146 267.0,152 256,156 C 245.0,152 234,146 228,144 Z" fill="#1F3A34"/>
+    <path id="lantern_drop" d="M 249,154 C 249,162 253,160 256,164 C 259,160 263,162 263,154 Z" fill="#1F3A34"/>
+    <line id="lantern_neck" x1="256" y1="68" x2="256" y2="76" stroke="#1F3A34" stroke-width="2.6" stroke-linecap="round"/>
+    <ellipse id="lantern_knob" cx="256" cy="74" rx="6.5" ry="4" fill="#1F3A34"/>
+    <path id="lantern_finial" d="M 256,52 C 261,56 261,62 256,68 C 251,62 251,56 256,52 Z" fill="#1F3A34"/>
+  </g>
+  <g inkscape:label="book" inkscape:groupmode="layer" id="layer_book">
+    <path id="book_cover_left" d="M 256.00,273.00 C 205.60,268.20 152.80,258.60 136.00,241.00 C 132.50,274.25 132.50,309.40 136.00,336.00 C 152.80,342.65 220.00,350.25 256.00,355.00 Z" fill="#0E6B5C"/>
+    <path id="book_cover_right" d="M 256.00,273.00 C 306.40,268.20 359.20,258.60 376.00,241.00 C 379.50,274.25 379.50,309.40 376.00,336.00 C 359.20,342.65 292.00,350.25 256.00,355.00 Z" fill="#0E6B5C"/>
+    <path id="book_page_left" d="M 256.00,276.00 C 208.12,271.50 157.96,262.50 142.00,246.00 C 138.50,276.10 138.50,307.92 142.00,332.00 C 157.96,338.30 221.80,345.50 256.00,350.00 Z" fill="#FBF4E4"/>
+    <path id="book_page_right" d="M 256.00,276.00 C 303.88,271.50 354.04,262.50 370.00,246.00 C 373.50,276.10 373.50,307.92 370.00,332.00 C 354.04,338.30 290.20,345.50 256.00,350.00 Z" fill="#FBF4E4"/>
+    <path id="page_line_l0" d="M 238.00,296.00 Q 201.40,290.00 164.80,296.00" fill="none" stroke="#B9AE99" stroke-width="2.1" stroke-linecap="round" opacity="0.62"/>
+    <path id="page_line_l1" d="M 238.00,312.00 Q 208.24,306.00 178.48,312.00" fill="none" stroke="#B9AE99" stroke-width="2.1" stroke-linecap="round" opacity="0.62"/>
+    <path id="page_line_l2" d="M 238.00,328.00 Q 203.68,322.00 169.36,328.00" fill="none" stroke="#B9AE99" stroke-width="2.1" stroke-linecap="round" opacity="0.62"/>
+    <path id="page_line_l3" d="M 238.00,344.00 Q 212.80,338.00 187.60,344.00" fill="none" stroke="#B9AE99" stroke-width="2.1" stroke-linecap="round" opacity="0.62"/>
+    <path id="page_line_l4" d="M 238.00,360.00 Q 207.10,354.00 176.20,360.00" fill="none" stroke="#B9AE99" stroke-width="2.1" stroke-linecap="round" opacity="0.62"/>
+    <path id="page_line_r0" d="M 274.00,296.00 Q 309.46,290.00 344.92,296.00" fill="none" stroke="#B9AE99" stroke-width="2.1" stroke-linecap="round" opacity="0.62"/>
+    <path id="page_line_r1" d="M 274.00,312.00 Q 304.90,306.00 335.80,312.00" fill="none" stroke="#B9AE99" stroke-width="2.1" stroke-linecap="round" opacity="0.62"/>
+    <path id="page_line_r2" d="M 274.00,328.00 Q 300.34,322.00 326.68,328.00" fill="none" stroke="#B9AE99" stroke-width="2.1" stroke-linecap="round" opacity="0.62"/>
+    <path id="page_line_r3" d="M 274.00,344.00 Q 307.18,338.00 340.36,344.00" fill="none" stroke="#B9AE99" stroke-width="2.1" stroke-linecap="round" opacity="0.62"/>
+    <path id="page_line_r4" d="M 274.00,360.00 Q 298.06,354.00 322.12,360.00" fill="none" stroke="#B9AE99" stroke-width="2.1" stroke-linecap="round" opacity="0.62"/>
+    <line id="book_spine" x1="256" y1="274" x2="256" y2="352" stroke="#1F3A34" stroke-width="3.4" stroke-linecap="round"/>
+    <rect id="book_foot" x="249" y="348" width="14" height="13" rx="2.5" fill="#0E6B5C"/>
+  </g>
+  <g inkscape:label="hills" inkscape:groupmode="layer" id="layer_hills" clip-path="url(#badgeClip)">
+    <path id="hill_back" d="M 20.00,239.00 C 24.37,239.66 37.48,228.26 46.22,242.98 C 54.96,257.69 63.70,303.66 72.44,327.29 C 81.19,350.91 89.93,369.20 98.67,384.71 C 107.41,400.22 116.15,411.15 124.89,420.35 C 133.63,429.55 142.37,435.60 151.11,439.91 C 159.85,444.22 168.59,445.52 177.33,446.20 C 186.07,446.88 194.81,445.14 203.56,443.98 C 212.30,442.81 221.04,440.40 229.78,439.23 C 238.52,438.07 247.26,437.00 256.00,437.00 C 264.74,437.00 273.48,438.07 282.22,439.23 C 290.96,440.40 299.70,442.81 308.44,443.98 C 317.19,445.14 325.93,446.88 334.67,446.20 C 343.41,445.52 352.15,444.22 360.89,439.91 C 369.63,435.60 378.37,429.55 387.11,420.35 C 395.85,411.15 404.59,400.22 413.33,384.71 C 422.07,369.20 430.81,350.91 439.56,327.29 C 448.30,303.66 457.04,257.69 465.78,242.98 C 474.52,228.26 487.63,239.66 492.00,239.00  L 492.00,540.00 L 20.00,540.00 Z" fill="#2F5D4E"/>
+    <path id="hill_mid" d="M 20.00,242.00 C 24.37,247.65 37.48,256.28 46.22,275.89 C 54.96,295.50 63.70,338.11 72.44,359.64 C 81.19,381.17 89.93,392.41 98.67,405.09 C 107.41,417.78 116.15,427.70 124.89,435.75 C 133.63,443.80 142.37,449.37 151.11,453.39 C 159.85,457.41 168.59,458.93 177.33,459.86 C 186.07,460.80 194.81,459.68 203.56,458.98 C 212.30,458.28 221.04,456.48 229.78,455.65 C 238.52,454.82 247.26,454.00 256.00,454.00 C 264.74,454.00 273.48,454.82 282.22,455.65 C 290.96,456.48 299.70,458.28 308.44,458.98 C 317.19,459.68 325.93,460.80 334.67,459.86 C 343.41,458.93 352.15,457.41 360.89,453.39 C 369.63,449.37 378.37,443.80 387.11,435.75 C 395.85,427.70 404.59,417.78 413.33,405.09 C 422.07,392.41 430.81,381.17 439.56,359.64 C 448.30,338.11 457.04,295.50 465.78,275.89 C 474.52,256.28 487.63,247.65 492.00,242.00  L 492.00,540.00 L 20.00,540.00 Z" fill="#3E8068"/>
+    <path id="hill_front" d="M 20.00,245.00 C 24.37,259.44 37.48,308.16 46.22,331.65 C 54.96,355.14 63.70,370.59 72.44,385.94 C 81.19,401.28 89.93,412.99 98.67,423.74 C 107.41,434.49 116.15,443.29 124.89,450.42 C 133.63,457.55 142.37,462.70 151.11,466.52 C 159.85,470.35 168.59,472.13 177.33,473.37 C 186.07,474.60 194.81,474.14 203.56,473.92 C 212.30,473.70 221.04,472.53 229.78,472.05 C 238.52,471.56 247.26,471.00 256.00,471.00 C 264.74,471.00 273.48,471.56 282.22,472.05 C 290.96,472.53 299.70,473.70 308.44,473.92 C 317.19,474.14 325.93,474.60 334.67,473.37 C 343.41,472.13 352.15,470.35 360.89,466.52 C 369.63,462.70 378.37,457.55 387.11,450.42 C 395.85,443.29 404.59,434.49 413.33,423.74 C 422.07,412.99 430.81,401.28 439.56,385.94 C 448.30,370.59 457.04,355.14 465.78,331.65 C 474.52,308.16 487.63,259.44 492.00,245.00  L 492.00,540.00 L 20.00,540.00 Z" fill="#5FA980"/>
+  </g>
+  <g inkscape:label="wordmark" inkscape:groupmode="layer" id="layer_word">
+    <text id="text_olk" x="256" y="408" text-anchor="middle"
+       font-family="'Playfair Display','Liberation Serif','Times New Roman',serif"
+       font-weight="700" font-size="66" letter-spacing="6" fill="#1F3A34">OLK</text>
+    <line id="tag_dash_l" x1="88" y1="429" x2="118" y2="429" stroke="#0E6B5C" stroke-width="2"/>
+    <line id="tag_dash_r" x1="394" y1="429" x2="424" y2="429" stroke="#0E6B5C" stroke-width="2"/>
+    <text id="text_tagline" x="256" y="434" text-anchor="middle"
+       font-family="'Cormorant Garamond','Liberation Sans',Arial,sans-serif"
+       font-weight="500" font-size="14.5" letter-spacing="3.2" fill="#0E6B5C">OPEN LIBRARY KASHMIR</text>
+  </g>
+  <g inkscape:label="rings" inkscape:groupmode="layer" id="layer_rings">
+    <circle id="ring_outer" cx="256" cy="256" r="240" fill="none" stroke="#1F3A34" stroke-width="5"/>
+    <circle id="ring_inner" cx="256" cy="256" r="229" fill="none" stroke="#1F3A34" stroke-width="2"/>
+  </g>
+</svg>
