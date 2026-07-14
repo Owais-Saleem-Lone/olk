@@ -3,9 +3,11 @@
 
 \section{What OLK is}
 
-\textbf{Open Library Kashmir (OLK)} is a community book-sharing platform for readers in the Kashmir valley. Someone with books sitting on a shelf lists them; someone who wants to read them finds them by browsing nearby listings and sends a request; the two arrange an in-person handover. No shipping, no warehouses, no payment processing — the entire transaction is a conversation between two neighbours and a walk to a bus stop.
+\textbf{Open Library Kashmir (OLK)} was conceived as a community-driven book-sharing initiative to serve readers across the Kashmir Valley. The original operating model relied on local volunteers to collect donated books and redistribute them to students in need. However, the organization rapidly encountered significant operational constraints—including a persistent shortage of volunteers and donors, as well as a limited distribution network that prevented us from reaching our target student demographic. These challenges necessitated a comprehensive strategic redesign of the platform.
 
-That constraint — everything happens in person, within walking or short-commute distance — is not an accident or a missing feature. It is the product's central design decision, and it explains almost everything else in this manual: why every book and every club carries a latitude/longitude and an area name, why the database has a haversine-distance function instead of a shipping-address field, why there is no payment table anywhere in the schema, and why "trust" (ratings, warnings, bans, reports) matters as much as inventory.
+The current model introduces a highly efficient, decentralized approach by eliminating nearly all intermediary layers. It establishes a direct, peer-to-peer connection between individuals looking to share their literature and those actively seeking it. Users with surplus books can catalog their collections on the platform, while prospective readers can browse the available inventory and submit a request. The involved parties then coordinate a mutually convenient handover or an agreed-upon shipping arrangement. By removing centralized warehousing and logistical intermediaries, the entire transaction takes place through direct, transparent user-to-user communication.
+
+At the core of this architectural shift is a commitment to fostering meaningful human connections through the shared love of reading. This direct engagement extends beyond the simple exchange of books, enabling a richer, more substantive interaction between users. The Clubs feature is a natural extension of this philosophy—it empowers passionate individuals to create interest-based communities, invite like-minded members, and organize events, all within a single, unified digital ecosystem.
 
 \section{Core features}
 
@@ -29,9 +31,9 @@ Primarily, the two or three interns who are about to inherit this codebase. You 
 This exact version of Next.js is \textbf{not} the Next.js in your training data or muscle memory. The project's own \pathname{AGENTS.md} says so explicitly: \emph{"This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in \texttt{node\_modules/next/dist/docs/} before writing any code."} A concrete example: Next.js 16 renamed \emph{Middleware} to \emph{Proxy}. This project uses the current \pathname{src/proxy.ts} convention. See Chapter~\ref{ch:proxy} for the full story.
 \end{olkwarn}
 
-\section{The bigger picture: why this project exists}
+\section{The bigger picture}
 
-OLK wants two things, in this order. First: get the platform live, publicly, on Vercel, serving real readers in Kashmir. Second, and this is the part worth stating explicitly because it will shape architectural decisions for years: \textbf{eventually run the platform's own infrastructure — including Supabase itself, since it is open source — on a local server physically located in Kashmir}, rather than depending indefinitely on a remote, foreign-hosted database.
+OLK wants two things, in this order. First: get the platform live, publicly, most likely on Vercel, serving real readers in Kashmir. Second, and this is the part worth stating explicitly because it will shape architectural decisions for years: \textbf{eventually run the platform's own infrastructure — including Supabase itself, since it is open source — on a local server physically located in Kashmir}, rather than depending indefinitely on a remote, foreign-hosted database.
 
 That second goal is why Chapter~\ref{ch:local-env} is not a throwaway "how to run this on your laptop" section. Learning to run Supabase's full stack under Docker locally — Postgres, GoTrue auth, PostgREST, Realtime, Storage, Studio, all of it — is a rehearsal for the day that same stack runs on a physical machine in-region instead of on a developer's laptop. Every command in that chapter (\code{supabase start}, \code{supabase stop}, \code{supabase db reset}) is a command that will eventually run against real hardware, not a metaphor for it.
 
@@ -53,10 +55,10 @@ The plan's individual pieces were technically sound — PM2+Caddy, PgBouncer, cr
 \end{itemize}
 \end{olknote}
 
-\textbf{Decision (2026-07-11): none of this ships now.} The project stays on Vercel + managed Supabase + Resend until there's a second developer and evidence of real load. The first-year planning target is \textbf{10,000} users, not 100k — reasonable for a regional community platform and not a number that stresses the current managed stack.
+\textbf{Decision (11-07-2026): none of this ships now.} The project stays on Vercel + managed Supabase + Resend until there are more developers and evidence of real load. The first-year planning target is \textbf{10,000} users, not 100k — reasonable for a regional community platform and not a number that stresses the current managed stack.
 
 \begin{olkwarn}
-A VPS is \textbf{not} automatically a step toward the Kashmir data-sovereignty goal stated earlier in this chapter. Renting a generic VPS (Hetzner, DigitalOcean, AWS, ...) just swaps one third party's control (Vercel/Supabase Inc.) for another's — the data still lives on hardware you don't own, in a jurisdiction you didn't choose. It only becomes a genuine step \emph{toward} sovereignty if it's treated as a rehearsal: running the same self-hosted Docker stack already exercised locally (Chapter~\ref{ch:local-env}) on rented infrastructure first, to prove the operational playbook — backups, upgrades, monitoring, TLS — before ever committing to physical hardware in-region. Stopping at "we rent a VPS instead of Vercel" and calling it done would be a lateral move, not progress on the actual goal.
+A VPS is \textbf{not} automatically a step toward the data-sovereignty goal stated earlier in this chapter. Renting a generic VPS (Hetzner, DigitalOcean, AWS, ...) just swaps one third party's control (Vercel/Supabase Inc.) for another's — the data still lives on hardware you don't own, in a jurisdiction you didn't choose. It only becomes a genuine step \emph{toward} sovereignty if it's treated as a rehearsal: running the same self-hosted Docker stack already exercised locally (Chapter~\ref{ch:local-env}) on rented infrastructure first, to prove the operational playbook — backups, upgrades, monitoring, TLS — before ever committing to physical hardware in-region. Stopping at "we rent a VPS instead of Vercel" and calling it done would be a lateral move, not progress on the actual goal.
 \end{olkwarn}
 
 \textbf{What's parked for later}, revisited once there's more than one developer and/or real signs of load (not before):
@@ -67,7 +69,7 @@ A VPS is \textbf{not} automatically a step toward the Kashmir data-sovereignty g
   \item Automated off-site backups (\code{pg\_dump} to self-hosted MinIO or similar) — worth doing earlier than the rest of this list, independent of the hosting question, once there's real user data worth losing.
 \end{itemize}
 
-\textbf{What shipped immediately instead}: indexes on the foreign-key and status columns the audit correctly flagged as missing — \pathname{supabase/migrations/20260711093615\_index\_fk\_and\_status\_columns.sql} adds eleven \code{btree} indexes across \code{book\_requests} (\code{book\_id}, \code{requester\_id}, \code{status}), \code{ratings} (\code{request\_id}, \code{rater\_id}, \code{rated\_user\_id}), and \code{reports} (\code{reporter\_id}, \code{reported\_user\_id}, \code{reported\_book\_id}, \code{status}, \code{assigned\_to} — Chapter~\ref{ch:schema}). A cheap, reversible fix with no architectural bet attached, unlike everything else on this list.
+\textbf{What shipped immediately instead}: indexes on the foreign-key and status columns the audit correctly flagged as missing —\\ \pathname{supabase/migrations/20260711093615\_index\_fk\_and\_status\_columns.sql} adds eleven \code{btree} indexes across \code{book\_requests} (\code{book\_id}, \code{requester\_id}, \code{status}), \code{ratings} (\code{request\_id}, \code{rater\_id}, \code{rated\_user\_id}), and \code{reports} (\code{reporter\_id}, \code{reported\_user\_id}, \code{reported\_book\_id}, \code{status}, \code{assigned\_to} — Chapter~\ref{ch:schema}). A cheap, reversible fix with no architectural bet attached, unlike everything else on this list.
 
 \section{A tour of the rest of this manual, in one paragraph}
 
