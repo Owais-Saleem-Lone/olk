@@ -73,6 +73,7 @@ type NotificationContext =
   | { kind: 'request'; id: string }
   | { kind: 'club_join'; id: string }
   | { kind: 'club_announcement'; id: string }
+  | { kind: 'event_created'; id: string }
   | { kind: 'wishlist_match'; id: string }
 
 export async function createNotification({ userId, type, title, link, context }: NotificationPayload) {
@@ -145,7 +146,7 @@ A brand-new notification \code{type} (say \code{'club\_invite'}) touches more th
   \item There is no enum or TypeScript union constraining \code{type} — it's a plain string column (Chapter~\ref{ch:schema}). A typo here doesn't fail at write time; it fails silently at read time, as step 2 below.
   \item \pathname{src/components/notification-bell.tsx} and \pathname{src/app/(dashboard)/notifications/page.tsx} both index into an \code{ICONS} lookup object keyed by \code{n.type}, falling back to a generic bell emoji when the key is missing — add your new type as a key in \emph{each} file's \code{ICONS} object, or it silently falls back to that generic icon rather than erroring.
   \item If \code{title} ever includes user-typed text for this new type, route it through \code{escapeHtml} before it can reach \pathname{send-notification-email.ts} (the warning above) — easy to forget for a brand-new call site since nothing enforces it.
-  \item Decide which existing \code{context.kind} the new call site's relationship maps to (\code{'request'}, \code{'club\_join'}, \code{'club\_announcement'}, or \code{'wishlist\_match'}) — or, if it's a genuinely new kind of relationship, add a new branch to \code{can\_notify()} (Chapter~\ref{ch:rls}) \emph{before} wiring up the call site. \code{createNotification} throws \code{"Forbidden"} if \code{can\_notify} doesn't recognise the \code{context.kind} or can't verify the relationship, so a new notification type with no matching branch fails loudly for every caller rather than silently succeeding.
+  \item Decide which existing \code{context.kind} the new call site's relationship maps to (\code{'request'}, \code{'club\_join'}, \code{'club\_announcement'}, \code{'event\_created'}, or \code{'wishlist\_match'}) — or, if it's a genuinely new kind of relationship, add a new branch to \code{can\_notify()} (Chapter~\ref{ch:rls}) \emph{before} wiring up the call site. \code{'event\_created'} itself is the \code{'club\_announcement'} shape one table over: the caller must be the event's own \code{creator\_id}, and the target must be a real member of that event's club. \code{createNotification} throws \code{"Forbidden"} if \code{can\_notify} doesn't recognise the \code{context.kind} or can't verify the relationship, so a new notification type with no matching branch fails loudly for every caller rather than silently succeeding.
 \end{enumerate}
 \end{olkhowto}
 

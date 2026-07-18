@@ -3,7 +3,7 @@
 
 \section{What RLS actually does}
 
-Row-Level Security is a Postgres feature, not a Supabase invention: once \code{ALTER TABLE ... ENABLE ROW LEVEL SECURITY} is run on a table (true for all 24 tables in this schema), \emph{every} query against it — from any role, through any route — is filtered by whichever \code{CREATE POLICY} statements apply to the current role and command (\code{SELECT}/\code{INSERT}/\code{UPDATE}/\code{DELETE}). No policy matching means no rows: RLS defaults closed, not open.
+Row-Level Security is a Postgres feature, not a Supabase invention: once \code{ALTER TABLE ... ENABLE ROW LEVEL SECURITY} is run on a table (true for all 26 tables in this schema), \emph{every} query against it — from any role, through any route — is filtered by whichever \code{CREATE POLICY} statements apply to the current role and command (\code{SELECT}/\code{INSERT}/\code{UPDATE}/\code{DELETE}). No policy matching means no rows: RLS defaults closed, not open.
 
 The Supabase JS client attaches the calling user's JWT to every request, and Postgres evaluates policies against \code{auth.uid()} (the JWT's subject claim) and \code{auth.role()} (\code{anon} or \code{authenticated}). This is the entire security model for every Client Component in this app (Chapter~\ref{ch:architecture}) — there is no separate authorization layer in application code for ordinary data access, only for admin Server Actions (Chapter~\ref{ch:admin}), which add an \emph{additional} check on top of RLS, not instead of it.
 
@@ -57,6 +57,8 @@ Skip step 2 and the new role is assignable in \pathname{/admin/settings} but gra
 \codecell{clubs} & Anyone (incl. anon) SELECTs active clubs; any authenticated user INSERTs as creator; the creator UPDATE/DELETEs their own; admins/mods UPDATE any, only \codecell{super\_admin} DELETEs any. \\
 \codecell{club\_members} & Any authenticated user SELECTs; a user INSERTs themself (join); a user DELETEs their own membership, the club's creator can remove anyone, admins/mods can too. \\
 \codecell{club\_posts} & Anyone SELECTs; only the club's creator INSERTs (posts); only the post's author DELETEs it. No UPDATE at all. \\
+\codecell{club\_events} & Anyone (incl. anon) SELECTs active events — visible regardless of the viewer's club membership; only the club's creator INSERTs/UPDATEs/DELETEs. \\
+\codecell{event\_rsvps} & Any authenticated user SELECTs (mirrors \codecell{club\_members}); a user INSERTs themself, but only if the event is \codecell{public} \emph{or} they're already a club member, \emph{and} it isn't already at \codecell{capacity}; a user DELETEs only their own RSVP. \\
 \codecell{notifications} & A user SELECT/UPDATEs only their own; admins/mods INSERT for anyone explicitly — \textbf{but see the gotcha below}. \\
 \codecell{reports} & A reporter INSERTs as themself and SELECTs their own; admins/mods SELECT all and UPDATE any. No DELETE. \\
 \codecell{admin\_audit\_log}, \codecell{admin\_notes}, \codecell{user\_bans}, \codecell{user\_warnings} & Admin/mod-only SELECT and INSERT (as themself where an admin id is recorded). No UPDATE/DELETE on the audit log or notes; \codecell{user\_bans} allows admin UPDATE (for unbanning). \\
@@ -68,7 +70,7 @@ Skip step 2 and the new role is assignable in \pathname{/admin/settings} but gra
 \end{longtable}
 \end{center}
 
-\section{Five RLS looseness gotchas — since tightened}
+\section{Six RLS looseness gotchas — since tightened}
 
 \begin{olknote}
 \textbf{\code{notifications} INSERT policy.} There used to be a separate, broader policy (alongside the explicit "admins/mods can INSERT for anyone" one) allowing \emph{any} authenticated user to INSERT a notification row, checked only against \code{auth.uid() IS NOT NULL} — with no restriction on whose \code{user\_id} the notification targets. That policy has been replaced with \code{"Users insert own notifications"}, requiring \code{auth.uid() = user\_id}. Since most of the app's real notification flows are cross-user by design (a request being accepted notifies the \emph{other} party, not the actor), \code{createNotification} (Chapter~\ref{ch:server-actions}) now writes through the service-role client instead of the calling user's session — it remains the one trusted, server-side gate for cross-user notification creation, after first confirming the caller is authenticated. A direct, unauthenticated-of-relationship REST call to \pathname{/notifications} can no longer insert a row addressed to an arbitrary other user.
@@ -88,6 +90,10 @@ Skip step 2 and the new role is assignable in \pathname{/admin/settings} but gra
 
 \begin{olknote}
 \textbf{\code{book-covers} storage uploads — now scoped to the uploader's own path.} \code{"Authenticated users can upload book covers"} used to check only \code{bucket\_id = 'book-covers'}, with no path restriction — and no UPDATE/DELETE policy existed on the bucket at all. Any authenticated user could upload to (and, once one existed, overwrite) any object path, including another user's. The client already namespaced uploads as \code{\{userId\}/\{timestamp\}.\{ext\}} (Chapter~\ref{ch:pages}); the INSERT policy was replaced and UPDATE/DELETE policies added, all three requiring \code{(storage.foldername(name))[1] = auth.uid()::text} — enforcing server-side what was previously only a client-side naming convention.
+\end{olknote}
+
+\begin{olknote}
+\textbf{\code{event\_rsvps} INSERT — \code{capacity} was missing from the check entirely at first.} The policy shipped checking \code{visibility} (public event, or caller is a club member) but not \code{capacity} — so the "Event full" state was enforced only by \pathname{events/[id]/page.tsx} disabling its RSVP button once \code{attendee\_count >= capacity}, exactly the "UI-only gate" pattern the club-creation eligibility check (Chapter~\ref{ch:wishlists-clubs}) already taught this codebase to distrust. Confirmed exploitable by testing it directly: a raw \code{POST /rest/v1/event\_rsvps}, as a real signed-in user, against a capacity-1 event that already had its one attendee, returned \code{201}. The policy's \code{WITH CHECK} now also requires \code{capacity IS NULL OR attendee\_count < capacity}, evaluated inside the same \code{EXISTS} as the visibility check, alongside the caller's own \code{user\_id}.
 \end{olknote}
 
 \begin{olktask}

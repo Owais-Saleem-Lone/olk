@@ -5,7 +5,7 @@
 \pathname{supabase/schema.sql} is a point-in-time dump, not a live view — it used to be five migrations stale (missing rate limiting, wishlist fuzzy matching, book description/year, and the profile \code{bio} column) before being regenerated with \code{npx supabase db dump --local --schema public}. \textbf{This chapter's tables reflect the true current schema}, built from \pathname{supabase/migrations} in full, per the house rule in Chapter~\ref{ch:workflow}: the migrations directory is always the authoritative source, never the dump — treat \pathname{schema.sql} as a convenience snapshot that can drift again the moment a migration lands without a follow-up regeneration.
 \end{olknote}
 
-All 24 tables live in the \code{public} schema and have Row-Level Security enabled; policies are covered separately in Chapter~\ref{ch:rls} so this chapter can focus purely on shape. Every primary key is a \code{uuid} defaulting to \code{gen\_random\_uuid()} unless noted otherwise.
+All 26 tables live in the \code{public} schema and have Row-Level Security enabled; policies are covered separately in Chapter~\ref{ch:rls} so this chapter can focus purely on shape. Every primary key is a \code{uuid} defaulting to \code{gen\_random\_uuid()} unless noted otherwise.
 
 \section{Identity}
 
@@ -108,6 +108,9 @@ One row per request, tracking a reader's percentage through a book. \code{book\_
 \subsection*{\code{clubs}, \code{club\_members}, \code{club\_posts}}
 \code{clubs}: \code{name}, \code{description}, \code{interest}, \code{area\_name}, \code{latitude}/\code{longitude}, \code{cover\_url}, \code{creator\_id} $\to$ \code{profiles(id)}, \code{member\_count} (int, kept in sync by \code{trg\_club\_member\_count} — Chapter~\ref{ch:functions}), \code{active} boolean (used for soft-delete). \code{club\_members}: \code{club\_id} + \code{user\_id}, \code{UNIQUE} pair, \code{joined\_at}. \code{club\_posts}: \code{club\_id}, \code{author\_id}, \code{content}, \code{created\_at} — creator-only to post, author-only to delete, no UPDATE policy at all (posts are immutable once made).
 
+\subsection*{\code{club\_events}, \code{event\_rsvps}}
+\code{club\_events}: \code{club\_id} $\to$ \code{clubs(id)}, \code{creator\_id} $\to$ \code{profiles(id)}, \code{title}, \code{description}, \code{cover\_url}, \code{starts\_at} (NOT NULL) / \code{ends\_at}, \code{is\_online} boolean, \code{location\_name} / \code{meeting\_url}, \code{latitude}/\code{longitude}, \code{visibility} (CHECK IN \code{public}/\code{members\_only} — gates RSVP, not visibility of the event itself, Chapter~\ref{ch:wishlists-clubs}), \code{capacity}, \code{attendee\_count} (kept in sync by \code{trg\_event\_attendee\_count}, the same shape as \code{trg\_club\_member\_count}), \code{active} boolean. \code{event\_rsvps}: \code{event\_id} + \code{user\_id}, \code{UNIQUE} pair, \code{created\_at} — no \code{status} column; an RSVP is a row, cancelling one is a \code{DELETE}.
+
 \section{Notifications \& Content}
 
 \subsection*{\code{notifications}}
@@ -126,7 +129,7 @@ Simple admin-managed lookup tables (\code{name} UNIQUE, \code{active} boolean). 
 \code{title}, \code{author}, \code{description}, \code{cover\_url}, \code{month\_label}, \code{active}. \code{saveBotm} (Chapter~\ref{ch:admin}) deactivates any existing entry before inserting a new one, the same single-active-row pattern as announcements.
 
 \subsection*{\code{platform\_settings}}
-\code{key} text \textbf{PK} (not a uuid — this table is a key/value store), \code{value} jsonb, \code{description}, \code{updated\_at}/\code{updated\_by}. Seeded keys: \code{max\_books\_per\_user} (50), \code{max\_requests\_per\_day} (10), \code{max\_messages\_per\_hour} (30), \code{overdue\_days\_threshold} (30), \code{maintenance\_mode}, and four \code{feature\_*} flags (clubs/wishlists/ratings/messages). Publicly readable (anyone can \code{SELECT}), writable only by \code{super\_admin}.
+\code{key} text \textbf{PK} (not a uuid — this table is a key/value store), \code{value} jsonb, \code{description}, \code{updated\_at}/\code{updated\_by}. Seeded keys: \code{max\_books\_per\_user} (50), \code{max\_requests\_per\_day} (10), \code{max\_messages\_per\_hour} (30), \code{overdue\_days\_threshold} (30), \code{maintenance\_mode}, and five \code{feature\_*} flags (clubs/wishlists/ratings/messages/events). Publicly readable (anyone can \code{SELECT}), writable only by \code{super\_admin}.
 
 \section{Admin \& Moderation}
 

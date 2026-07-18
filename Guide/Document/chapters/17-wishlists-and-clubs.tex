@@ -1,4 +1,4 @@
-\chapter{Wishlists, Matching \& Clubs}
+\chapter{Wishlists, Matching, Clubs \& Events}
 \label{ch:wishlists-clubs}
 
 \section{Wishlists: asking for a book that doesn't exist yet}
@@ -49,4 +49,26 @@ Neither a club's creator nor an admin can hard-delete a club through the app lay
 
 \begin{olktask}
 Add a wishlist entry for a title that doesn't exist yet, then list a book with a \emph{deliberately misspelled} version of that title from a second test account (swap two letters, or use a different capitalisation) and confirm the match still fires. Then try a title that only shares one common word (e.g. "The Old Man" vs. "Old Man River") and confirm it does \emph{not} match — this is the fastest way to build a feel for where the 0.35 similarity threshold actually sits in practice, beyond just reading the number.
+\end{olktask}
+
+\section{Events: club-scoped, but publicly discoverable}
+
+A club can schedule events (\code{club\_events}, plus one \code{event\_rsvps} row per attendee — Chapter~\ref{ch:schema}): a title, description, start/end time, either an in-person location or an online meeting link, an optional attendee cap, and a per-event \code{visibility} of \code{public} or \code{members\_only}.
+
+\begin{olknote}
+\textbf{\code{visibility} gates the RSVP action, not discovery.} Every event stays listed and viewable by anyone — on the club's own page, on the cross-club \pathname{/events} directory, and in the landing page's "Upcoming Events" preview — regardless of the viewer's club membership, mirroring how clubs themselves are already publicly browsable (Chapter~\ref{ch:rls}). A \code{members\_only} event just shows "Join the club to RSVP" instead of an RSVP button for a non-member. Two different features, deliberately not conflated: hiding an event outright would need a second, separate flag.
+\end{olknote}
+
+Creating an event is gated exactly like posting an announcement (Chapter~\ref{ch:rls}) — only the club's creator — rather than the club-creation eligibility rule earlier in this chapter; a club's creator has already cleared that bar once, so there is no second trigger to re-derive it for events. \code{trg\_event\_attendee\_count} keeps \code{club\_events.attendee\_count} in sync with real \code{event\_rsvps} rows, the same atomic-trigger shape as \code{trg\_club\_member\_count} above (Chapter~\ref{ch:functions}).
+
+\begin{olkgotcha}
+The RSVP \code{INSERT} policy's \code{visibility} check was added alongside a second, independent condition — \code{capacity IS NULL OR attendee\_count < capacity} — but that second condition didn't ship on day one. The "Event full" state was originally enforced only by disabling the RSVP button once \code{attendee\_count >= capacity} in \pathname{events/[id]/page.tsx}; a direct \code{POST /rest/v1/event\_rsvps} call could still RSVP past a full event, confirmed by testing exactly that against a capacity-1 event before the policy was corrected. Same lesson as the club-creation gate earlier in this chapter, one feature later: a disabled button is a UX nicety, not a security boundary — only the policy is.
+\end{olkgotcha}
+
+Event notifications reuse the club-announcement broadcast shape: creating an event fans out an \code{event\_created} notification to every current member (Chapter~\ref{ch:server-actions}), routed through the same \code{can\_notify} guard with a new branch verifying the caller is the event's own creator and the target is a real club member. There is deliberately no per-RSVP notification to the organiser — at any real scale that would be pure noise, so the attendee list on the event and admin pages covers that need instead.
+
+The cross-club directory (\pathname{/events}) uses \code{get\_events\_nearby}, the same haversine-and-\code{NULLS LAST} pattern as \code{get\_clubs\_nearby} (Chapter~\ref{ch:functions}), falling back to a plain \code{created\_at}-ordered query when the viewer has no location set. A zero-dependency Route Handler, \pathname{api/events/[id]/ics/route.ts}, generates an RFC5545 calendar file on demand for "Add to calendar" — no external library, just a template string with the handful of characters (\code{,}, \code{;}, \code{\textbackslash}) that need escaping inside an ICS field.
+
+\begin{olktask}
+Create a club event with \code{capacity} set to 1, RSVP to it yourself, then — from a second test account that is \emph{not} a member of that club — try to RSVP through the UI (should be blocked by the disabled button) and then directly via a \code{POST} to \pathname{/rest/v1/event\_rsvps} with that account's own access token (should come back \code{403}). This is the same "is it a real gate or just a hidden button" habit Chapter~\ref{ch:rls}'s task asks you to build for club creation, applied to the newest feature in the schema.
 \end{olktask}

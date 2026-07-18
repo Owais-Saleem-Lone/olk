@@ -95,6 +95,11 @@ export async function proxy(request: NextRequest) {
   if (!flags.feature_messages && pathname.startsWith('/messages')) {
     const browseUrl = request.nextUrl.clone(); browseUrl.pathname = '/browse'; return NextResponse.redirect(browseUrl)
   }
+  // Event *creation* is nested under /clubs/[id]/events/..., not under /events,
+  // so this one check needs both prefixes -- the others above only need one.
+  if (!flags.feature_events && (pathname.startsWith('/events') || /^\/clubs\/[^/]+\/events\//.test(pathname))) {
+    const browseUrl = request.nextUrl.clone(); browseUrl.pathname = '/browse'; return NextResponse.redirect(browseUrl)
+  }
 
   if (!user && isProtected) {
     const loginUrl = request.nextUrl.clone()
@@ -133,13 +138,17 @@ Five responsibilities, in the order they execute:
   \item \textbf{Session refresh} — the \code{cookies.getAll}/\code{setAll} dance exists purely so \code{@supabase/ssr} can rotate the auth token cookies on every request. This runs unconditionally, for \emph{every} request matched by \code{config.matcher} (i.e. everything except static assets), whether or not the route is protected.
   \item \textbf{Feature flags} — \code{platform\_settings} (Chapter~\ref{ch:admin}) is read once per (cached, 30-second-TTL) window via \pathname{src/lib/platform-settings.ts}, shared with the \pathname{(dashboard)/layout.tsx} server component that hides nav links for disabled features.
   \item \textbf{Maintenance mode} — if \code{maintenance\_mode} is on, every non-admin visitor (whether logged in or not) is redirected to \pathname{/maintenance}, except \pathname{/login} itself (so an admin can still sign in) and \pathname{/maintenance}.
-  \item \textbf{Per-feature route gates} — \code{feature\_clubs}/\code{feature\_wishlists}/\code{feature\_messages} being off redirects their entire route tree (\pathname{/clubs}, \pathname{/wishlist}, \pathname{/messages}) to \pathname{/browse}, independent of whether the route is otherwise "protected."
+  \item \textbf{Per-feature route gates} — \code{feature\_clubs}/\code{feature\_wishlists}/\code{feature\_messages}/\code{feature\_events} being off redirects their entire route tree (\pathname{/clubs}, \pathname{/wishlist}, \pathname{/messages}, \pathname{/events} plus \pathname{/clubs/[id]/events/*}) to \pathname{/browse}, independent of whether the route is otherwise "protected."
   \item \textbf{Unauthenticated, banned-user, and admin gates} — unchanged from before: redirect a session-less visitor away from \code{PROTECTED\_ROUTES} to \pathname{/login}; for a logged-in user on a protected route, bounce a currently-banned user to \pathname{/profile}, and bounce any non-admin away from \pathname{/admin}.
 \end{enumerate}
 
 \begin{olknote}
 Look again at \code{PROTECTED\_ROUTES}: it does \emph{not} include \pathname{/browse} or \pathname{/notifications} or \pathname{/clubs} (only \pathname{/clubs/create}). This is deliberate — those pages are meant to be at least partially visible to guests — but it means any new page added under \pathname{(dashboard)} that assumes a logged-in \code{user} object without checking for \code{null} itself will crash for anonymous visitors unless it is also added to this list, or unless the page guards \code{auth.getUser()} being null on its own. There is no automatic enforcement tying new routes to this list — it is a manually maintained array. The feature-flag route gates above are a separate, independent set of checks — a route can be flag-gated without being in \code{PROTECTED\_ROUTES}, and vice versa.
 \end{olknote}
+
+\begin{olkgotcha}
+The \code{feature\_events} check above was missing entirely when the Events feature first shipped — \code{feature\_clubs}, \code{feature\_wishlists}, and \code{feature\_messages} all had their route-gate check, but the fourth flag added alongside Events did not get the equivalent line in this file. The flag still existed, was still toggleable from \pathname{/admin/settings}, and still hid the nav link (Chapter~\ref{ch:pages}) — but toggling it off left every \pathname{/events} page (and \pathname{/clubs/[id]/events/create}) fully reachable by URL, unlike every sibling feature flag. Caught by toggling the flag off in Studio and hitting \pathname{/events} directly rather than only checking the nav link disappeared. \textbf{Lesson:} a feature flag touches three independent places — the seed row, the sidebar's \code{NAV\_ITEMS} filter, and this file's route gates — and nothing ties them together; adding one without the other two silently ships a flag that only half-works.
+\end{olkgotcha}
 
 \begin{olkhowto}
 Adding a new page that should require login (say \pathname{/my-loans}) means touching three places, none of which reference each other:
