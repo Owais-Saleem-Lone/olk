@@ -8,6 +8,7 @@ type NotificationContext =
   | { kind: 'request'; id: string }
   | { kind: 'club_join'; id: string }
   | { kind: 'club_announcement'; id: string }
+  | { kind: 'event_created'; id: string }
   | { kind: 'wishlist_match'; id: string }
 
 type NotificationPayload = {

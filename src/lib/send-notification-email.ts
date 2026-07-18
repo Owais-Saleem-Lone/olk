@@ -14,6 +14,8 @@ const NOTIFICATION_SUBJECTS: Record<string, string> = {
   handover_confirmed: 'Book handover confirmed',
   book_returned: 'Book has been returned',
   club_joined: 'New member in your club',
+  club_announcement: 'New announcement in your club',
+  event_created: 'New event in your club',
 }
 
 export async function sendNotificationEmail({

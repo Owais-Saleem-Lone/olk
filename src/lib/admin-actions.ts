@@ -422,6 +422,28 @@ export const transferClubOwnership = withAdminAction(
 )
 
 // ═══════════════════════════════════════════
+// EVENT MANAGEMENT
+// ═══════════════════════════════════════════
+
+export const deactivateEvent = withAdminAction(
+  'moderator',
+  'deactivate_event',
+  async ({ supabase }, eventId: string) => {
+    await supabase.from('club_events').update({ active: false }).eq('id', eventId)
+    return { targetType: 'event', targetId: eventId }
+  }
+)
+
+export const reactivateEvent = withAdminAction(
+  'moderator',
+  'reactivate_event',
+  async ({ supabase }, eventId: string) => {
+    await supabase.from('club_events').update({ active: true }).eq('id', eventId)
+    return { targetType: 'event', targetId: eventId }
+  }
+)
+
+// ═══════════════════════════════════════════
 // CONTENT MANAGEMENT
 // ═══════════════════════════════════════════
 

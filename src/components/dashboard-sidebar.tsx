@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/saved', label: '🔖 Saved Books' },
   { href: '/wishlist', label: '✨ Wishlist', flag: 'feature_wishlists' as const },
   { href: '/clubs', label: '🏘️ Clubs', flag: 'feature_clubs' as const },
+  { href: '/events', label: '📅 Events', flag: 'feature_events' as const },
   { href: '/messages', label: '💬 Messages', flag: 'feature_messages' as const },
   { href: '/requests', label: '📩 Requests' },
   { href: '/notifications', label: '🔔 Notifications' },

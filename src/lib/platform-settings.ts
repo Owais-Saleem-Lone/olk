@@ -3,6 +3,7 @@ export type FeatureFlags = {
   feature_wishlists: boolean
   feature_ratings: boolean
   feature_messages: boolean
+  feature_events: boolean
   maintenance_mode: boolean
 }
 
@@ -11,6 +12,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   feature_wishlists: true,
   feature_ratings: true,
   feature_messages: true,
+  feature_events: true,
   maintenance_mode: false,
 }
 

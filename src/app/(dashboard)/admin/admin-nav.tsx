@@ -11,6 +11,7 @@ const NAV_SECTIONS = [
   { href: '/admin/requests', label: 'Requests', icon: '📩', minRole: 'viewer' as AdminRole },
   { href: '/admin/reports', label: 'Reports', icon: '🚩', minRole: 'moderator' as AdminRole },
   { href: '/admin/clubs', label: 'Clubs', icon: '🏘️', minRole: 'viewer' as AdminRole },
+  { href: '/admin/events', label: 'Events', icon: '📅', minRole: 'viewer' as AdminRole },
   { href: '/admin/content', label: 'Content', icon: '📝', minRole: 'moderator' as AdminRole },
   { href: '/admin/notifications', label: 'Notify', icon: '🔔', minRole: 'moderator' as AdminRole },
   { href: '/admin/settings', label: 'Settings', icon: '⚙️', minRole: 'super_admin' as AdminRole },

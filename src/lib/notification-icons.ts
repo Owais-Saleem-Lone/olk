@@ -7,4 +7,5 @@ export const NOTIFICATION_ICONS: Record<string, string> = {
   book_returned: '📗',
   club_joined: '🏘️',
   club_announcement: '📢',
+  event_created: '📅',
 }

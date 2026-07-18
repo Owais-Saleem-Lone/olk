@@ -65,6 +65,14 @@ export default async function Home() {
     .order('member_count', { ascending: false })
     .limit(6)
 
+  const { data: upcomingEvents } = await supabase
+    .from('club_events')
+    .select('id, title, starts_at, is_online, location_name, attendee_count, clubs(name)')
+    .eq('active', true)
+    .gte('starts_at', new Date().toISOString())
+    .order('starts_at', { ascending: true })
+    .limit(6)
+
   return (
     <div className="min-h-screen bg-[#0f172a] text-white overflow-x-hidden">
 
@@ -96,6 +104,12 @@ export default async function Home() {
               className="text-sm text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"
             >
               🏘️ Clubs
+            </Link>
+            <Link
+              href={user ? "/events" : "/login"}
+              className="text-sm text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"
+            >
+              📅 Events
             </Link>
           </div>
           <div className="flex items-center gap-2">
@@ -419,6 +433,56 @@ export default async function Home() {
                 </div>
               </Link>
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Upcoming Events ── */}
+      {upcomingEvents && upcomingEvents.length > 0 && (
+        <section className="relative z-10 max-w-5xl mx-auto px-6 pb-28">
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <p className="text-brand-teal-light text-sm font-semibold uppercase tracking-widest mb-1">Community</p>
+              <h2 className="text-2xl md:text-3xl font-bold">Upcoming Events</h2>
+            </div>
+            <Link
+              href={user ? "/events" : "/login"}
+              className="flex items-center gap-1.5 text-sm text-slate-300 hover:text-brand-teal-light transition-colors group"
+            >
+              {user ? 'See all events' : 'Join to explore'}
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-0.5 transition-transform">
+                <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+              </svg>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {upcomingEvents.map((ev) => {
+              const club = ev.clubs as unknown as { name: string } | null
+              return (
+                <Link
+                  key={ev.id}
+                  href={user ? `/events/${ev.id}` : "/login"}
+                  className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5 hover:border-brand-teal/20 transition-colors group"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-xl bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-lg flex-shrink-0">
+                      📅
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-sm text-white group-hover:text-brand-teal-light transition-colors leading-snug truncate">
+                        {ev.title}
+                      </h3>
+                      {club && <p className="text-xs text-slate-500 truncate">{club.name}</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-slate-400">
+                    <span>{new Date(ev.starts_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
+                    <span>{ev.is_online ? '💻 Online' : (ev.location_name || 'In person')}</span>
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         </section>
       )}

@@ -35,6 +35,16 @@ type Member = {
   profiles: { display_name: string | null; area_name: string | null }
 }
 
+type ClubEvent = {
+  id: string
+  title: string
+  starts_at: string
+  is_online: boolean
+  location_name: string | null
+  visibility: string
+  attendee_count: number
+}
+
 export default function ClubDetailPage() {
   const supabase = createClient()
   const params = useParams()
@@ -44,7 +54,9 @@ export default function ClubDetailPage() {
   const [club, setClub] = useState<Club | null>(null)
   const [creatorName, setCreatorName] = useState('')
   const [posts, setPosts] = useState<Post[]>([])
+  const [postCount, setPostCount] = useState(0)
   const [members, setMembers] = useState<Member[]>([])
+  const [events, setEvents] = useState<ClubEvent[]>([])
   const [isMember, setIsMember] = useState(false)
   const [isCreator, setIsCreator] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -95,13 +107,23 @@ export default function ClubDetailPage() {
       setIsMember(!!membership)
     }
 
-    const { data: postsData } = await supabase
+    const { data: postsData, count: postsCount } = await supabase
       .from('club_posts')
-      .select('id, content, created_at, author_id, profiles(display_name)')
+      .select('id, content, created_at, author_id, profiles(display_name)', { count: 'exact' })
       .eq('club_id', clubId)
       .order('created_at', { ascending: false })
       .limit(20)
     if (postsData) setPosts(postsData as unknown as Post[])
+    setPostCount(postsCount ?? 0)
+
+    const { data: eventsData } = await supabase
+      .from('club_events')
+      .select('id, title, starts_at, is_online, location_name, visibility, attendee_count')
+      .eq('club_id', clubId)
+      .gte('starts_at', new Date().toISOString())
+      .order('starts_at', { ascending: true })
+      .limit(10)
+    if (eventsData) setEvents(eventsData as ClubEvent[])
 
     const { data: membersData } = await supabase
       .from('club_members')
@@ -274,7 +296,7 @@ export default function ClubDetailPage() {
               <p className="text-xs text-slate-500 mt-1">Members</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-brand-teal-light">{posts.length}</p>
+              <p className="text-2xl font-bold text-brand-teal-light">{postCount}</p>
               <p className="text-xs text-slate-500 mt-1">Announcements</p>
             </div>
             <div className="text-center">
@@ -283,6 +305,49 @@ export default function ClubDetailPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Upcoming Events */}
+      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Upcoming Events</h2>
+          {isCreator && (
+            <Link
+              href={`/clubs/${clubId}/events/create`}
+              className="flex items-center gap-1.5 bg-brand-teal hover:bg-brand-teal-light text-white font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors"
+            >
+              + Create Event
+            </Link>
+          )}
+        </div>
+
+        {events.length === 0 ? (
+          <p className="text-sm text-slate-500 py-4 text-center">No upcoming events yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {events.map(ev => (
+              <Link
+                key={ev.id}
+                href={`/events/${ev.id}`}
+                className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 hover:border-brand-teal/20 transition-colors"
+              >
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <p className="text-sm font-semibold text-white truncate">{ev.title}</p>
+                  {ev.visibility === 'members_only' && (
+                    <span className="flex-shrink-0 text-[10px] font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-full">Members</span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400">
+                  {new Date(ev.starts_at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {ev.is_online ? '💻 Online' : ev.location_name ? `📍 ${ev.location_name}` : '📍 TBA'}
+                  {' · '}{ev.attendee_count} going
+                </p>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

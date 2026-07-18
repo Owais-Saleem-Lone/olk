@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAsyncEffect } from '@/hooks/use-async-effect'
+import { createNotification } from '@/lib/notifications'
 import { formatDistance } from '@/lib/geo'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -135,6 +136,19 @@ export default function ClubsPage() {
     if (!error) {
       setJoinedClubs(prev => new Set(prev).add(clubId))
       setClubs(prev => prev.map(c => c.id === clubId ? { ...c, member_count: c.member_count + 1 } : c))
+
+      // Mirrors the notification sent when joining from the club detail page —
+      // joining from this list used to skip it, so the creator never found out.
+      const club = clubs.find(c => c.id === clubId)
+      if (club) {
+        await createNotification({
+          userId: club.creator_id,
+          type: 'club_joined',
+          title: `Someone joined your club "${club.name}"`,
+          link: `/clubs/${clubId}`,
+          context: { kind: 'club_join', id: clubId },
+        })
+      }
     }
     setJoiningClub(null)
   }
