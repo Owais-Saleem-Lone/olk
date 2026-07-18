@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { createNotification } from '@/lib/notifications'
 import { formatDistance } from '@/lib/geo'
+import { CLUB_INTERESTS } from '@/lib/club-interests'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -12,7 +13,7 @@ type Club = {
   id: string
   name: string
   description: string | null
-  interest: string | null
+  interests: string[]
   area_name: string | null
   cover_url: string | null
   creator_id: string
@@ -21,14 +22,6 @@ type Club = {
   distance_km?: number | null
   creator_name?: string | null
 }
-
-const INTERESTS = [
-  'Art & Painting', 'Biography', 'Business & Finance', 'Cinema',
-  'English Literature', 'Fiction', 'General', 'Hindi Literature',
-  'History', 'Philosophy', 'Poetry', 'Psychology',
-  'Science', 'Self-Help', 'Technology', 'Travel',
-  'Urdu Literature', 'Writing',
-]
 
 export default function ClubsPage() {
   const supabase = createClient()
@@ -80,10 +73,10 @@ export default function ClubsPage() {
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase()
           filtered = filtered.filter(c =>
-            c.name.toLowerCase().includes(q) || (c.interest && c.interest.toLowerCase().includes(q))
+            c.name.toLowerCase().includes(q) || c.interests.some(i => i.toLowerCase().includes(q))
           )
         }
-        if (filterInterest) filtered = filtered.filter(c => c.interest === filterInterest)
+        if (filterInterest) filtered = filtered.filter(c => c.interests.includes(filterInterest))
         setClubs(filtered)
       }
     } else {
@@ -93,7 +86,7 @@ export default function ClubsPage() {
         .eq('active', true)
         .order('member_count', { ascending: false })
 
-      if (filterInterest) query = query.eq('interest', filterInterest)
+      if (filterInterest) query = query.contains('interests', [filterInterest])
 
       const { data } = await query
       if (data) {
@@ -101,7 +94,7 @@ export default function ClubsPage() {
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase()
           filtered = filtered.filter(c =>
-            c.name.toLowerCase().includes(q) || (c.interest && c.interest.toLowerCase().includes(q))
+            c.name.toLowerCase().includes(q) || c.interests.some(i => i.toLowerCase().includes(q))
           )
         }
         setClubs(filtered)
@@ -167,7 +160,7 @@ export default function ClubsPage() {
             href="/clubs/create"
             className="flex items-center gap-1.5 bg-brand-teal hover:bg-brand-teal-light text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
           >
-            + Create Club
+            + Request a Club
           </Link>
         )}
       </div>
@@ -189,7 +182,7 @@ export default function ClubsPage() {
             className="bg-white/5 border border-white/10 rounded-lg px-3 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-teal"
           >
             <option value="" className="bg-brand-slate">All Interests</option>
-            {INTERESTS.map(i => <option key={i} value={i} className="bg-brand-slate">{i}</option>)}
+            {CLUB_INTERESTS.map(i => <option key={i} value={i} className="bg-brand-slate">{i}</option>)}
           </select>
           <button type="submit" className="bg-brand-teal hover:bg-brand-teal-light text-white font-semibold px-6 py-3 rounded-lg transition-colors text-sm">
             Search
@@ -222,11 +215,13 @@ export default function ClubsPage() {
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-4xl opacity-20">🏘️</div>
                 )}
-                {club.interest && (
-                  <div className="absolute top-2 left-2">
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                      {club.interest}
-                    </span>
+                {club.interests.length > 0 && (
+                  <div className="absolute top-2 left-2 flex flex-wrap gap-1 max-w-[90%]">
+                    {club.interests.slice(0, 2).map(i => (
+                      <span key={i} className="text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                        {i}
+                      </span>
+                    ))}
                   </div>
                 )}
               </div>

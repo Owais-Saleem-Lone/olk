@@ -60,7 +60,7 @@ export default async function Home() {
 
   const { data: activeClubs } = await supabase
     .from('clubs')
-    .select('id, name, interest, member_count')
+    .select('id, name, interests, member_count')
     .eq('active', true)
     .order('member_count', { ascending: false })
     .limit(6)
@@ -424,9 +424,9 @@ export default async function Home() {
                   </h3>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-slate-400">
-                  {club.interest && (
+                  {club.interests?.[0] && (
                     <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full">
-                      {club.interest}
+                      {club.interests[0]}
                     </span>
                   )}
                   <span>{club.member_count} {club.member_count === 1 ? 'member' : 'members'}</span>

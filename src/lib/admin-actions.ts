@@ -422,6 +422,69 @@ export const transferClubOwnership = withAdminAction(
 )
 
 // ═══════════════════════════════════════════
+// CLUB REQUEST REVIEW
+// ═══════════════════════════════════════════
+
+export const approveClubRequest = withAdminAction(
+  'moderator',
+  'approve_club_request',
+  async ({ supabase }, requestId: string, note: string) => {
+    const { data: newClubId, error } = await supabase.rpc('approve_club_request', {
+      p_request_id: requestId,
+      p_note: note || null,
+    })
+    if (error) throw error
+
+    const { data: request } = await supabase
+      .from('club_requests')
+      .select('requester_id, name')
+      .eq('id', requestId)
+      .single()
+
+    if (request) {
+      await supabase.from('notifications').insert({
+        user_id: request.requester_id,
+        type: 'club_request_approved',
+        title: `Your club "${request.name}" was approved!`,
+        link: `/clubs/${newClubId}`,
+      })
+    }
+
+    return { targetType: 'club_request', targetId: requestId, details: { newClubId, note } }
+  }
+)
+
+export const rejectClubRequest = withAdminAction(
+  'moderator',
+  'reject_club_request',
+  async ({ supabase }, requestId: string, note: string) => {
+    const { error } = await supabase.rpc('reject_club_request', {
+      p_request_id: requestId,
+      p_note: note || null,
+    })
+    if (error) throw error
+
+    const { data: request } = await supabase
+      .from('club_requests')
+      .select('requester_id, name')
+      .eq('id', requestId)
+      .single()
+
+    if (request) {
+      await supabase.from('notifications').insert({
+        user_id: request.requester_id,
+        type: 'club_request_rejected',
+        title: `Your club request "${request.name}" was not approved`,
+        body: note || null,
+        link: `/clubs/create`,
+      })
+    }
+
+    return { targetType: 'club_request', targetId: requestId, details: { note } }
+  }
+)
+
+// ═══════════════════════════════════════════
 // EVENT MANAGEMENT
 // ═══════════════════════════════════════════
 

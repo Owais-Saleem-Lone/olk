@@ -8,4 +8,6 @@ export const NOTIFICATION_ICONS: Record<string, string> = {
   club_joined: '🏘️',
   club_announcement: '📢',
   event_created: '📅',
+  club_request_approved: '🎉',
+  club_request_rejected: 'ℹ️',
 }

@@ -13,7 +13,7 @@ type Club = {
   id: string
   name: string
   description: string | null
-  interest: string | null
+  interests: string[]
   area_name: string | null
   cover_url: string | null
   creator_id: string
@@ -255,9 +255,9 @@ export default function ClubDetailPage() {
                 </>
               )}
               <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
-                {club?.interest && (
-                  <span className="bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-medium px-2.5 py-1 rounded-full">{club.interest}</span>
-                )}
+                {club?.interests?.map(i => (
+                  <span key={i} className="bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-medium px-2.5 py-1 rounded-full">{i}</span>
+                ))}
                 {club?.area_name && <span>📍 {club.area_name}</span>}
                 <span>Founded {joinDate}</span>
                 <span>by <Link href={`/user/${club?.creator_id}`} className="text-brand-teal-light hover:text-teal-300">{creatorName}</Link></span>

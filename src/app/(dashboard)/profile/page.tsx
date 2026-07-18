@@ -3,9 +3,13 @@
 import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAsyncEffect } from '@/hooks/use-async-effect'
+import Link from 'next/link'
+
+type MyClub = { id: string; name: string; member_count: number }
 
 export default function ProfilePage() {
   const supabase = createClient()
+  const [myClubs, setMyClubs] = useState<MyClub[]>([])
   const [displayName, setDisplayName] = useState('')
   const [areaName, setAreaName] = useState('')
   const [bio, setBio] = useState('')
@@ -37,6 +41,13 @@ export default function ProfilePage() {
         setLongitude(data.longitude ?? null)
         setEmailDigest(data.email_digest ?? true)
       }
+
+      const { data: clubs } = await supabase
+        .from('clubs')
+        .select('id, name, member_count')
+        .eq('creator_id', user.id)
+        .eq('active', true)
+      setMyClubs(clubs || [])
     }
     setLoading(false)
   }, [supabase])
@@ -110,6 +121,29 @@ export default function ProfilePage() {
     <div>
       <h1 className="text-3xl font-bold mb-2">Your Profile</h1>
       <p className="text-slate-400 mb-8">Tell the community who you are and where you are located</p>
+
+      {myClubs.length > 0 && (
+        <div className="max-w-lg mb-6">
+          <h2 className="text-sm font-semibold text-slate-300 mb-2">My Club{myClubs.length > 1 ? 's' : ''}</h2>
+          <div className="space-y-2">
+            {myClubs.map(club => (
+              <Link
+                key={club.id}
+                href={`/clubs/${club.id}`}
+                className="flex items-center justify-between bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 hover:border-brand-teal/20 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-lg flex-shrink-0">🏘️</div>
+                  <div>
+                    <p className="text-sm font-medium text-white">{club.name}</p>
+                    <p className="text-xs text-slate-500">{club.member_count} {club.member_count === 1 ? 'member' : 'members'} · Edit here →</p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8 max-w-lg">
         <form onSubmit={handleSave} className="space-y-5">

@@ -9,7 +9,7 @@ type Club = {
   id: string
   name: string
   description: string | null
-  interest: string | null
+  interests: string[]
   area_name: string | null
   member_count: number
   active: boolean
@@ -40,7 +40,7 @@ export default function AdminClubsPage() {
     setLoading(true)
     let query = supabase
       .from('clubs')
-      .select('id, name, description, interest, area_name, member_count, active, created_at, creator:creator_id(id, display_name)')
+      .select('id, name, description, interests, area_name, member_count, active, created_at, creator:creator_id(id, display_name)')
       .order('member_count', { ascending: false })
 
     if (filter === 'active') query = query.eq('active', true)
@@ -133,7 +133,7 @@ export default function AdminClubsPage() {
                       {c.name}
                       {!c.active && <span className="ml-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-full">Inactive</span>}
                     </p>
-                    <p className="text-xs text-slate-500">{c.member_count} members · {c.area_name || 'No area'} · {c.interest || 'General'}</p>
+                    <p className="text-xs text-slate-500">{c.member_count} members · {c.area_name || 'No area'} · {c.interests.join(', ') || 'General'}</p>
                   </div>
                   <span className="text-slate-600 text-xs">→</span>
                 </div>
@@ -159,8 +159,8 @@ export default function AdminClubsPage() {
                   <p className="text-xs text-slate-500">Members</p>
                 </div>
                 <div className="text-center py-2 bg-white/[0.03] rounded-lg">
-                  <p className="text-sm text-slate-300">{selected.interest || '—'}</p>
-                  <p className="text-xs text-slate-500">Interest</p>
+                  <p className="text-sm text-slate-300">{selected.interests.join(', ') || '—'}</p>
+                  <p className="text-xs text-slate-500">Interests</p>
                 </div>
                 <div className="text-center py-2 bg-white/[0.03] rounded-lg">
                   <p className="text-sm text-slate-300">{selected.area_name || '—'}</p>
