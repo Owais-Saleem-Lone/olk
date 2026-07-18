@@ -23,10 +23,27 @@ npx supabase migration new <name>       # scaffold a correctly-timestamped migra
 npx supabase db dump --local --schema public > supabase/schema.sql
                                          # regenerate the schema.sql snapshot
 
-# Hosted project (production) only:
+# Hosted project (production) -- one-time link per machine (Chapter 4, S:link):
 npx supabase login
 npx supabase link --project-ref <ref>
+
+# Hosted project (production) -- every push, once linked:
+npx supabase migration list             # compare local vs. hosted migration history
+npx supabase db push --dry-run          # preview which migrations would be applied
 npx supabase db push                    # apply pending migrations to the hosted project
+npx supabase db query "<sql>" --linked  # read-only query against the hosted project
+\end{lstlisting}
+
+\section{npm script wrappers (Chapter~\ref{ch:local-env} -- prefer these day-to-day)}
+\begin{lstlisting}[style=olkcodebash, language=bash]
+npm run env:local        # point .env.local at the local Docker stack
+npm run env:remote       # point .env.local at the hosted project
+                          # (restart `npm run dev` after either)
+
+npm run db:reset         # = npx supabase db reset (schema only, wipes local data)
+npm run db:reset-full    # db reset, then db:pull-data -- schema + real data, one command
+npm run db:pull-data     # copy public/auth data from the hosted project into local
+npm run db:push          # = npx supabase db push
 \end{lstlisting}
 
 \section{Docker (rarely needed directly — the Supabase CLI drives this for you)}

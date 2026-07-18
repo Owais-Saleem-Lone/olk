@@ -112,6 +112,22 @@ npm run dev
 Next.js does \textbf{not} hot-reload \code{NEXT\_PUBLIC\_*} environment variables into an already-running dev server process — they are baked in at server start. If you edit \pathname{.env.local} while \code{npm run dev} is already running, kill and restart it, or you will silently keep talking to whichever backend it started with.
 \end{olkwarn}
 
+\subsection{7. Link the CLI to the hosted project (one-time, before your first push or data-pull)}
+\label{sec:link}
+
+Everything up to this point — \code{start}, \code{db reset}, \code{npm run dev} against the local stack — works with zero contact with the hosted project, and a completely fresh clone has none of that contact configured: the link between your local Supabase CLI and the hosted project lives in \pathname{supabase/.temp/}, which is git-ignored (\pathname{supabase/config.toml}'s \code{project\_id = "olk"}, from step 2, only names your \emph{local Docker} containers — it is not the same thing and does not establish this link). The moment you want to run any command this chapter uses later that talks to the hosted project — \code{db push} (\S\ref{sec:workflow}), \code{db:pull-data} (\S\ref{sec:pull-data}), or \code{migration list}/\code{db query --linked} (verifying sync, further below) — you need this one-time setup first:
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={One-time per machine: authenticate, then link to the hosted OLK project}]
+npx supabase login
+npx supabase link --project-ref <the-hosted-project-ref>
+\end{lstlisting}
+
+\begin{olknote}
+\code{<the-hosted-project-ref>} is the id in the hosted project's dashboard URL (\url{https://supabase.com/dashboard/project/<ref>}), and matches what \pathname{.env.remote}'s \code{NEXT\_PUBLIC\_SUPABASE\_URL} embeds (\url{https://<ref>.supabase.co}) — if a teammate already has \pathname{.env.remote}, you can read the ref straight out of that URL rather than hunting for it in the dashboard. \code{supabase login} opens a browser for you to authorize the CLI against your Supabase account; you need to already be a member of the OLK project on that account for \code{link} to succeed.
+\end{olknote}
+
+This step is also covered, with identical commands, in Chapter~\ref{ch:vercel} — it appears there too because it happens to be the first place a new deploy needs it, not because it's deploy-specific. Do it once per machine, here, and every push/pull-data/migration-list command for the rest of this chapter (and that one) just works.
+
 \section{Day-to-day commands}
 
 \begin{center}
@@ -138,6 +154,10 @@ Next.js does \textbf{not} hot-reload \code{NEXT\_PUBLIC\_*} environment variable
 \label{sec:workflow}
 
 The point of all of the above is a specific loop: write and test migrations and features entirely against the local Docker stack, where mistakes are free (\code{db reset} throws it all away and replays from scratch in seconds) — then, once satisfied, run \code{npm run db:push} to apply the same migrations to the hosted project. Never develop directly against hosted data; never run \code{db reset} against a linked remote project (it has no \code{--linked} form for exactly this reason — \code{reset} is a local-only concept).
+
+\begin{olktip}
+Before the real push, preview it: \code{npx supabase db push --dry-run} connects to the linked hosted project and lists exactly which migration files it would apply, without applying any of them. It costs a few seconds and catches the two mistakes that matter most before they're irreversible — a migration you forgot you'd already pushed, or one you didn't mean to push yet — since the file list it prints should exactly match what you expect from your own \pathname{supabase/migrations} directory. Run the real \code{npm run db:push} immediately after, while that list is still fresh in your head.
+\end{olktip}
 
 \begin{olkgotcha}
 This chapter's own example: four migrations were written and fully tested against local Docker in one sitting, but the person testing them ran \code{supabase db reset} to apply them — without registering that the \emph{local} database also held real, hand-entered test data (an account, some books) that \code{db reset} silently discards, since a reset's entire contract is "recreate the database, then replay migrations," never "preserve what was there." The migrations themselves were correct and the hosted project was never touched, but local testing data was gone. \textbf{Lesson: \code{db reset} is safe for schema, never for data you haven't already pushed or don't have a copy of} — see the data-pull workflow immediately below for how this was recovered.
