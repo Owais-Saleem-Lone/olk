@@ -88,6 +88,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(browseUrl)
   }
 
+  // Events live at /events but event *creation* is nested under /clubs/[id]/events/...,
+  // so this needs both prefixes, unlike the single-prefix checks above.
+  if (!flags.feature_events && (pathname.startsWith('/events') || /^\/clubs\/[^/]+\/events\//.test(pathname))) {
+    const browseUrl = request.nextUrl.clone()
+    browseUrl.pathname = '/browse'
+    return NextResponse.redirect(browseUrl)
+  }
+
   if (!user && isProtected) {
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/login'
