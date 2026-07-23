@@ -8,7 +8,7 @@
    version="1.1"
    id="svg41"
    sodipodi:docname="OLK_logo_3.svg"
-   inkscape:version="1.4.4 (dcaf3e7d, 2026-05-05)"
+   inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -23,15 +23,15 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="1.4142136"
-     inkscape:cx="218.84954"
-     inkscape:cy="339.7648"
-     inkscape:window-width="2048"
-     inkscape:window-height="1014"
+     inkscape:zoom="1"
+     inkscape:cx="247.99999"
+     inkscape:cy="262.49999"
+     inkscape:window-width="1453"
+     inkscape:window-height="883"
      inkscape:window-x="0"
-     inkscape:window-y="25"
-     inkscape:window-maximized="0"
-     inkscape:current-layer="clipped_art"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer_word"
      showgrid="false" />
   <defs
      id="defs14">
@@ -460,75 +460,60 @@
        style="display:inline">
       <g
          id="g2"
-         transform="translate(0,52)">
+         transform="translate(7.99467,18.25731)">
         <path
-           fill="#334155"
-           opacity="0.85"
-           d="m 58.738916,218.25616 68.000004,-93.04434 32.4335,51.30356 56.08867,-34.34821 31.18555,53.44597 52.9491,-36.69201 30.14778,33.80998 81.1954,-63.29 40,88.81505 z"
-           id="path16"
-           style="display:inline;fill:#12322a;fill-opacity:1;stroke-width:1.02826"
-           sodipodi:nodetypes="cccccccccc" />
+           style="fill:#123329;fill-opacity:0.85098;stroke:#9cca80;stroke-width:0;stroke-dasharray:none"
+           d="m 37.648229,231.74269 68.000011,-93.04434 57.63924,93.04434 z"
+           id="path1" />
         <path
-           fill="#e2e8f0"
-           opacity="0.9"
-           d="m 215.26203,142.18395 17.88792,30.65428 -12.34853,-6.10024 -7.68801,7.10837 -9.73892,-3.38259 -11.93596,2.37602 z"
-           id="path17"
-           sodipodi:nodetypes="ccccccc"
-           style="display:inline" />
+           style="fill:#12332a;fill-opacity:0.85098;stroke:#9cca80;stroke-width:0;stroke-dasharray:none"
+           d="m 429.64822,231.74269 -39.99999,-88.81504 -82.34037,88.81504 z"
+           id="path2-5" />
         <path
-           fill="#e2e8f0"
-           opacity="0.9"
-           d="m 299.40039,158.92248 23.07086,25.83764 -13.0982,0.0608 -3.64368,3.27423 -6.58621,-12.15929 -17.29884,8.99343 z"
-           id="path18"
-           style="display:inline"
-           sodipodi:nodetypes="ccccccc" />
+           style="fill:#323e18;fill-opacity:0.85098;stroke:#9cca80;stroke-width:0;stroke-dasharray:none"
+           d="m 145.95088,203.75703 50.82623,-35.72149 51.22822,63.70715 h -84.71785 z"
+           id="path3"
+           sodipodi:nodetypes="ccccc" />
+        <path
+           style="fill:#323e18;fill-opacity:0.85098;stroke:#9cca80;stroke-width:0;stroke-dasharray:none"
+           d="m 229.48002,208.70469 50.78328,-40.83587 46.38954,43.00774 -19.34498,20.86613 h -59.30253 z"
+           id="path4"
+           sodipodi:nodetypes="cccccc" />
         <path
            fill="#e2e8f0"
            opacity="0.75"
-           d="m 126.73892,125.21182 13.92722,21.9303 -9.71066,-4.99824 -1.49078,12.79372 -15.04434,1.72578 z"
+           d="m 105.64824,138.69835 15.86737,25.61395 -10.40081,6.44311 -14.74078,-9.08128 -13.64194,8.38038 z"
            id="path19"
            sodipodi:nodetypes="cccccc"
            style="display:inline" />
         <path
            fill="#e2e8f0"
+           opacity="0.9"
+           d="m 196.77711,168.03554 25.61411,31.85357 -20.07472,-7.29952 -16.81301,6.35837 c -10.11223,-4.10214 -11.78856,-4.99236 -22.41407,-7.23617 z"
+           id="path17"
+           sodipodi:nodetypes="cccccc"
+           style="display:inline" />
+        <path
+           fill="#e2e8f0"
+           opacity="0.9"
+           d="m 280.2633,167.86882 26.36813,24.44589 -20.82874,-5.46031 -9.12322,6.00482 c -10.11223,-4.10214 -14.86882,0.63575 -25.49433,-1.60806 z"
+           id="path17-2"
+           sodipodi:nodetypes="cccccc"
+           style="display:inline" />
+        <path
+           fill="#e2e8f0"
            opacity="0.75"
-           d="m 410.75026,129.4704 9.58676,21.27411 -9.49301,-6.25666 -6.96931,18.17554 -12.93462,-4.64857 z"
-           id="path20"
+           d="m 389.64823,142.92765 12.92485,28.69804 -11.49903,3.76803 -14.70004,-5.74029 -18.85208,7.92671 z"
+           id="path19-1"
            sodipodi:nodetypes="cccccc"
            style="display:inline" />
       </g>
     </g>
     <g
-       inkscape:label="lamplight"
-       inkscape:groupmode="layer"
-       id="layer_light"
-       style="display:none">
-      <!-- soft halo behind the whole book -->
-      <ellipse
-         cx="256"
-         cy="226"
-         rx="150"
-         ry="80"
-         fill="url(#bookHalo)"
-         id="ellipse20"
-         style="display:none" />
-      <!-- beams from the two lanterns onto the pages -->
-      <path
-         fill="url(#beamL)"
-         d="m 139,120 h 14 l 97,120 -88,14 z"
-         id="path21"
-         style="display:none" />
-      <path
-         fill="url(#beamR)"
-         d="m 359,120 h 14 l -23,134 -88,-14 z"
-         id="path22"
-         style="display:none" />
-    </g>
-    <g
        inkscape:label="book"
        inkscape:groupmode="layer"
        id="layer_book"
-       transform="matrix(1.09,0,0,1.09,-23.04,-9.4)"
+       transform="matrix(1.09,0,0,1.09,-27.4,-20.539987)"
        style="display:inline">
       <!-- cover -->
       <path
@@ -599,17 +584,17 @@
          id="path34"
          style="display:none" />
     </g>
-    <path
-       fill="#2e7d5f"
-       d="m 331.23264,465.33313 c -62.95173,-44 -174.50384,-53.8434 -249.05194,-43.8434 -69.57823,9 -33.067477,-5.93502 -87.7360895,24.06498 l -2,61.55539 H 396.66099 Z"
-       id="path2"
-       style="display:inline;fill:#1f5748;fill-opacity:1;stroke-width:0.910117"
-       sodipodi:nodetypes="cccccc" />
     <g
        inkscape:label="hills"
        inkscape:groupmode="layer"
        id="layer_hills"
        style="display:inline">
+      <path
+         fill="#2e7d5f"
+         d="m 331.23264,465.33313 c -62.95173,-44 -174.50384,-53.8434 -249.05194,-43.8434 -69.57823,9 -33.067477,-5.93502 -87.7360895,24.06498 l -2,61.55539 H 396.66099 Z"
+         id="path2"
+         style="display:inline;fill:#1f5748;fill-opacity:1;stroke-width:0.910117"
+         sodipodi:nodetypes="cccccc" />
       <path
          fill="#2e7d5f"
          d="m 186.19847,481.07857 c 62.95173,-44 139.91441,-68.19802 214.46252,-58.19802 69.57823,9 30.1704,-2.43594 84.83901,27.56406 L 487.5,512 H 83.283618 Z"
@@ -630,7 +615,7 @@
        style="display:inline">
       <text
          x="253.28418"
-         y="391.64722"
+         y="387.64722"
          text-anchor="middle"
          font-family="'Liberation Serif', 'Nimbus Roman', 'Times New Roman', serif"
          font-weight="bold"
@@ -648,8 +633,8 @@
          fill="#2dd4bf"
          id="text_tagline"
          style="display:inline;fill:#2dd4bf;fill-opacity:1;stroke:#9cca80;stroke-width:0.245669;stroke-dasharray:none;stroke-opacity:1"
-         x="255.65247"
-         y="305.23633">OPEN LIBRARY KASHMIR</text>
+         x="248.80705"
+         y="297.65915">OPEN LIBRARY KASHMIR</text>
     </g>
   </g>
   <g
@@ -665,6 +650,6 @@
        stroke="#14b8a6"
        stroke-width="4"
        id="circle28"
-       style="display:inline;stroke-width:7.40031;stroke-dasharray:none;stroke:#12332a;stroke-opacity:0.8509804" />
+       style="display:inline;stroke:#12332a;stroke-width:7.40031;stroke-dasharray:none;stroke-opacity:0.85098" />
   </g>
 </svg>
