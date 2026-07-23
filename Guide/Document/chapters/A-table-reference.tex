@@ -19,6 +19,7 @@ A single-page-per-eye-scan version of Chapter~\ref{ch:schema}, for quick lookup.
 \codecell{wishlists} & id, user\_id, title, author, genre, active, matched\_book\_id, created\_at & user\_id $\to$ profiles; matched\_book\_id $\to$ books \\
 \codecell{book\_notes} & id, book\_id, user\_id, note, created\_at & book\_id $\to$ books; user\_id $\to$ profiles \\
 \codecell{clubs} & id, name, description, interest, area\_name, latitude, longitude, cover\_url, creator\_id, member\_count, active, created\_at & creator\_id $\to$ profiles \\
+\codecell{club\_requests} & id, requester\_id, name, interests, description, goal, target\_members, area\_name, latitude, longitude, cover\_url, status, review\_note, reviewed\_by, reviewed\_at, created\_club\_id, created\_at & requester\_id/reviewed\_by $\to$ profiles; created\_club\_id $\to$ clubs \\
 \codecell{club\_members} & id, club\_id, user\_id, joined\_at & club\_id $\to$ clubs; user\_id $\to$ profiles \\
 \codecell{club\_posts} & id, club\_id, author\_id, content, created\_at & club\_id $\to$ clubs; author\_id $\to$ profiles \\
 \codecell{club\_events} & id, club\_id, creator\_id, title, description, cover\_url, starts\_at, ends\_at, is\_online, location\_name, meeting\_url, latitude, longitude, visibility, capacity, attendee\_count, active, created\_at & club\_id $\to$ clubs; creator\_id $\to$ profiles \\

@@ -31,13 +31,15 @@ These three are why RLS policies throughout Chapter~\ref{ch:rls} can be as short
 
 \section{Discovery: geography}
 
-\begin{lstlisting}[style=olkcodesql, caption={get\_books\_nearby — haversine distance, nulls last}]
-CREATE OR REPLACE FUNCTION public.get_books_nearby(user_lat double precision, user_lng double precision)
+\begin{lstlisting}[style=olkcodesql, caption={get\_books\_nearby — haversine distance, nulls last, bounded}]
+CREATE OR REPLACE FUNCTION public.get_books_nearby(
+  user_lat double precision, user_lng double precision, p_limit integer DEFAULT 200
+)
 RETURNS TABLE(id uuid, title varchar, author varchar, condition varchar,
               listing_type varchar, status varchar, genre varchar, cover_url text,
               owner_id uuid, created_at timestamptz, distance_km double precision,
               owner_name varchar, owner_area varchar, read_count int,
-              acquired_via_donation boolean)
+              acquired_via_donation boolean, description text, publication_year smallint)
 LANGUAGE sql STABLE SECURITY DEFINER AS $$
   SELECT
     b.id, b.title, b.author, b.condition, b.listing_type, b.status,
@@ -54,11 +56,12 @@ LANGUAGE sql STABLE SECURITY DEFINER AS $$
       ELSE NULL
     END AS distance_km,
     p.display_name AS owner_name, p.area_name AS owner_area,
-    b.read_count, b.acquired_via_donation
+    b.read_count, b.acquired_via_donation, b.description, b.publication_year
   FROM books b
   JOIN profiles p ON p.id = b.owner_id
   WHERE b.status IN ('available', 'given', 'unavailable')
-  ORDER BY distance_km ASC NULLS LAST, b.created_at DESC;
+  ORDER BY distance_km ASC NULLS LAST, b.created_at DESC
+  LIMIT p_limit;
 $$;
 \end{lstlisting}
 
@@ -66,10 +69,18 @@ $$;
 The \code{6371 * acos(...)} expression is the haversine great-circle-distance formula (6371 = Earth's radius in km). \code{LEAST(1.0, GREATEST(-1.0, ...))} clamps the argument to \code{acos} into $[-1, 1]$ — without it, floating-point rounding on two nearly-identical coordinates (e.g. a user browsing their own listing) can push the argument fractionally outside that range and make \code{acos} return \code{NaN}, since \code{acos} is only defined on $[-1,1]$.
 \end{olknote}
 
+\begin{olkwarn}
+\code{p\_limit} bounds the \emph{result size}, not the \emph{work}. Postgres still computes \code{distance\_km} for every row matching the \code{status} filter and sorts all of them before applying \code{LIMIT} — there is no index that can help here, since the sort key is a computed expression, not a stored column. At today's catalog size this is cheap; it will not stay cheap as the \code{books} table grows toward the scale discussed in Chapter~\ref{ch:welcome}'s scaling roadmap. A spatial index or a coarser area-bucket pre-filter is the real fix, not yet done — see \S\ref{sec:phase1} of that chapter.
+\end{olkwarn}
+
 \code{get\_clubs\_nearby(user\_lat, user\_lng)} is the same haversine pattern applied to \code{clubs} (only \code{active = true}), joined to the creator's profile, ordered by distance then by \code{member\_count DESC}. \code{get\_events\_nearby(user\_lat, user\_lng)} is the same pattern again, one table further out: \code{club\_events} (only \code{active = true}) joined to both its parent \code{clubs} row and the creator's profile, ordered by distance then by \code{starts\_at ASC} — soonest first, rather than most-popular first, since "what's happening near me next" is the more useful default for events than it is for clubs.
 
 \begin{olkgotcha}
 Both nearby functions have an explicit column list in \code{RETURNS TABLE(...)}. When \code{books.description} and \code{books.publication\_year} were added, an earlier version of this function briefly shipped \emph{without} them in its return type — silently dropping those two columns from every geo-sorted browse result for any user with a location set, even though the columns existed in the table. A follow-up migration (\pathname{20260702184016\_...}) had to \code{DROP} and re-\code{CREATE} the function to add them. \textbf{Lesson for the next schema change that touches \code{books} or \code{clubs}:} adding a column to the underlying table does \emph{not} automatically surface it through either nearby function — you must also update its \code{RETURNS TABLE} list and redeploy the function.
+\end{olkgotcha}
+
+\begin{olkgotcha}
+Adding \code{p\_limit} above (23-07-2026, Chapter~\ref{ch:welcome}'s scaling pass) hit a second, independent Postgres surprise: the first attempt used a plain \code{CREATE OR REPLACE FUNCTION} with the new third parameter appended, on the theory that a default value would keep every existing 2-argument call site working unchanged. It compiled and applied without error — and did nothing. Postgres identifies a function by its name \emph{and} its parameter type list together; adding a parameter changes that identity, so \code{CREATE OR REPLACE} registered a brand-new 3-argument \emph{overload} sitting \emph{alongside} the untouched original 2-argument function, which still had no \code{LIMIT}. Since \pathname{browse/page.tsx} calls \code{.rpc('get\_books\_nearby', \{ user\_lat, user\_lng \})} with exactly two arguments, Postgres kept resolving every real call to the old, unfixed overload — confirmed by running \code{\textbackslash df public.get\_books\_nearby} against a freshly-reset local database (Chapter~\ref{ch:local-env}) and finding two rows, not one, where only one was expected. The fix is the explicit \code{DROP FUNCTION IF EXISTS public.get\_books\_nearby(double precision, double precision);} that now appears at the top of \pathname{20260723143629\_bound\_get\_books\_nearby\_limit.sql}, before the \code{CREATE OR REPLACE}. \textbf{Lesson:} \code{CREATE OR REPLACE FUNCTION} only replaces a function with the \emph{exact same} parameter type list. Changing the return type (the gotcha above) and changing the parameter list (this one) are two separate reasons the same fix — drop the old signature explicitly first — is needed; after any signature change, verify with \code{\textbackslash df} that exactly one overload exists before trusting the fix.
 \end{olkgotcha}
 
 \section{Public aggregates}

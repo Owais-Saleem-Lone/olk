@@ -45,6 +45,7 @@ Route groups in parentheses, e.g. \pathname{(dashboard)}, do not appear in the U
 \pathcell{app/register/page.tsx} & Client & Sign-up via \code{supabase.auth.signUp}; profile row is created by a database trigger, not this page. \\
 \pathcell{app/maintenance/page.tsx} & Server & Static page shown to non-admins when \code{maintenance\_mode} is on (Chapter~\ref{ch:proxy}). \\
 \pathcell{app/api/digest/route.ts} & Route Handler & \code{GET}/\code{POST} endpoint for the weekly email digest cron (Chapter~\ref{ch:vercel}). \\
+\pathcell{app/api/books/route.ts} & Route Handler & Serves Browse's plain, unfiltered book list from a 20-second shared in-memory cache; excluded from the Proxy's matcher (Chapter~\ref{ch:proxy}). \\
 \pathcell{app/(dashboard)/layout.tsx} & Server & Branches entirely on auth state: guests get a minimal navbar, signed-in users get the full \code{DashboardShell}. \\
 \pathcell{app/(dashboard)/browse/page.tsx} & Client & Book discovery: search, filters, distance radius, request/bookmark actions. \\
 \pathcell{app/(dashboard)/my-books/page.tsx} & Client & Add/edit/delete listings, ISBN scanner, reading-progress, "Pass It On." \\

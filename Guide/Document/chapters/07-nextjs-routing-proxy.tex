@@ -70,11 +70,14 @@ export async function proxy(request: NextRequest) {
   const isProtected = PROTECTED_ROUTES.some(route => pathname.startsWith(route))
   const flags = await getFeatureFlags(supabase)
 
-  let profile: { is_banned: boolean; ban_expires_at: string | null; is_admin: boolean; admin_role: string | null } | null = null
-  if (user && (isProtected || flags.maintenance_mode)) {
+  // Fetched for every authenticated request now, not just protected ones --
+  // DashboardLayout needs is_admin/display_name on every page too, and
+  // forwarding it via headers below lets the layout skip its own auth call.
+  let profile: { is_banned: boolean; ban_expires_at: string | null; is_admin: boolean; admin_role: string | null; display_name: string | null } | null = null
+  if (user) {
     const { data } = await supabase
       .from('profiles')
-      .select('is_banned, ban_expires_at, is_admin, admin_role')
+      .select('is_banned, ban_expires_at, is_admin, admin_role, display_name')
       .eq('id', user.id)
       .single()
     profile = data
@@ -124,23 +127,41 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return supabaseResponse
+  // Forward the already-verified user/profile/flags to downstream Server
+  // Components via request headers, so DashboardLayout doesn't repeat
+  // auth.getUser() + a profiles query + an uncached platform_settings query.
+  // Values are base64-encoded since display_name may contain non-ASCII text.
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-olk-user-id', user?.id ?? '')
+  requestHeaders.set('x-olk-user-email', user?.email ?? '')
+  requestHeaders.set('x-olk-user-is-admin', profile?.is_admin ? '1' : '0')
+  requestHeaders.set('x-olk-user-display-name', Buffer.from(profile?.display_name ?? '').toString('base64'))
+  requestHeaders.set('x-olk-feature-flags', Buffer.from(JSON.stringify(flags)).toString('base64'))
+
+  const finalResponse = NextResponse.next({ request: { headers: requestHeaders } })
+  supabaseResponse.cookies.getAll().forEach(cookie => finalResponse.cookies.set(cookie))
+  return finalResponse
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/((?!api/books|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }
 \end{lstlisting}
 
-Five responsibilities, in the order they execute:
+Six responsibilities, in the order they execute:
 
 \begin{enumerate}
-  \item \textbf{Session refresh} — the \code{cookies.getAll}/\code{setAll} dance exists purely so \code{@supabase/ssr} can rotate the auth token cookies on every request. This runs unconditionally, for \emph{every} request matched by \code{config.matcher} (i.e. everything except static assets), whether or not the route is protected.
-  \item \textbf{Feature flags} — \code{platform\_settings} (Chapter~\ref{ch:admin}) is read once per (cached, 30-second-TTL) window via \pathname{src/lib/platform-settings.ts}, shared with the \pathname{(dashboard)/layout.tsx} server component that hides nav links for disabled features.
+  \item \textbf{Session refresh} — the \code{cookies.getAll}/\code{setAll} dance exists purely so \code{@supabase/ssr} can rotate the auth token cookies on every request. This runs unconditionally, for \emph{every} request matched by \code{config.matcher} (i.e. everything except static assets and \pathname{/api/books}), whether or not the route is protected.
+  \item \textbf{Feature flags} — \code{platform\_settings} (Chapter~\ref{ch:admin}) is read once per (cached, 30-second-TTL) window via \pathname{src/lib/platform-settings.ts}.
   \item \textbf{Maintenance mode} — if \code{maintenance\_mode} is on, every non-admin visitor (whether logged in or not) is redirected to \pathname{/maintenance}, except \pathname{/login} itself (so an admin can still sign in) and \pathname{/maintenance}.
   \item \textbf{Per-feature route gates} — \code{feature\_clubs}/\code{feature\_wishlists}/\code{feature\_messages}/\code{feature\_events} being off redirects their entire route tree (\pathname{/clubs}, \pathname{/wishlist}, \pathname{/messages}, \pathname{/events} plus \pathname{/clubs/[id]/events/*}) to \pathname{/browse}, independent of whether the route is otherwise "protected."
-  \item \textbf{Unauthenticated, banned-user, and admin gates} — unchanged from before: redirect a session-less visitor away from \code{PROTECTED\_ROUTES} to \pathname{/login}; for a logged-in user on a protected route, bounce a currently-banned user to \pathname{/profile}, and bounce any non-admin away from \pathname{/admin}.
+  \item \textbf{Unauthenticated, banned-user, and admin gates} — redirect a session-less visitor away from \code{PROTECTED\_ROUTES} to \pathname{/login}; for a logged-in user on a protected route, bounce a currently-banned user to \pathname{/profile}, and bounce any non-admin away from \pathname{/admin}.
+  \item \textbf{Forward user/profile/flags to the layout via headers} — the newest responsibility (23-07-2026, Chapter~\ref{ch:welcome}'s scaling pass). \pathname{(dashboard)/layout.tsx} used to independently call \code{auth.getUser()} and re-query \code{profiles}/\code{platform\_settings} itself, roughly doubling the Supabase Auth API calls per page view. It now reads \code{x-olk-user-id} etc. from \code{headers()} instead of querying anything — this only works because every matched route passes through the Proxy first, so the layout can trust headers the Proxy set moments earlier in the same request.
 \end{enumerate}
+
+\begin{olknote}
+Base64-encoding \code{display\_name} and the feature-flags JSON before setting them as headers is not decorative — raw HTTP header values are restricted to a safe ASCII subset, and \code{display\_name} is free-text a user typed, which in a project serving Kashmir is routinely non-Latin script. Sending it unescaped would silently corrupt or break on names \code{Buffer.from(...).toString('base64')} handles correctly.
+\end{olknote}
 
 \begin{olknote}
 Look again at \code{PROTECTED\_ROUTES}: it does \emph{not} include \pathname{/browse} or \pathname{/notifications} or \pathname{/clubs} (only \pathname{/clubs/create}). This is deliberate — those pages are meant to be at least partially visible to guests — but it means any new page added under \pathname{(dashboard)} that assumes a logged-in \code{user} object without checking for \code{null} itself will crash for anonymous visitors unless it is also added to this list, or unless the page guards \code{auth.getUser()} being null on its own. There is no automatic enforcement tying new routes to this list — it is a manually maintained array. The feature-flag route gates above are a separate, independent set of checks — a route can be flag-gated without being in \code{PROTECTED\_ROUTES}, and vice versa.
@@ -162,4 +183,8 @@ None of these three will error or warn if you forget one — the page will just 
 
 \section{The \code{matcher} config}
 
-The exported \code{config.matcher} is a single regex excluding \pathname{\_next/static}, \pathname{\_next/image}, \pathname{favicon.ico}, and common image extensions — meaning the Proxy runs on literally every other request, including API routes and RSC payload fetches, not just page navigations. This is why the session-refresh logic at the top has to be cheap and unconditional: it runs far more often than the redirect logic below it.
+The exported \code{config.matcher} is a single regex excluding \pathname{\_next/static}, \pathname{\_next/image}, \pathname{favicon.ico}, \pathname{/api/books}, and common image extensions — meaning the Proxy runs on literally every other request, including API routes and RSC payload fetches, not just page navigations. This is why the session-refresh logic at the top has to be cheap and unconditional: it runs far more often than the redirect logic below it.
+
+\begin{olkhowto}
+\pathname{/api/books} is the one route deliberately carved out of the matcher, added during the scaling pass in Chapter~\ref{ch:welcome}. The rule for adding another exclusion later: a route only belongs on this list if it needs \emph{none} of the Proxy's six responsibilities above — no session refresh, no feature-flag gate, no ban/admin check. \pathname{/api/digest} stays matched (it does not need feature flags either, but excluding it would need a second look at whether it should) — when in doubt, leave a new route matched; excluding a route that turns out to need protection is a silent security gap, not a loud error.
+\end{olkhowto}

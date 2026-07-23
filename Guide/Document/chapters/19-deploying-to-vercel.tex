@@ -50,8 +50,16 @@ Vercel's built-in Cron Jobs feature calls the path with \code{GET}, not \code{PO
 Moving the digest from Monday 8am to, say, Friday 5pm is one line in \pathname{vercel.json} at the repository root: \code{"schedule": "0 8 * * 1"} $\to$ \code{"0 17 * * 5"} (standard 5-field cron — minute, hour, day-of-month, month, day-of-week). Vercel evaluates the schedule in UTC, not your local timezone, so convert first. This file is read only at deploy time, not per-request, so a new schedule takes effect on the \emph{next} deploy — don't expect editing it to change a run that's already scheduled for today.
 \end{olkhowto}
 
+\begin{olknote}
+\pathname{/api/digest/route.ts} exports \code{export const maxDuration = 60}, added in the same pass that fixed its N+1 (Chapter~\ref{ch:server-actions}) — an explicit statement of the function's timeout budget rather than trusting Vercel's plan-tier default. Hobby and Pro plans cap \code{maxDuration} at different ceilings; check the current limit for whichever plan the project is actually on before assuming 60 seconds is safely under it, especially once subscriber count grows toward the numbers in Chapter~\ref{ch:welcome}'s scaling roadmap.
+\end{olknote}
+
 \code{CRON\_SECRET} itself is just a long random string you generate once and set as an environment variable in both Vercel's dashboard and wherever else the digest is triggered from — there is no Supabase-side concept of this secret, it exists purely as a shared value the route handler compares against the incoming \code{Authorization} header.
 
 \section{What Vercel does \emph{not} give you here}
 
 There is no server to SSH into, no long-running process, and — relevant to Chapter~\ref{ch:welcome}'s longer-term goal — no way to run Supabase itself on Vercel. Vercel hosts the Next.js frontend only; the database remains wherever you point \code{NEXT\_PUBLIC\_SUPABASE\_URL}, whether that's Supabase's hosted cloud today or, eventually, a self-hosted instance on a server in Kashmir. Moving the database off Supabase's cloud in the future would change exactly one thing from Vercel's perspective: the environment variables in Chapter~\ref{ch:envvars} would point at a different host. The frontend deployment story described in this chapter does not change at all.
+
+\begin{olknote}
+This chapter's mechanics (push, connect, set env vars, deploy) stay identical for Phase 1 of Chapter~\ref{ch:welcome}'s scaling roadmap — hardening the app while staying on Vercel + hosted Supabase. They stop applying once Phase 2 begins: a self-hosted VPS runs its own long-lived Node process under PM2 behind Caddy, not a Vercel deployment at all. Read that chapter's roadmap before assuming this chapter is still the deployment story at that point.
+\end{olknote}

@@ -154,42 +154,56 @@ A brand-new notification \code{type} (say \code{'club\_invite'}) touches more th
 
 \pathname{src/app/api/digest/route.ts} is the one place in this codebase that is a real HTTP endpoint rather than a Server Action, because it needs to be invoked by something outside a page render — an external cron scheduler (Chapter~\ref{ch:vercel}).
 
-\begin{lstlisting}[caption={app/api/digest/route.ts — auth gate and the per-subscriber loop}]
+\begin{lstlisting}[caption={app/api/digest/route.ts — auth gate, batched email lookup, batched send}]
+export const maxDuration = 60           // Vercel function timeout budget
+const RESEND_BATCH_SIZE = 100           // Resend's batch-send API limit
+
 async function handleDigest(request: Request) {
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorized(authHeader)) {      // timing-safe comparison against CRON_SECRET
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
   if (!resend) return Response.json({ error: 'Email service not configured' }, { status: 503 })
 
   const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
   const subscribers = /* profiles where email_digest = true */
-  const recentBooks = /* books from the last 7 days, status = available */
+  const newBooks = /* books from the last 7 days, status = available, limit 10 */
+
+  // One id -> email map via paginated listUsers(), not one getUserById() call
+  // per subscriber -- O(subscribers / 1000) Auth API calls instead of O(subscribers).
+  const emailById = new Map<string, string>()
+  for (let page = 1; ; page++) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 })
+    if (error || !data?.users?.length) break
+    for (const u of data.users) if (u.email) emailById.set(u.id, u.email)
+    if (data.users.length < 1000) break
+  }
+
+  const recipients = subscribers
+    .map(sub => ({ sub, email: emailById.get(sub.id) }))
+    .filter((r): r is { sub: typeof subscribers[number]; email: string } => !!r.email)
 
   let sent = 0
-  const failures: { userId: string; error: string }[] = []
-  for (const sub of subscribers) {
+  const failures: { userIds: string[]; error: string }[] = []
+  for (const batch of chunk(recipients, RESEND_BATCH_SIZE)) {
     try {
-      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(sub.id)
-      const email = authUser?.user?.email
-      if (!email) continue
-      await resend.emails.send({ /* ... */ })
-      sent++
+      await resend.batch.send(batch.map(({ sub, email }) => ({ from: fromAddress, to: email, subject, html: renderEmail(sub) })))
+      sent += batch.length
     } catch (e) {
-      failures.push({ userId: sub.id, error: (e as Error).message })
+      failures.push({ userIds: batch.map(r => r.sub.id), error: (e as Error).message })
     }
   }
-  return Response.json({ sent, books: recentBooks.length, failures: failures.length, failureDetails: failures })
+  return Response.json({ sent, books: newBooks.length, failures: failures.length, failureDetails: failures })
 }
 
 export async function GET(request: Request) { return handleDigest(request) }
 export async function POST(request: Request) { return handleDigest(request) }
 \end{lstlisting}
 
-Authorization here is a plain shared-secret Bearer token comparison against \code{CRON\_SECRET} (Chapter~\ref{ch:vercel} covers where that value comes from) — appropriate for a server-to-server cron trigger with no user session involved.
+Authorization here is a timing-safe shared-secret Bearer token comparison against \code{CRON\_SECRET} (Chapter~\ref{ch:vercel} covers where that value comes from) — appropriate for a server-to-server cron trigger with no user session involved.
 
 \begin{olknote}
-The per-subscriber loop used to have no \code{try/catch} around \code{resend.emails.send(...)} — a malformed address or a transient Resend error would abort the entire run for every subscriber after that point in iteration order. Each send is now wrapped individually, with failures collected and returned in the response rather than left to abort the run. The route also used to export only \code{POST}, while Vercel's Cron Jobs feature calls with \code{GET} by default (Chapter~\ref{ch:vercel}); it now exports both, delegating to the same \code{handleDigest} logic.
+The per-subscriber loop used to have no \code{try/catch} around \code{resend.emails.send(...)} — a malformed address or a transient Resend error would abort the entire run for every subscriber after that point in iteration order. It also used to call \code{auth.admin.getUserById(sub.id)} and \code{resend.emails.send(...)} once each, per subscriber, sequentially — a real N+1 that would exceed Vercel's function timeout well before this project's 30,000--50,000-user target (Chapter~\ref{ch:welcome}). The 23-07-2026 scaling pass replaced both: email lookups now go through paginated \code{listUsers()} building one id$\to$email map, and sends go through \code{resend.batch.send()} in chunks of 100 rather than one \code{resend.emails.send()} call per person. Failures are still collected per-batch rather than aborting the run, and an explicit \code{maxDuration} now states the timeout budget rather than relying on Vercel's default. The route also used to export only \code{POST}, while Vercel's Cron Jobs feature calls with \code{GET} by default (Chapter~\ref{ch:vercel}); it now exports both, delegating to the same \code{handleDigest} logic.
 \end{olknote}
 
 \begin{olktask}

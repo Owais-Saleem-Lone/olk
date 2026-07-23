@@ -20,7 +20,7 @@
   \node[box, fill=white, minimum width=2.9cm, minimum height=0.9cm] (rsc) at ($(vercel.center)+(-1.6cm,0.9cm)$) {Server Components\\[-1pt]\footnotesize \& Server Actions};
   \node[box, fill=white, minimum width=2.6cm, minimum height=0.9cm] (proxy) at ($(vercel.center)+(1.9cm,0.9cm)$) {Proxy\\[-1pt]\footnotesize (\texttt{proxy.ts})};
   \node[box, fill=white, minimum width=2.9cm, minimum height=0.9cm] (cc) at ($(vercel.center)+(-1.6cm,-0.7cm)$) {Client Components\\[-1pt]\footnotesize (browser JS bundle)};
-  \node[box, fill=white, minimum width=2.6cm, minimum height=0.9cm] (api) at ($(vercel.center)+(1.9cm,-0.7cm)$) {Route Handler\\[-1pt]\footnotesize \pathname{/api/digest}};
+  \node[box, fill=white, minimum width=2.6cm, minimum height=0.9cm] (api) at ($(vercel.center)+(1.9cm,-0.7cm)$) {Route Handlers\\[-1pt]\footnotesize \pathname{/api/digest}, \pathname{/api/books}};
 
   \node[svc, minimum width=6.6cm, minimum height=3.3cm, below=1.6cm of vercel] (supabase) {};
   \node[lbl, above right] at (supabase.north west) {\textbf{Supabase} (local: Docker; later: self-hosted in Kashmir)};
@@ -50,6 +50,10 @@ Every file under \pathname{src/app} is a Server Component by default. A file bec
   \item \textbf{Server Components} (no directive) render on Vercel's servers, can call \code{await createClient()} from \pathname{src/lib/supabase/server.ts} directly, and never ship their data-fetching code to the browser. \pathname{src/app/page.tsx} (the landing page) and every \pathname{layout.tsx} in this project are Server Components.
   \item \textbf{Client Components} (\code{"use client"}) render once on the server for the initial HTML, then hydrate and re-render in the browser. They use \pathname{src/lib/supabase/client.ts}'s \code{createClient()}, which talks to Supabase directly over HTTPS from the reader's browser — meaning every query a Client Component makes is subject to Row-Level Security as the logged-in user, never as an elevated role. Nearly every interactive page in the dashboard (\pathname{browse}, \pathname{my-books}, \pathname{requests}, \pathname{messages/[id]}, all of \pathname{admin/*}) is a Client Component, because they need \code{useState}/\code{useEffect} for interactivity.
 \end{itemize}
+
+\begin{olknote}
+One deliberate exception to "Client Components talk to Supabase directly": \pathname{browse/page.tsx}'s plain, unfiltered book list goes through \pathname{/api/books} (the Route Handler in Figure~\ref{fig:architecture}) instead, specifically so its result can be cached and shared across every visitor for a few seconds rather than re-queried per request (Chapter~\ref{ch:proxy}). Any search or filter still bypasses that route and queries Supabase directly, since a filtered result isn't the same for every visitor and so isn't safe to cache under a shared key. This is the general rule for adding a shared cache anywhere else in this codebase: only a query whose result is identical no matter who's asking is a candidate.
+\end{olknote}
 
 \begin{olknote}
 This project's most complex pages are almost entirely Client Components, even though a "fetch on the server, render once" Server Component would often be more efficient. That is a real, current characteristic of the codebase, not a recommendation — see Chapter~\ref{ch:pages} for page-by-page detail, and treat "should this be a Server Component instead" as a legitimate refactor to propose, not a rule that's already been decided against.

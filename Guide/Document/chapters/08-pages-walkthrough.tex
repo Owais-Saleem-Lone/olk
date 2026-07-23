@@ -20,7 +20,11 @@ The \code{profiles!books\_owner\_id\_fkey(...)} syntax is PostgREST's way of nam
 
 \section{Browse — \pathname{app/(dashboard)/browse/page.tsx}}
 
-The main discovery surface: search, genre/type/condition/area filters, a distance radius slider, request/bookmark actions, and entry points into the notes and report modals. It calls the \code{get\_books\_nearby} RPC (Chapter~\ref{ch:functions}) when the viewer has a location set, and falls back to a plain ordered query otherwise.
+The main discovery surface: search, genre/type/condition/area filters, a distance radius slider, request/bookmark actions, and entry points into the notes and report modals. It calls the \code{get\_books\_nearby} RPC (Chapter~\ref{ch:functions}) when the viewer has a location set, and falls back to a plain ordered query otherwise — bounded to 200 rows either way (Chapter~\ref{ch:welcome}'s scaling roadmap).
+
+\begin{olknote}
+The plain-query fallback branches again on whether a search or filter is active. With none active, the page fetches from \pathname{/api/books} (Chapter~\ref{ch:proxy}) — a cached, shared response, since that exact result is identical for every visitor. The moment a search term or a genre/type/condition filter is set, it goes back to querying Supabase directly, uncached, because a filtered result isn't the same for every visitor and caching it under a shared key would be wrong. This split — not "always cache" or "never cache" — is deliberate; see Chapter~\ref{ch:architecture}'s note on the same page for the general rule it follows.
+\end{olknote}
 
 \begin{olknote}
 This page used to be a single 683-line file mixing data fetching, the search/filter bar, and the per-book grid card all in one component. A code-quality pass split the presentational pieces out: \pathname{src/components/browse/search-filters.tsx} (the search bar, filter toggle, and all four filter controls) and \pathname{src/components/browse/book-card.tsx} (one grid item: cover, badges, owner info, and the request/bookmark/notes/report action row). \pathname{page.tsx} itself is now a 336-line orchestrator that keeps the location-aware fetching logic below and hands rendering to those two components — the sample below is unchanged and still lives directly in \pathname{page.tsx}, since search sanitisation is a data-fetching concern, not a presentational one.

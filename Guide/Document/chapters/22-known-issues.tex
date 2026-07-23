@@ -8,6 +8,10 @@ This chapter used to list 21 items — every \textbf{KNOWN ISSUE} flagged earlie
 \begin{enumerate}
   \item \textbf{\pathname{about-modal.tsx} still has a placeholder bio for one founder.} Owais Saleem's bio is real; Malik Umair's is still "Biography coming soon." — waiting on him to provide the text, not a code task. Chapter~\ref{ch:components}.
   \item \textbf{Automated test coverage is minimal.} Vitest is configured and covers a handful of pure functions (Chapter~\ref{ch:workflow}), but there is no component, integration, or end-to-end coverage. Growing this is ongoing, incremental work, not a single fixable bug.
+  \item \textbf{No error monitoring in production.} No Sentry, no Vercel Analytics/Speed Insights, nothing — a runtime error today is invisible unless a user reports it. Chapter~\ref{ch:welcome}'s scaling roadmap (Phase 1) lists this as a prerequisite for real growth, not yet done.
+  \item \textbf{No general HTTP-level rate limiting.} The only rate limits that exist are two database triggers scoped narrowly to \code{messages} and \code{book\_requests} (Chapter~\ref{ch:functions}). Login, signup, and plain \code{/browse} traffic are unprotected. Chapter~\ref{ch:welcome}, Phase 1.
+  \item \textbf{\pathname{browse/page.tsx}'s \code{.limit(200)} and \code{get\_books\_nearby}'s \code{p\_limit} are stopgaps, not real pagination.} Once the catalog exceeds a couple hundred available books, results past that cutoff silently stop appearing — no error, no "next page." Chapter~\ref{ch:welcome}, Phase 1.
+  \item \textbf{Admin list pages other than Books have no pagination.} Users, Requests, Reports, Clubs, Events, and Club Requests all fetch their full result set. Lower priority than the item above since admin traffic is inherently small, but will degrade as those tables grow over months of real usage. Chapter~\ref{ch:pages}.
 \end{enumerate}
 
 \begin{olknote}

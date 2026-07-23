@@ -9,7 +9,7 @@
 \textbf{Layer} & \textbf{Technology} & \textbf{Role in OLK} \\
 \midrule
 Hosting & Vercel & Builds and serves the Next.js app; will run the weekly digest via a scheduled call to \pathcell{/api/digest} (Chapter~\ref{ch:vercel}). \\
-Framework & Next.js 16.2.6 (App Router) & Routing, Server Components, Server Actions, the Route Handler under \pathcell{src/app/api}. \textbf{Not} the Next.js of most tutorials — see Chapter~\ref{ch:welcome}'s warning. \\
+Framework & Next.js 16.2.11 (App Router) & Routing, Server Components, Server Actions, the Route Handlers under \pathcell{src/app/api} (\pathcell{/api/digest}, \pathcell{/api/books}). \textbf{Not} the Next.js of most tutorials — see Chapter~\ref{ch:welcome}'s warning. \\
 UI runtime & React 19.2.4 & Server/Client Component model; no separate state-management library is used anywhere in the codebase. \\
 Language & TypeScript 5 (strict mode) & All application code; \pathcell{tsconfig.json} has \codecell{"strict": true}. \\
 Styling & Tailwind CSS v4 (\codecell{@tailwindcss/postcss}) & Utility classes throughout; no component library (no MUI/Chakra/shadcn) — every button, modal, and card is hand-built. \\
@@ -22,13 +22,13 @@ Transactional email & Resend (\codecell{resend} npm package) & Notification emai
 
 \section{Full dependency manifest}
 
-\pathname{package.json} is intentionally small. There is no state management library, no data-fetching cache library (no React Query / SWR), no UI kit, no charting library, no form library, and only a minimal Vitest setup (Chapter~\ref{ch:workflow}) rather than full test coverage. Every one of those things that exists in the app was hand-rolled — the admin dashboard's growth charts are CSS bars, the ISBN scanner drives the browser's native \code{BarcodeDetector} API directly, and every form is plain controlled React state with a raw Supabase call.
+\pathname{package.json} is intentionally small. There is no state management library, no data-fetching cache library (no React Query / SWR), no UI kit, no charting library, no form library, and only a minimal Vitest setup (Chapter~\ref{ch:workflow}) rather than full test coverage. Every one of those things that exists in the app was hand-rolled — the admin dashboard's growth charts are CSS bars, the ISBN scanner drives the browser's native \code{BarcodeDetector} API directly, and every form is plain controlled React state with a raw Supabase call. The one exception is a deliberately tiny one: two module-level, short-TTL in-memory caches (\pathname{proxy.ts}'s feature flags and \pathname{/api/books}' public book list, Chapter~\ref{ch:proxy}) stand in for a real caching library, sized for exactly the two cases that need it rather than adopted as general infrastructure.
 
 \begin{lstlisting}[caption={\pathname{package.json} — dependencies}]
 "dependencies": {
   "@supabase/ssr": "^0.10.3",
   "@supabase/supabase-js": "^2.106.2",
-  "next": "16.2.6",
+  "next": "^16.2.11",
   "react": "19.2.4",
   "react-dom": "19.2.4",
   "resend": "^6.14.0",
@@ -40,7 +40,7 @@ Transactional email & Resend (\codecell{resend} npm package) & Notification emai
   "@types/react": "^19",
   "@types/react-dom": "^19",
   "eslint": "^9",
-  "eslint-config-next": "16.2.6",
+  "eslint-config-next": "^16.2.11",
   "tailwindcss": "^4",
   "typescript": "^5",
   "vitest": "^4.1.9"

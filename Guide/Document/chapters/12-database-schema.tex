@@ -5,7 +5,7 @@
 \pathname{supabase/schema.sql} is a point-in-time dump, not a live view — it used to be five migrations stale (missing rate limiting, wishlist fuzzy matching, book description/year, and the profile \code{bio} column) before being regenerated with \code{npx supabase db dump --local --schema public}. \textbf{This chapter's tables reflect the true current schema}, built from \pathname{supabase/migrations} in full, per the house rule in Chapter~\ref{ch:workflow}: the migrations directory is always the authoritative source, never the dump — treat \pathname{schema.sql} as a convenience snapshot that can drift again the moment a migration lands without a follow-up regeneration.
 \end{olknote}
 
-All 26 tables live in the \code{public} schema and have Row-Level Security enabled; policies are covered separately in Chapter~\ref{ch:rls} so this chapter can focus purely on shape. Every primary key is a \code{uuid} defaulting to \code{gen\_random\_uuid()} unless noted otherwise.
+All 27 tables live in the \code{public} schema and have Row-Level Security enabled; policies are covered separately in Chapter~\ref{ch:rls} so this chapter can focus purely on shape. Every primary key is a \code{uuid} defaulting to \code{gen\_random\_uuid()} unless noted otherwise.
 
 \section{Identity}
 
@@ -104,6 +104,9 @@ One row per request, tracking a reader's percentage through a book. \code{book\_
 
 \subsection*{\code{book\_notes}}
 \code{book\_id} $\to$ \code{books(id)}; \code{user\_id} $\to$ \code{profiles(id)}; \code{note} text; \code{UNIQUE(book\_id, user\_id)} — one editable note per user per book, publicly readable.
+
+\subsection*{\code{club\_requests}}
+Club creation is no longer a direct \code{INSERT} into \code{clubs} — it's an admin-reviewed request. \code{requester\_id} $\to$ \code{profiles(id)}; \code{name}, \code{interests} (\code{text[]}), \code{description}, \code{goal}, \code{target\_members}, \code{area\_name}/\code{latitude}/\code{longitude}/\code{cover\_url} mirror what a created club would eventually hold; \code{status} (CHECK IN \code{pending/approved/rejected}, default \code{pending}); \code{review\_note}, \code{reviewed\_by} $\to$ \code{profiles(id)}, \code{reviewed\_at}; \code{created\_club\_id} $\to$ \code{clubs(id)}, set once an admin approves the request and the real \code{clubs} row is created. Two \code{BEFORE INSERT}/\code{BEFORE INSERT OR UPDATE} triggers, \code{check\_club\_request\_eligibility} and \code{check\_club\_request\_limits}, mirror the same shape as \code{check\_club\_creation\_eligibility} (Chapter~\ref{ch:functions}) — eligibility and rate-limiting are enforced at the database layer here too, not just in whatever form the request UI happens to show.
 
 \subsection*{\code{clubs}, \code{club\_members}, \code{club\_posts}}
 \code{clubs}: \code{name}, \code{description}, \code{interest}, \code{area\_name}, \code{latitude}/\code{longitude}, \code{cover\_url}, \code{creator\_id} $\to$ \code{profiles(id)}, \code{member\_count} (int, kept in sync by \code{trg\_club\_member\_count} — Chapter~\ref{ch:functions}), \code{active} boolean (used for soft-delete). \code{club\_members}: \code{club\_id} + \code{user\_id}, \code{UNIQUE} pair, \code{joined\_at}. \code{club\_posts}: \code{club\_id}, \code{author\_id}, \code{content}, \code{created\_at} — creator-only to post, author-only to delete, no UPDATE policy at all (posts are immutable once made).

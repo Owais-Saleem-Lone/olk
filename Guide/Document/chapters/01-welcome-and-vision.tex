@@ -71,6 +71,98 @@ A VPS is \textbf{not} automatically a step toward the data-sovereignty goal stat
 
 \textbf{What shipped immediately instead}: indexes on the foreign-key and status columns the audit correctly flagged as missing —\\ \pathname{supabase/migrations/20260711093615\_index\_fk\_and\_status\_columns.sql} adds eleven \code{btree} indexes across \code{book\_requests} (\code{book\_id}, \code{requester\_id}, \code{status}), \code{ratings} (\code{request\_id}, \code{rater\_id}, \code{rated\_user\_id}), and \code{reports} (\code{reporter\_id}, \code{reported\_user\_id}, \code{reported\_book\_id}, \code{status}, \code{assigned\_to} — Chapter~\ref{ch:schema}). A cheap, reversible fix with no architectural bet attached, unlike everything else on this list.
 
+\section{A second pass: readiness for launch, and for 30,000--50,000 users}
+\label{sec:scaling-audit}
+
+\textbf{Decision (23-07-2026): the planning target moves from 10,000 to 30,000--50,000 users over the following three months.} A second audit, this time asking two concrete questions — "is this ready to actually go live on Vercel?" and "does it survive that much growth?" — found real bugs rather than architectural concerns, and all of them shipped the same day:
+
+\begin{itemize}
+  \item \textbf{A second round of missing indexes}: \code{books.owner\_id}, \code{books.status}, \code{messages.request\_id}, \code{club\_members.user\_id}, \code{bookmarks.user\_id} — the first audit's pass (above) covered \code{book\_requests}/\code{ratings}/\code{reports} but missed these five equally hot columns (Chapter~\ref{ch:schema}).
+  \item \textbf{\code{get\_books\_nearby} had no \code{LIMIT}} — every call sorted the \emph{entire} \code{books} table by computed distance before returning it. Now takes an optional \code{p\_limit} (default 200). Fixing this taught a real Postgres lesson about function overloading — see the \textbf{KNOWN ISSUE} box in Chapter~\ref{ch:functions}.
+  \item \textbf{\pathname{browse/page.tsx}'s plain query had no bound either} — now \code{.limit(200)}, same stopgap as above (\S\ref{sec:phase1} explains why this is a stopgap, not a fix).
+  \item \textbf{The weekly digest cron had an N+1}: one \code{auth.admin.getUserById} call plus one \code{resend.emails.send} call per subscriber, sequential, with no timeout budget. Replaced with paginated \code{listUsers()} (builds an id$\to$email map in batches of 1,000) and \code{resend.batch.send()} (100 emails per call), plus an explicit \code{maxDuration} (Chapter~\ref{ch:server-actions}).
+  \item \textbf{\pathname{proxy.ts} and \pathname{(dashboard)/layout.tsx} independently repeated the same auth/profile/settings work} — both called \code{auth.getUser()}, both queried \code{profiles}, both queried \code{platform\_settings} (only the Proxy's copy was cached). The Proxy now forwards its already-computed user id, profile fields, and feature flags to the layout via request headers, so the layout does zero Supabase calls of its own (Chapter~\ref{ch:proxy}).
+  \item \textbf{A new \pathname{/api/books} route, cached}: the plain "no search, no filter" Browse query — identical for every visitor — is now served from a 20-second in-memory cache instead of hitting Supabase directly on every page load. Deliberately excluded from the Proxy's matcher, since it needs no session at all (Chapter~\ref{ch:proxy}).
+  \item Next.js patched \code{16.2.6} $\to$ \code{16.2.11} (Chapter~\ref{ch:techstack}), and \pathname{error.tsx}/\pathname{loading.tsx}/\pathname{not-found.tsx} were added — none existed before.
+\end{itemize}
+
+\begin{olknote}
+Every item above was verified against the local Docker stack (Chapter~\ref{ch:local-env}), not just read as a diff: \code{supabase db reset} to prove the migrations replay cleanly, a real headless-browser pass through register/login/browse/logout, and a direct test of the cache's TTL behaviour (insert a row in Postgres, confirm the cached response stays stale, wait, confirm it refreshes). Chapter~\ref{ch:playbook}'s "security \& code-quality audit" entry describes this verify-don't-trust habit in general; this pass is a concrete instance of it.
+\end{olknote}
+
+\section{The scaling roadmap, phase by phase}
+\label{sec:scaling-roadmap}
+
+None of the fixes above make the platform fast at 30--50k users — they remove the ways it would have \emph{broken}. Getting there smoothly is a separate, staged piece of work. The table below is the whole roadmap at a glance; the sections after it go one level deeper on each row. \textbf{Do not start a phase before its trigger condition is actually true} — this is the same discipline as the "100k had no basis" lesson two sections ago, applied going forward instead of in hindsight.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}p{2.1cm} p{3.3cm} Y@{}}
+\toprule
+\textbf{Phase} & \textbf{Start when...} & \textbf{What changes} \\
+\midrule
+0 --- Done & --- & Bug fixes above: indexes, bounded queries, batched digest, deduped auth, one small cache. \\
+1 --- Harden & Now, in parallel with real user growth toward 30--50k & Real pagination, general rate limiting, error monitoring, a proper fix for the geo query, Supabase/Vercel plan upgrades. \\
+2 --- Rehearse & There are 2+ developers \emph{and} Phase 1 is live and stable & Run the already-Dockerised Supabase stack (Chapter~\ref{ch:local-env}) on a rented VPS, in parallel with production, as a dry run. \\
+3 --- Sovereignty & The VPS rehearsal has run cleanly for a real stretch (months, not days) & Move the same, already-proven stack onto physical hardware in Kashmir. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Phase 1 --- harden the managed stack}
+\label{sec:phase1}
+
+Still Vercel + hosted Supabase + Resend — nothing here is an infrastructure change, it is code and dashboard configuration.
+
+\textbf{Code/software changes needed:}
+\begin{itemize}
+  \item \textbf{Real pagination for \pathname{browse/page.tsx}}, replacing the flat \code{.limit(200)} from \S\ref{sec:scaling-audit}. That limit is a silent-truncation risk, not a real fix: once the catalog holds more than 200 available books, books past the cutoff simply stop appearing, with no error and no indication to the user. Range/offset paging (or a "Load more" button) is the actual fix.
+  \item \textbf{General HTTP-level rate limiting} — today's only rate limits are two database triggers scoped to \code{messages} and \code{book\_requests} (Chapter~\ref{ch:functions}). Login, signup, and plain \code{/browse} traffic have no limit at all. A small Upstash Redis (or equivalent) sliding-window check inside \pathname{src/proxy.ts}, ahead of the existing auth/feature-flag logic, is the natural place for this.
+  \item \textbf{Error monitoring} — there is currently no Sentry, no Vercel Analytics/Speed Insights, nothing. At today's scale that's a gap; at 30--50k it's a blind spot you cannot afford.
+  \item \textbf{A real fix for \code{get\_books\_nearby}'s compute cost} — the \code{p\_limit} added in \S\ref{sec:scaling-audit} bounds the \emph{response size}, not the \emph{work}: Postgres still computes the haversine distance for every row matching the status filter before sorting and truncating. A spatial index (PostGIS, or the lighter-weight \code{earthdistance}/\code{cube} extensions with a GiST index) or a coarser geohash/area-bucket pre-filter are the two realistic paths — both are migrations, both belong in Chapter~\ref{ch:functions} once written.
+\end{itemize}
+
+\textbf{Server/Supabase changes needed:}
+\begin{itemize}
+  \item \textbf{Supabase Pro tier, plus a compute add-on sized to observed load} — the free/shared-compute tier this project has run on so far is not sized for 30--50k users regardless of how clean the queries are.
+  \item \textbf{Vercel Pro tier} — Hobby's function-timeout and concurrency ceilings, and its non-commercial terms of service, are not a fit for real production traffic at this scale.
+  \item \textbf{Raise Supabase's Auth rate limits} (dashboard $\to$ Authentication $\to$ Rate Limits) — \pathname{proxy.ts}'s \code{auth.getUser()} call (Chapter~\ref{ch:proxy}) is a real network round-trip to Supabase's Auth server on \emph{every} matched request, not a local JWT check. The default limits are tuned for a much smaller project than a 30--50k-user one.
+  \item \textbf{Confirm Resend's plan covers the volume} — both the per-notification email and the weekly digest (Chapter~\ref{ch:server-actions}) scale with user count; check this before it becomes a silent failure mode.
+\end{itemize}
+
+\begin{olktask}
+Pick one item from this phase — real pagination for Browse is the most self-contained — and implement it against the local Docker stack, following the same verify-before-trusting discipline as \S\ref{sec:scaling-audit}: \code{supabase db reset}, then a real browser pass, not just \code{tsc}/\code{lint}/\code{build}.
+\end{olktask}
+
+\subsection{Phase 2 --- rehearse self-hosting on a rented VPS}
+
+This is the step the \textbf{WARNING} box earlier in this chapter insists on: proving the operational playbook on rented hardware before ever touching physical hardware in Kashmir. Concretely, here is what is \emph{different} from the managed stack once you take this step, service by service:
+
+\begin{itemize}
+  \item \textbf{Connection pooling stops being invisible.} On managed Supabase, PostgREST's internal pool to Postgres is Supabase's problem. Self-hosted, you run PgBouncer (or Supabase's own Supavisor) yourself, and you are the one who sizes \code{pool\_size} against Postgres's \code{max\_connections} and notices when it's wrong.
+  \item \textbf{Backups become entirely your responsibility.} No more automatic managed snapshots — a \code{pg\_dump} cron job, with the dump copied \emph{off} the same VPS (the "parked for later" bullet earlier in this chapter about off-site backups stops being optional at this point).
+  \item \textbf{TLS and routing are now your config, not a platform default.} Caddy (or similar) in front of PM2-managed Next.js and the self-hosted Supabase Docker services (Chapter~\ref{ch:local-env} is literally the same stack, just no longer on a laptop) — Vercel's automatic edge TLS and global network disappear.
+  \item \textbf{Monitoring and alerting are now something you configure and watch}, not a dashboard Vercel/Supabase gave you for free.
+  \item \textbf{Upgrade cadence and CVEs for Postgres, GoTrue, PostgREST, Realtime, and Storage become your job to track.} This is the single biggest ongoing burden in this whole roadmap, and the reason the first audit (\S\ref{sec:infra-audit}) was right to push back on doing this before there were real users to justify it.
+  \item \textbf{Email stays on Resend.} This is the one thing that should \emph{not} change in this phase — a fresh VPS IP has no sending reputation, and losing digest/notification emails to spam folders defeats the entire feature. Revisit only if Resend's own limits become the actual blocker, per the first audit's conclusion.
+  \item \textbf{The \pathname{/api/books} caching pattern (Chapter~\ref{ch:proxy}) still works unchanged} — it's plain Next.js code, indifferent to what's behind \code{NEXT\_PUBLIC\_SUPABASE\_URL}. What's worth adding at this phase is a CDN or edge cache in front of Caddy for public GET responses, since Vercel's edge network was doing that invisibly before.
+\end{itemize}
+
+\subsection{Phase 3 --- physical hardware in Kashmir}
+
+Everything from Phase 2 carries over unchanged (pooling, backups, TLS, monitoring, upgrades) — this phase adds the concerns that only exist once the hardware is physically yours, in-region:
+
+\begin{itemize}
+  \item \textbf{Power reliability} — a UPS at minimum, a generator plan if the budget allows; grid reliability in the region is a real, known constraint, not a hypothetical one.
+  \item \textbf{Internet uplink redundancy} — a second ISP or failover link, since a hyperscaler's backbone redundancy is exactly what you're giving up by leaving Vercel/Supabase's cloud.
+  \item \textbf{Off-site, out-of-region backup replication becomes non-negotiable}, not just good practice — cloud infrastructure gives you multi-availability-zone redundancy by default; a single physical server does not, so losing the building without a real off-site copy means losing the platform's only copy of user data.
+  \item \textbf{Physical security and access control} for the machine itself.
+  \item \textbf{Latency for any users outside the region} — a single in-region server may be measurably slower than the global CDN it replaces for anyone connecting from outside Kashmir. Given the project's stated audience (Chapter~\ref{ch:welcome}), this is very likely an acceptable trade for the sovereignty goal — but it should be a decision made explicitly, not a surprise discovered after the move.
+\end{itemize}
+
+\begin{olkwarn}
+Re-read the \textbf{WARNING} box earlier in this chapter before starting Phase 3: a VPS rehearsal that goes well is what makes this phase a genuine step toward data sovereignty rather than a repeat of the same "we don't control this hardware" problem one layer down. Do not skip Phase 2 to get here faster.
+\end{olkwarn}
+
 \section{A tour of the rest of this manual, in one paragraph}
 
 You will set up the project locally with Docker (Part II), learn how the Next.js frontend is organised page by page and component by component (Part III), learn the Supabase/Postgres backend table by table, function by function, and policy by policy (Part IV), then watch those two halves work together across three real user journeys — exchanging a book, matching a wishlist, moderating a report — traced start to finish (Part V). Part VI is what to do once this is live: deploying, the environment variables that matter, a maintenance playbook organised as "if you need to do X, start here," and a candid accounting of what is still broken or unfinished. Let's begin.
