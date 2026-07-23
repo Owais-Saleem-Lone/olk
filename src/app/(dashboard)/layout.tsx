@@ -1,20 +1,33 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
 import DashboardShell from '@/components/dashboard-shell'
 import AnnouncementBanner from '@/components/announcement-banner'
 import Toaster from '@/components/toaster'
-import { FEATURE_FLAG_KEYS, parseFeatureFlags } from '@/lib/platform-settings'
+import { DEFAULT_FEATURE_FLAGS, type FeatureFlags } from '@/lib/platform-settings'
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // proxy.ts already ran auth.getUser() + the profile/platform_settings
+  // lookups for this request and forwarded the results via headers, so this
+  // layout doesn't need to repeat any of that Supabase round-tripping.
+  const hdrs = await headers()
+  const userId = hdrs.get('x-olk-user-id') || null
+  const userEmail = hdrs.get('x-olk-user-email') || null
+  const isAdmin = hdrs.get('x-olk-user-is-admin') === '1'
+  const displayNameHeader = hdrs.get('x-olk-user-display-name')
+  const displayName = displayNameHeader
+    ? Buffer.from(displayNameHeader, 'base64').toString('utf-8') || null
+    : null
+  const flagsHeader = hdrs.get('x-olk-feature-flags')
+  const featureFlags: FeatureFlags = flagsHeader
+    ? JSON.parse(Buffer.from(flagsHeader, 'base64').toString('utf-8'))
+    : DEFAULT_FEATURE_FLAGS
 
   // Guest: simple responsive top navbar, no sidebar
-  if (!user) {
+  if (!userId) {
     return (
       <div className="min-h-screen bg-slate-950 text-white">
         <header className="sticky top-0 z-50 border-b border-white/[0.06] backdrop-blur-md bg-slate-950/80">
@@ -48,22 +61,8 @@ export default async function DashboardLayout({
   }
 
   // Authenticated: sidebar layout (shell handles mobile/desktop switching)
-  let displayName: string | null = null
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('display_name, is_admin')
-    .eq('id', user.id)
-    .single()
-  displayName = profile?.display_name ?? null
-
-  const { data: settingsRows } = await supabase
-    .from('platform_settings')
-    .select('key, value')
-    .in('key', FEATURE_FLAG_KEYS)
-  const featureFlags = parseFeatureFlags(settingsRows)
-
   return (
-    <DashboardShell displayName={displayName} email={user.email ?? null} isAdmin={profile?.is_admin ?? false} featureFlags={featureFlags}>
+    <DashboardShell displayName={displayName} email={userEmail} isAdmin={isAdmin} featureFlags={featureFlags}>
       {children}
       <Toaster />
     </DashboardShell>

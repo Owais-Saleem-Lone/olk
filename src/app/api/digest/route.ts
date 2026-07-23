@@ -15,6 +15,20 @@ function isAuthorized(authHeader: string | null): boolean {
   return timingSafeEqual(expectedBuf, providedBuf)
 }
 
+// Vercel's default function timeout is too short for a sequential per-user
+// loop; batching (below) keeps this well under budget even at 10k+ subscribers,
+// but keep some headroom explicit rather than relying on the platform default.
+export const maxDuration = 60
+
+// Resend's batch send endpoint accepts at most 100 messages per call.
+const RESEND_BATCH_SIZE = 100
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size))
+  return out
+}
+
 async function handleDigest(request: Request) {
   const authHeader = request.headers.get('authorization')
   if (!isAuthorized(authHeader)) {
@@ -65,45 +79,60 @@ async function handleDigest(request: Request) {
     </tr>
   `).join('')
 
+  // Resolve emails for all subscribers via paginated listUsers() instead of
+  // one getUserById() round-trip per subscriber (was an N+1 that would blow
+  // through the function timeout well before 10k subscribers).
+  const emailById = new Map<string, string>()
+  for (let page = 1; ; page++) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 })
+    if (error || !data?.users?.length) break
+    for (const u of data.users) {
+      if (u.email) emailById.set(u.id, u.email)
+    }
+    if (data.users.length < 1000) break
+  }
+
+  const renderEmail = (name: string) => `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background: ${EMAIL_BRAND.bg}; color: ${EMAIL_BRAND.text}; border-radius: 16px;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <div style="display: inline-block; background: linear-gradient(135deg, ${EMAIL_BRAND.tealGradientFrom}, ${EMAIL_BRAND.tealGradientTo}); padding: 8px 14px; border-radius: 8px; font-weight: bold; font-size: 14px; color: white;">OLK</div>
+      </div>
+      <p style="font-size: 18px; font-weight: 600; margin: 0 0 4px; color: white;">Hey ${name}!</p>
+      <p style="font-size: 14px; color: ${EMAIL_BRAND.textMuted}; margin: 0 0 20px;">Here's what's new on Open Library Kashmir this week:</p>
+      <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 4px 16px;">
+        <table style="width: 100%; border-collapse: collapse;">${bookListHtml}</table>
+      </div>
+      <div style="text-align: center; margin-top: 24px;">
+        <a href="${siteUrl}/browse" style="display: inline-block; background: ${EMAIL_BRAND.teal}; color: white; font-weight: 600; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-size: 14px;">Browse All Books</a>
+      </div>
+      <p style="text-align: center; font-size: 11px; color: ${EMAIL_BRAND.textFooter}; margin-top: 24px;">
+        You're receiving this because you have digest emails enabled.
+        <a href="${siteUrl}/profile" style="color: ${EMAIL_BRAND.textFaint};">Unsubscribe</a>
+      </p>
+    </div>
+  `
+
+  const subject = `${newBooks.length} new book${newBooks.length > 1 ? 's' : ''} on OLK this week`
+  const recipients = subscribers
+    .map(sub => ({ sub, email: emailById.get(sub.id) }))
+    .filter((r): r is { sub: typeof subscribers[number]; email: string } => !!r.email)
+
   let sent = 0
-  const failures: { userId: string; error: string }[] = []
+  const failures: { userIds: string[]; error: string }[] = []
 
-  for (const sub of subscribers) {
+  for (const batch of chunk(recipients, RESEND_BATCH_SIZE)) {
     try {
-      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(sub.id)
-      const email = authUser?.user?.email
-      if (!email) continue
-
-      const name = escapeHtml(sub.display_name?.split('@')[0] || 'Reader')
-
-      await resend.emails.send({
-        from: fromAddress,
-        to: email,
-        subject: `${newBooks.length} new book${newBooks.length > 1 ? 's' : ''} on OLK this week`,
-        html: `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background: ${EMAIL_BRAND.bg}; color: ${EMAIL_BRAND.text}; border-radius: 16px;">
-            <div style="text-align: center; margin-bottom: 24px;">
-              <div style="display: inline-block; background: linear-gradient(135deg, ${EMAIL_BRAND.tealGradientFrom}, ${EMAIL_BRAND.tealGradientTo}); padding: 8px 14px; border-radius: 8px; font-weight: bold; font-size: 14px; color: white;">OLK</div>
-            </div>
-            <p style="font-size: 18px; font-weight: 600; margin: 0 0 4px; color: white;">Hey ${name}!</p>
-            <p style="font-size: 14px; color: ${EMAIL_BRAND.textMuted}; margin: 0 0 20px;">Here's what's new on Open Library Kashmir this week:</p>
-            <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 4px 16px;">
-              <table style="width: 100%; border-collapse: collapse;">${bookListHtml}</table>
-            </div>
-            <div style="text-align: center; margin-top: 24px;">
-              <a href="${siteUrl}/browse" style="display: inline-block; background: ${EMAIL_BRAND.teal}; color: white; font-weight: 600; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-size: 14px;">Browse All Books</a>
-            </div>
-            <p style="text-align: center; font-size: 11px; color: ${EMAIL_BRAND.textFooter}; margin-top: 24px;">
-              You're receiving this because you have digest emails enabled.
-              <a href="${siteUrl}/profile" style="color: ${EMAIL_BRAND.textFaint};">Unsubscribe</a>
-            </p>
-          </div>
-        `,
-      })
-
-      sent++
+      await resend.batch.send(
+        batch.map(({ sub, email }) => ({
+          from: fromAddress,
+          to: email,
+          subject,
+          html: renderEmail(escapeHtml(sub.display_name?.split('@')[0] || 'Reader')),
+        }))
+      )
+      sent += batch.length
     } catch (e) {
-      failures.push({ userId: sub.id, error: (e as Error).message })
+      failures.push({ userIds: batch.map(r => r.sub.id), error: (e as Error).message })
     }
   }
 

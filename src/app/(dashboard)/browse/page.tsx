@@ -107,21 +107,43 @@ export default function BrowsePage() {
         setProfiles(profileMap)
       }
     } else {
-      let dbQuery = supabase
-        .from('books')
-        .select('*')
-        .in('status', ['available', 'given', 'unavailable'])
-        .order('created_at', { ascending: false })
+      const hasActiveFilter = query.trim() !== '' || !!filterGenre || !!filterType || !!filterCondition
+      let data: Book[] | null = null
+      let error: { message: string } | null = null
 
-      if (query.trim() !== '') {
-        const q = sanitizeSearchQuery(query)
-        dbQuery = dbQuery.or(`title.ilike.%${q}%,author.ilike.%${q}%`)
+      if (!hasActiveFilter) {
+        // No search/filters: this is the exact same public list for every
+        // visitor, so it's served from a short-lived server cache
+        // (/api/books) instead of hitting Supabase directly on every load.
+        try {
+          const res = await fetch('/api/books')
+          if (!res.ok) throw new Error(`Failed to load books (${res.status})`)
+          data = await res.json()
+        } catch (e) {
+          error = { message: (e as Error).message }
+        }
+      } else {
+        // A search/filter is active: bounded to avoid pulling the entire
+        // table, but not cacheable since results vary per query/filter combo.
+        let dbQuery = supabase
+          .from('books')
+          .select('*')
+          .in('status', ['available', 'given', 'unavailable'])
+          .order('created_at', { ascending: false })
+          .limit(200)
+
+        if (query.trim() !== '') {
+          const q = sanitizeSearchQuery(query)
+          dbQuery = dbQuery.or(`title.ilike.%${q}%,author.ilike.%${q}%`)
+        }
+        if (filterGenre) dbQuery = dbQuery.eq('genre', filterGenre)
+        if (filterType) dbQuery = dbQuery.eq('listing_type', filterType)
+        if (filterCondition) dbQuery = dbQuery.eq('condition', filterCondition)
+
+        const result = await dbQuery
+        data = result.data
+        error = result.error
       }
-      if (filterGenre) dbQuery = dbQuery.eq('genre', filterGenre)
-      if (filterType) dbQuery = dbQuery.eq('listing_type', filterType)
-      if (filterCondition) dbQuery = dbQuery.eq('condition', filterCondition)
-
-      const { data, error } = await dbQuery
 
       if (error) {
         console.error('Error fetching books:', error)
