@@ -11,10 +11,10 @@ type Announcement = {
 }
 
 const typeStyles: Record<string, { bg: string; border: string; text: string; icon: string }> = {
-  info: { bg: 'bg-blue-500/10', border: 'border-blue-500/20', text: 'text-blue-300', icon: '📢' },
-  warning: { bg: 'bg-amber-500/10', border: 'border-amber-500/20', text: 'text-amber-300', icon: '⚠️' },
-  success: { bg: 'bg-green-500/10', border: 'border-green-500/20', text: 'text-green-300', icon: '✅' },
-  event: { bg: 'bg-purple-500/10', border: 'border-purple-500/20', text: 'text-purple-300', icon: '🎉' },
+  info: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', icon: '📢' },
+  warning: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', icon: '⚠️' },
+  success: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', icon: '✅' },
+  event: { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700', icon: '🎉' },
 }
 
 export default function AnnouncementBanner() {
@@ -41,11 +41,11 @@ export default function AnnouncementBanner() {
       {announcements.map(a => {
         const style = typeStyles[a.type] || typeStyles.info
         return (
-          <div key={a.id} className={`${style.bg} border ${style.border} rounded-xl px-4 py-3 flex items-start gap-3`}>
+          <div key={a.id} className={`${style.bg} border ${style.border} rounded-xl px-4 py-3 flex items-start gap-3 shadow-sm`}>
             <span className="text-lg flex-shrink-0 mt-0.5">{style.icon}</span>
             <div className="flex-1 min-w-0">
               <p className={`text-sm font-semibold ${style.text}`}>{a.title}</p>
-              {a.body && <p className="text-xs text-slate-300 mt-0.5">{a.body}</p>}
+              {a.body && <p className="text-xs text-slate-600 mt-0.5">{a.body}</p>}
             </div>
           </div>
         )
