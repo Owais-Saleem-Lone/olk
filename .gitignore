@@ -13,6 +13,8 @@
 # testing
 /coverage
 
+# presentations
+/Meetings
 # next.js
 /.next/
 /out/
