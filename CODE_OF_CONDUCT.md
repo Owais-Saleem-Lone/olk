@@ -2,20 +2,19 @@
 
 ## Our Pledge
 
-We as members, contributors, and leaders pledge to make participation in the OLK community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
+We as members, contributors, and leaders pledge to make participation in the OLK community a harassment-free experience for everyone, regardless of gender, age, body size, visible or invisible disability, level of experience, education, socio-economic status, personal appearance, race, and religion.
 
-OLK is built in large part by students, interns, and first-time open-source contributors. We pledge to act and interact in ways that contribute to an open, welcoming, diverse, inclusive, and healthy community for people at every experience level, not just experienced engineers.
+We pledge to act and interact in ways that contribute to an open, welcoming, diverse, inclusive, and healthy community for the people.
 
 ## Our Standards
 
 Examples of behavior that contributes to a positive environment:
 
-- Demonstrating empathy and kindness toward other people
 - Being respectful of differing opinions, viewpoints, and experiences
 - Giving and gracefully accepting constructive feedback
-- Accepting responsibility for mistakes, apologizing, and learning from them
+- Accepting responsibility for mistakes, and learning from them
 - Focusing on what is best for the community, not just for ourselves as individuals
-- Being patient with contributors who are new to open source or to this stack
+- Being patient with contributors who are new to open source and making efforts to make their onboarding smooth.
 
 Examples of unacceptable behavior:
 
