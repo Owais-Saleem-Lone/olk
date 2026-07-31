@@ -214,6 +214,7 @@ The logic lives in `src/proxy.ts` and is fully integrated with Supabase’s auth
 | `npm run start`  | Starts the production server                   |
 | `npm run lint`   | Runs ESLint to analyze code quality            |
 | `npm test`       | Runs the Vitest unit test suite                |
+| `npm run test:rls` | Runs the RLS/role integration suite against your local Supabase stack (`supabase start` first) |
 
 ---
 

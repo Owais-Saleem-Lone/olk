@@ -22,7 +22,7 @@ These aren't style preferences — each one exists because breaking it caused a 
 
 3. **`npm run lint` and `npm test` must both pass clean before you open a PR.** This is exactly what CI (`.github/workflows/ci.yml`) runs on every push and PR against `main` — if it's not clean locally, it won't be clean in CI either.
 
-4. **If your change touches RLS policies or admin roles, test as more than one role** — a regular user *and* at least a `moderator` account, not just `super_admin`. RLS bugs that only restrict access are invisible if every test you run already has full access.
+4. **If your change touches RLS policies or admin roles, run the RLS integration suite** (`supabase start && supabase db reset && npm run test:rls`) and add a case for what you changed if the suite doesn't already cover it. It exercises real policies against a live local Supabase stack as more than one role — a regular user *and* at least a `moderator` account, not just `super_admin` — since RLS bugs that only restrict access are invisible if every check you run already has full access.
 
 5. **No `any` types.** The codebase is currently 100% free of them — keep it that way. If you're fighting a type, that's usually a sign the shape needs narrowing, not silencing.
 

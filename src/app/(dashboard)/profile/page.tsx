@@ -149,12 +149,15 @@ export default function ProfilePage() {
         <form onSubmit={handleSave} className="space-y-5">
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Display Name</label>
+            <div className="flex items-baseline justify-between mb-1.5">
+              <label className="block text-sm font-medium text-slate-300">Display Name</label>
+              <span className="text-xs text-slate-500">{displayName.length}/50</span>
+            </div>
             <input
               type="text"
               required
               value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
+              onChange={(e) => setDisplayName(e.target.value.slice(0, 50))}
               className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
               placeholder="e.g., Owais S."
             />

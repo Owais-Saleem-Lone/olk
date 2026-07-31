@@ -54,14 +54,38 @@ The \code{queueMicrotask(() => fn())} fix above was applied file by file, by han
 
 \section{Automated tests: a minimal but real foundation}
 
-\pathname{vitest.config.ts} configures Vitest with the same \code{@/*} alias as \pathname{tsconfig.json}; \code{npm test} runs every \pathname{src/**/*.test.ts} file. Coverage today is intentionally narrow — pure, isolable logic only (\pathname{html-escape.test.ts}, \pathname{text-limits.test.ts}, \pathname{geo.test.ts}) — not component tests, integration tests, or anything that touches Supabase. There is no Playwright or similar end-to-end runner. Until that changes, the practical discipline for anything not covered by a unit test is unchanged:
+\pathname{vitest.config.ts} configures Vitest with the same \code{@/*} alias as \pathname{tsconfig.json}; \code{npm test} runs every \pathname{src/**/*.test.ts} file. Coverage there is intentionally narrow — pure, isolable logic only (\pathname{html-escape.test.ts}, \pathname{text-limits.test.ts}, \pathname{geo.test.ts}, \pathname{date-utils.test.ts}, \pathname{platform-settings.test.ts}) — not component tests or anything that touches Supabase. There is no Playwright or similar end-to-end runner yet. Until that changes, the practical discipline for anything not covered by a unit test is unchanged:
 
 \begin{itemize}
   \item Run \code{npm run dev} against the \emph{local} Supabase stack, never the hosted one, while iterating.
   \item After any schema change, run \code{supabase db reset} and re-exercise the affected page end to end before considering the change done.
-  \item After any RLS or admin-role change, test as more than one role — a regular user \emph{and} at least a \code{moderator} account — since RLS bugs are invisible if you only ever test as a \code{super\_admin}.
-  \item When you add a new pure function (a formatter, a validator, a small parser), add a test file next to it rather than only exercising it by hand — that's how the three files above got there, and it's the cheapest way to grow real coverage incrementally.
+  \item When you add a new pure function (a formatter, a validator, a small parser), add a test file next to it rather than only exercising it by hand — that's how the files above got there, and it's the cheapest way to grow real coverage incrementally.
 \end{itemize}
+
+\subsection{The RLS/role integration suite}
+\label{sec:rls-suite}
+
+\code{tests/rls/} is a second, separate suite that exercises real Row-Level Security policies and role-gating triggers (Chapter~\ref{ch:rls}) against a live local Supabase stack — not mocked, not unit-tested in isolation. It has its own config (\pathname{vitest.integration.config.ts}) and script:
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Running the RLS suite locally}]
+supabase start   # if not already running
+supabase db reset
+npm run test:rls
+\end{lstlisting}
+
+\pathname{tests/rls/helpers.ts} creates and signs in real throwaway users via the service-role client (\code{auth.admin.createUser}), optionally promotes them to \code{moderator}/\code{super\_admin} via a direct service-role \code{profiles} update, and tears them down afterward — cascades (Chapter~\ref{ch:schema}) clean up every fixture row automatically. Assertions always run through \emph{each user's own} signed-in client, never the service-role client, since the whole point is exercising the real policy, not bypassing it.
+
+Two-thirds of the suite (\pathname{books-delete-super-admin-only}, \pathname{notifications-insert-scope}, \pathname{profile-self-escalation}, \pathname{ratings-counterparty}, \pathname{event-rsvp-capacity}, \pathname{storage-book-covers-path-scope}) are regression tests for the six specific, previously-exploitable bugs Chapter~\ref{ch:rls} documents — each pins down the \emph{fixed} behavior so it can't silently regress. The rest are baseline cross-user isolation checks (messages, book\_requests, bookmarks/wishlists, user\_bans) for tables the six historical bugs didn't already cover.
+
+\begin{olknote}
+For a bug found but not yet fixed while building this kind of suite, encode the \emph{correct} behavior with Vitest's \code{it.fails} rather than skipping the case — it's expected to fail until someone fixes the underlying issue, and a real fix flips it to an unexpected pass, which is Vitest's signal to remove the \code{.fails} and move the case into a normal regression test. This suite used that pattern once: \code{handle\_new\_user()} used to default \code{profiles.display\_name} to the raw signup email, but \code{display\_name} is \code{varchar(50)} — a longer email made the trigger's insert raise \code{value too long for type character varying(50)}, which rolled back the entire \code{auth.users} insert inside the same transaction (a real signup failure, not a cosmetic display-name issue). Fixed in \pathname{20260731160026\_truncate\_default\_display\_name\_to\_column\_limit.sql} by truncating the default to the column's own limit rather than widening the column; \pathname{tests/rls/signup-email-length.test.ts} now asserts the fixed behavior directly.
+\end{olknote}
+
+\begin{olkwarn}
+If a long-running local stack (days, not a fresh \code{supabase start}) suddenly returns \code{502}/\allowbreak{}"An invalid response was received from the upstream server" for every storage call after a \code{supabase db reset}, Kong has likely cached the storage container's pre-restart IP — \code{db reset} restarts some containers (storage included) without restarting Kong itself. \code{docker restart supabase\_kong\_olk} fixes it. CI doesn't hit this, since it always starts the whole stack fresh.
+\end{olkwarn}
+
+CI runs this suite as a separate job (\pathname{.github/workflows/ci.yml}'s \code{rls-tests}) that installs the Supabase CLI, runs \code{supabase start} \& \code{db reset} to replay every migration from scratch, then \code{npm run test:rls} — kept separate from the fast \code{build} job so a contributor without Docker running locally still gets lint/unit-test feedback quickly.
 
 \section{Git conventions}
 

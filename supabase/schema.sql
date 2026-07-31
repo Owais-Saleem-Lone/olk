@@ -1,3 +1,4 @@
+Dumping schemas from local database...
 
 
 
@@ -166,6 +167,43 @@ $$;
 ALTER FUNCTION "public"."admin_get_top_contributors"("lim" integer) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."approve_club_request"("p_request_id" "uuid", "p_note" "text") RETURNS "uuid"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_request public.club_requests%ROWTYPE;
+  v_new_club_id uuid;
+BEGIN
+  IF NOT public.is_admin_or_mod() THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  SELECT * INTO v_request FROM public.club_requests WHERE id = p_request_id AND status = 'pending';
+  IF v_request.id IS NULL THEN
+    RAISE EXCEPTION 'Request not found or already reviewed';
+  END IF;
+
+  INSERT INTO public.clubs (name, description, interests, area_name, latitude, longitude, cover_url, creator_id)
+  VALUES (v_request.name, v_request.description, v_request.interests, v_request.area_name,
+          v_request.latitude, v_request.longitude, v_request.cover_url, v_request.requester_id)
+  RETURNING id INTO v_new_club_id;
+
+  INSERT INTO public.club_members (club_id, user_id) VALUES (v_new_club_id, v_request.requester_id);
+
+  UPDATE public.club_requests
+  SET status = 'approved', review_note = p_note, reviewed_by = auth.uid(),
+      reviewed_at = now(), created_club_id = v_new_club_id
+  WHERE id = p_request_id;
+
+  RETURN v_new_club_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."approve_club_request"("p_request_id" "uuid", "p_note" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."can_notify"("p_target_user" "uuid", "p_context_type" "text", "p_context_id" "uuid") RETURNS boolean
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -208,6 +246,17 @@ BEGIN
       AND EXISTS (
         SELECT 1 FROM public.club_members
         WHERE club_id = p_context_id AND user_id = p_target_user
+      );
+
+  ELSIF p_context_type = 'event_created' THEN
+    SELECT e.creator_id INTO v_creator FROM public.club_events e WHERE e.id = p_context_id;
+
+    RETURN v_creator IS NOT NULL
+      AND v_caller = v_creator
+      AND EXISTS (
+        SELECT 1 FROM public.club_events e
+        JOIN public.club_members cm ON cm.club_id = e.club_id
+        WHERE e.id = p_context_id AND cm.user_id = p_target_user
       );
 
   ELSIF p_context_type = 'wishlist_match' THEN
@@ -287,6 +336,86 @@ $$;
 
 
 ALTER FUNCTION "public"."check_club_creation_eligibility"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."check_club_request_eligibility"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  completed_count INT;
+  report_count INT;
+BEGIN
+  SELECT
+    (SELECT count(*) FROM public.book_requests br
+       JOIN public.books b ON b.id = br.book_id
+       WHERE b.owner_id = NEW.requester_id AND br.status IN ('handed_over', 'returned'))
+    +
+    (SELECT count(*) FROM public.book_requests br
+       WHERE br.requester_id = NEW.requester_id AND br.status IN ('handed_over', 'returned'))
+  INTO completed_count;
+
+  SELECT count(*) INTO report_count
+  FROM public.reports WHERE reported_user_id = NEW.requester_id;
+
+  IF completed_count < 5 OR report_count > 0 THEN
+    RAISE EXCEPTION 'Not eligible to request a club: requires 5+ completed exchanges and a clean report record';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."check_club_request_eligibility"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."check_club_request_limits"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  name_words INT;
+  desc_words INT;
+  goal_words INT;
+  target_words INT;
+BEGIN
+  name_words := array_length(regexp_split_to_array(btrim(NEW.name), '\s+'), 1);
+  IF name_words > 10 THEN
+    RAISE EXCEPTION 'Club name exceeds the 10-word limit (got % words)', name_words;
+  END IF;
+
+  desc_words := array_length(regexp_split_to_array(btrim(NEW.description), '\s+'), 1);
+  IF desc_words > 200 THEN
+    RAISE EXCEPTION 'Description exceeds the 200-word limit (got % words)', desc_words;
+  END IF;
+
+  IF NEW.goal IS NOT NULL AND btrim(NEW.goal) <> '' THEN
+    goal_words := array_length(regexp_split_to_array(btrim(NEW.goal), '\s+'), 1);
+    IF goal_words > 50 THEN
+      RAISE EXCEPTION 'Goal exceeds the 50-word limit (got % words)', goal_words;
+    END IF;
+  END IF;
+
+  IF NEW.target_members IS NOT NULL AND btrim(NEW.target_members) <> '' THEN
+    target_words := array_length(regexp_split_to_array(btrim(NEW.target_members), '\s+'), 1);
+    IF target_words > 50 THEN
+      RAISE EXCEPTION 'Target members exceeds the 50-word limit (got % words)', target_words;
+    END IF;
+  END IF;
+
+  IF NEW.review_note IS NOT NULL AND btrim(NEW.review_note) <> '' THEN
+    IF array_length(regexp_split_to_array(btrim(NEW.review_note), '\s+'), 1) > 100 THEN
+      RAISE EXCEPTION 'Review note exceeds the 100-word limit';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."check_club_request_limits"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."complete_donated_book_reading"("p_request_id" "uuid") RETURNS "void"
@@ -390,7 +519,7 @@ $$;
 ALTER FUNCTION "public"."enforce_request_rate_limit"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) RETURNS TABLE("id" "uuid", "title" character varying, "author" character varying, "condition" character varying, "listing_type" character varying, "status" character varying, "genre" character varying, "cover_url" "text", "owner_id" "uuid", "created_at" timestamp with time zone, "distance_km" double precision, "owner_name" character varying, "owner_area" character varying, "read_count" integer, "acquired_via_donation" boolean, "description" "text", "publication_year" smallint)
+CREATE OR REPLACE FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision, "p_limit" integer DEFAULT 200) RETURNS TABLE("id" "uuid", "title" character varying, "author" character varying, "condition" character varying, "listing_type" character varying, "status" character varying, "genre" character varying, "cover_url" "text", "owner_id" "uuid", "created_at" timestamp with time zone, "distance_km" double precision, "owner_name" character varying, "owner_area" character varying, "read_count" integer, "acquired_via_donation" boolean, "description" "text", "publication_year" smallint)
     LANGUAGE "sql" STABLE SECURITY DEFINER
     AS $$
   SELECT
@@ -416,18 +545,19 @@ CREATE OR REPLACE FUNCTION "public"."get_books_nearby"("user_lat" double precisi
   FROM books b
   JOIN profiles p ON p.id = b.owner_id
   WHERE b.status IN ('available', 'given', 'unavailable')
-  ORDER BY distance_km ASC NULLS LAST, b.created_at DESC;
+  ORDER BY distance_km ASC NULLS LAST, b.created_at DESC
+  LIMIT p_limit;
 $$;
 
 
-ALTER FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) OWNER TO "postgres";
+ALTER FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision, "p_limit" integer) OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "user_lng" double precision) RETURNS TABLE("id" "uuid", "name" character varying, "description" "text", "interest" character varying, "area_name" character varying, "cover_url" "text", "creator_id" "uuid", "member_count" integer, "created_at" timestamp with time zone, "distance_km" double precision, "creator_name" character varying)
+CREATE OR REPLACE FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "user_lng" double precision) RETURNS TABLE("id" "uuid", "name" character varying, "description" "text", "interests" "text"[], "area_name" character varying, "cover_url" "text", "creator_id" "uuid", "member_count" integer, "created_at" timestamp with time zone, "distance_km" double precision, "creator_name" character varying)
     LANGUAGE "sql" STABLE SECURITY DEFINER
     AS $$
   SELECT
-    c.id, c.name, c.description, c.interest, c.area_name,
+    c.id, c.name, c.description, c.interests, c.area_name,
     c.cover_url, c.creator_id, c.member_count, c.created_at,
     CASE
       WHEN c.latitude IS NOT NULL AND c.longitude IS NOT NULL THEN
@@ -463,6 +593,36 @@ $$;
 
 
 ALTER FUNCTION "public"."get_community_stats"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_events_nearby"("user_lat" double precision, "user_lng" double precision) RETURNS TABLE("id" "uuid", "club_id" "uuid", "club_name" character varying, "title" character varying, "description" "text", "cover_url" "text", "starts_at" timestamp with time zone, "ends_at" timestamp with time zone, "is_online" boolean, "location_name" character varying, "meeting_url" "text", "visibility" character varying, "capacity" integer, "attendee_count" integer, "creator_id" "uuid", "creator_name" character varying, "distance_km" double precision)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    AS $$
+  SELECT
+    e.id, e.club_id, c.name, e.title, e.description, e.cover_url,
+    e.starts_at, e.ends_at, e.is_online, e.location_name, e.meeting_url,
+    e.visibility, e.capacity, e.attendee_count, e.creator_id,
+    p.display_name AS creator_name,
+    CASE
+      WHEN e.latitude IS NOT NULL AND e.longitude IS NOT NULL THEN
+        6371 * acos(
+          LEAST(1.0, GREATEST(-1.0,
+            cos(radians(user_lat)) * cos(radians(e.latitude)) *
+            cos(radians(e.longitude) - radians(user_lng)) +
+            sin(radians(user_lat)) * sin(radians(e.latitude))
+          ))
+        )
+      ELSE NULL
+    END AS distance_km
+  FROM club_events e
+  JOIN clubs c ON c.id = e.club_id
+  JOIN profiles p ON p.id = e.creator_id
+  WHERE e.active = true
+  ORDER BY distance_km ASC NULLS LAST, e.starts_at ASC;
+$$;
+
+
+ALTER FUNCTION "public"."get_events_nearby"("user_lat" double precision, "user_lng" double precision) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_platform_setting_int"("p_key" "text", "p_default" integer) RETURNS integer
@@ -514,7 +674,7 @@ CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$ BEGIN
   INSERT INTO public.profiles (id, display_name)
-  VALUES (new.id, new.email); -- Defaults their display name to their email
+  VALUES (new.id, substring(new.email from 1 for 50));
   RETURN new;
 END;
  $$;
@@ -599,6 +759,29 @@ $$;
 ALTER FUNCTION "public"."match_wishlists_for_book"("p_title" "text", "p_owner_id" "uuid", "p_threshold" real) OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."reject_club_request"("p_request_id" "uuid", "p_note" "text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+BEGIN
+  IF NOT public.is_admin_or_mod() THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  UPDATE public.club_requests
+  SET status = 'rejected', review_note = p_note, reviewed_by = auth.uid(), reviewed_at = now()
+  WHERE id = p_request_id AND status = 'pending';
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Request not found or already reviewed';
+  END IF;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."reject_club_request"("p_request_id" "uuid", "p_note" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."update_club_member_count"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     AS $$
@@ -616,6 +799,25 @@ $$;
 
 
 ALTER FUNCTION "public"."update_club_member_count"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."update_event_attendee_count"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE club_events SET attendee_count = attendee_count + 1 WHERE id = NEW.event_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE club_events SET attendee_count = GREATEST(0, attendee_count - 1) WHERE id = OLD.event_id;
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."update_event_attendee_count"() OWNER TO "postgres";
 
 SET default_tablespace = '';
 
@@ -764,6 +966,8 @@ CREATE TABLE IF NOT EXISTS "public"."books" (
     "hidden_at" timestamp with time zone,
     "description" "text",
     "publication_year" smallint,
+    "featured" boolean DEFAULT false NOT NULL,
+    "featured_at" timestamp with time zone,
     CONSTRAINT "books_condition_check" CHECK ((("condition")::"text" = ANY (ARRAY[('excellent'::character varying)::"text", ('good'::character varying)::"text", ('fair'::character varying)::"text", ('poor'::character varying)::"text"]))),
     CONSTRAINT "books_lending_duration_months_check" CHECK (("lending_duration_months" = ANY (ARRAY[1, 2, 3]))),
     CONSTRAINT "books_listing_type_check" CHECK ((("listing_type")::"text" = ANY (ARRAY[('donate'::character varying)::"text", ('lend'::character varying)::"text"]))),
@@ -773,6 +977,33 @@ CREATE TABLE IF NOT EXISTS "public"."books" (
 
 
 ALTER TABLE "public"."books" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."club_events" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "club_id" "uuid" NOT NULL,
+    "creator_id" "uuid" NOT NULL,
+    "title" character varying(200) NOT NULL,
+    "description" "text",
+    "cover_url" "text",
+    "starts_at" timestamp with time zone NOT NULL,
+    "ends_at" timestamp with time zone,
+    "is_online" boolean DEFAULT false,
+    "location_name" character varying(200),
+    "meeting_url" "text",
+    "latitude" double precision,
+    "longitude" double precision,
+    "visibility" character varying(20) DEFAULT 'public'::character varying NOT NULL,
+    "capacity" integer,
+    "attendee_count" integer DEFAULT 0,
+    "active" boolean DEFAULT true,
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "club_events_check" CHECK ((("ends_at" IS NULL) OR ("ends_at" >= "starts_at"))),
+    CONSTRAINT "club_events_visibility_check" CHECK ((("visibility")::"text" = ANY ((ARRAY['public'::character varying, 'members_only'::character varying])::"text"[])))
+);
+
+
+ALTER TABLE "public"."club_events" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."club_members" (
@@ -798,23 +1029,59 @@ CREATE TABLE IF NOT EXISTS "public"."club_posts" (
 ALTER TABLE "public"."club_posts" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."club_requests" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "requester_id" "uuid" NOT NULL,
+    "name" character varying(150) NOT NULL,
+    "interests" "text"[] DEFAULT '{}'::"text"[] NOT NULL,
+    "description" "text" NOT NULL,
+    "goal" "text",
+    "target_members" "text",
+    "area_name" character varying(200),
+    "latitude" double precision,
+    "longitude" double precision,
+    "cover_url" "text",
+    "status" character varying(20) DEFAULT 'pending'::character varying NOT NULL,
+    "review_note" "text",
+    "reviewed_by" "uuid",
+    "reviewed_at" timestamp with time zone,
+    "created_club_id" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    CONSTRAINT "club_requests_status_check" CHECK ((("status")::"text" = ANY ((ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying])::"text"[])))
+);
+
+
+ALTER TABLE "public"."club_requests" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."clubs" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "name" character varying(200) NOT NULL,
     "description" "text",
-    "interest" character varying(100),
     "area_name" character varying(200),
     "latitude" double precision,
     "longitude" double precision,
     "cover_url" "text",
     "creator_id" "uuid" NOT NULL,
-    "member_count" integer DEFAULT 1,
+    "member_count" integer DEFAULT 0,
     "active" boolean DEFAULT true,
-    "created_at" timestamp with time zone DEFAULT "now"()
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "interests" "text"[] DEFAULT '{}'::"text"[] NOT NULL
 );
 
 
 ALTER TABLE "public"."clubs" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."event_rsvps" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "event_id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."event_rsvps" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."genres" (
@@ -1052,6 +1319,11 @@ ALTER TABLE ONLY "public"."books"
 
 
 
+ALTER TABLE ONLY "public"."club_events"
+    ADD CONSTRAINT "club_events_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."club_members"
     ADD CONSTRAINT "club_members_club_id_user_id_key" UNIQUE ("club_id", "user_id");
 
@@ -1067,8 +1339,23 @@ ALTER TABLE ONLY "public"."club_posts"
 
 
 
+ALTER TABLE ONLY "public"."club_requests"
+    ADD CONSTRAINT "club_requests_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."clubs"
     ADD CONSTRAINT "clubs_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "public"."event_rsvps"
+    ADD CONSTRAINT "event_rsvps_event_id_user_id_key" UNIQUE ("event_id", "user_id");
+
+
+
+ALTER TABLE ONLY "public"."event_rsvps"
+    ADD CONSTRAINT "event_rsvps_pkey" PRIMARY KEY ("id");
 
 
 
@@ -1174,7 +1461,55 @@ CREATE INDEX "idx_book_requests_status" ON "public"."book_requests" USING "btree
 
 
 
+CREATE INDEX "idx_bookmarks_user" ON "public"."bookmarks" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "idx_books_featured" ON "public"."books" USING "btree" ("featured_at") WHERE ("featured" = true);
+
+
+
+CREATE INDEX "idx_books_owner" ON "public"."books" USING "btree" ("owner_id");
+
+
+
+CREATE INDEX "idx_books_status" ON "public"."books" USING "btree" ("status");
+
+
+
 CREATE INDEX "idx_books_title_trgm" ON "public"."books" USING "gin" ("title" "public"."gin_trgm_ops");
+
+
+
+CREATE INDEX "idx_club_events_club_starts" ON "public"."club_events" USING "btree" ("club_id", "starts_at");
+
+
+
+CREATE INDEX "idx_club_events_starts_active" ON "public"."club_events" USING "btree" ("starts_at") WHERE ("active" = true);
+
+
+
+CREATE INDEX "idx_club_members_user" ON "public"."club_members" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "idx_club_requests_requester" ON "public"."club_requests" USING "btree" ("requester_id", "created_at" DESC);
+
+
+
+CREATE INDEX "idx_club_requests_status" ON "public"."club_requests" USING "btree" ("status", "created_at" DESC);
+
+
+
+CREATE INDEX "idx_clubs_interests" ON "public"."clubs" USING "gin" ("interests");
+
+
+
+CREATE INDEX "idx_event_rsvps_event" ON "public"."event_rsvps" USING "btree" ("event_id");
+
+
+
+CREATE INDEX "idx_messages_request" ON "public"."messages" USING "btree" ("request_id");
 
 
 
@@ -1238,6 +1573,14 @@ CREATE OR REPLACE TRIGGER "trg_check_club_creation_eligibility" BEFORE INSERT ON
 
 
 
+CREATE OR REPLACE TRIGGER "trg_check_club_request_eligibility" BEFORE INSERT ON "public"."club_requests" FOR EACH ROW EXECUTE FUNCTION "public"."check_club_request_eligibility"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_check_club_request_limits" BEFORE INSERT OR UPDATE ON "public"."club_requests" FOR EACH ROW EXECUTE FUNCTION "public"."check_club_request_limits"();
+
+
+
 CREATE OR REPLACE TRIGGER "trg_club_member_count" AFTER INSERT OR DELETE ON "public"."club_members" FOR EACH ROW EXECUTE FUNCTION "public"."update_club_member_count"();
 
 
@@ -1247,6 +1590,10 @@ CREATE OR REPLACE TRIGGER "trg_enforce_message_rate_limit" BEFORE INSERT ON "pub
 
 
 CREATE OR REPLACE TRIGGER "trg_enforce_request_rate_limit" BEFORE INSERT ON "public"."book_requests" FOR EACH ROW EXECUTE FUNCTION "public"."enforce_request_rate_limit"();
+
+
+
+CREATE OR REPLACE TRIGGER "trg_event_attendee_count" AFTER INSERT OR DELETE ON "public"."event_rsvps" FOR EACH ROW EXECUTE FUNCTION "public"."update_event_attendee_count"();
 
 
 
@@ -1328,6 +1675,16 @@ ALTER TABLE ONLY "public"."books"
 
 
 
+ALTER TABLE ONLY "public"."club_events"
+    ADD CONSTRAINT "club_events_club_id_fkey" FOREIGN KEY ("club_id") REFERENCES "public"."clubs"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."club_events"
+    ADD CONSTRAINT "club_events_creator_id_fkey" FOREIGN KEY ("creator_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."club_members"
     ADD CONSTRAINT "club_members_club_id_fkey" FOREIGN KEY ("club_id") REFERENCES "public"."clubs"("id") ON DELETE CASCADE;
 
@@ -1348,8 +1705,33 @@ ALTER TABLE ONLY "public"."club_posts"
 
 
 
+ALTER TABLE ONLY "public"."club_requests"
+    ADD CONSTRAINT "club_requests_created_club_id_fkey" FOREIGN KEY ("created_club_id") REFERENCES "public"."clubs"("id");
+
+
+
+ALTER TABLE ONLY "public"."club_requests"
+    ADD CONSTRAINT "club_requests_requester_id_fkey" FOREIGN KEY ("requester_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."club_requests"
+    ADD CONSTRAINT "club_requests_reviewed_by_fkey" FOREIGN KEY ("reviewed_by") REFERENCES "public"."profiles"("id");
+
+
+
 ALTER TABLE ONLY "public"."clubs"
     ADD CONSTRAINT "clubs_creator_id_fkey" FOREIGN KEY ("creator_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."event_rsvps"
+    ADD CONSTRAINT "event_rsvps_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "public"."club_events"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."event_rsvps"
+    ADD CONSTRAINT "event_rsvps_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("id") ON DELETE CASCADE;
 
 
 
@@ -1575,6 +1957,10 @@ CREATE POLICY "Admins manage book_of_month" ON "public"."book_of_month" USING ((
 
 
 
+CREATE POLICY "Admins view all requests" ON "public"."club_requests" FOR SELECT TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
 CREATE POLICY "Anyone can read settings" ON "public"."platform_settings" FOR SELECT TO "authenticated", "anon" USING (true);
 
 
@@ -1587,6 +1973,16 @@ CREATE POLICY "Anyone can view active areas" ON "public"."areas" FOR SELECT TO "
 
 
 
+CREATE POLICY "Anyone can view active club events" ON "public"."club_events" FOR SELECT TO "authenticated", "anon" USING (("active" = true));
+
+
+
+CREATE POLICY "Anyone can view active club posts" ON "public"."club_posts" FOR SELECT TO "authenticated", "anon" USING ((EXISTS ( SELECT 1
+   FROM "public"."clubs"
+  WHERE (("clubs"."id" = "club_posts"."club_id") AND ("clubs"."active" = true)))));
+
+
+
 CREATE POLICY "Anyone can view active clubs" ON "public"."clubs" FOR SELECT TO "authenticated", "anon" USING (("active" = true));
 
 
@@ -1595,19 +1991,15 @@ CREATE POLICY "Anyone can view active genres" ON "public"."genres" FOR SELECT TO
 
 
 
-CREATE POLICY "Anyone can view club posts" ON "public"."club_posts" FOR SELECT TO "authenticated", "anon" USING (true);
-
-
-
-CREATE POLICY "Authenticated users can create clubs" ON "public"."clubs" FOR INSERT TO "authenticated" WITH CHECK (("auth"."uid"() = "creator_id"));
-
-
-
 CREATE POLICY "Authenticated users can view book notes" ON "public"."book_notes" FOR SELECT TO "authenticated" USING (true);
 
 
 
 CREATE POLICY "Authenticated users can view club members" ON "public"."club_members" FOR SELECT TO "authenticated" USING (true);
+
+
+
+CREATE POLICY "Authenticated users can view event rsvps" ON "public"."event_rsvps" FOR SELECT TO "authenticated" USING (true);
 
 
 
@@ -1629,6 +2021,12 @@ CREATE POLICY "Books are viewable by authenticated users" ON "public"."books" FO
 
 
 
+CREATE POLICY "Club creator can create events" ON "public"."club_events" FOR INSERT TO "authenticated" WITH CHECK ((("auth"."uid"() = "creator_id") AND (EXISTS ( SELECT 1
+   FROM "public"."clubs"
+  WHERE (("clubs"."id" = "club_events"."club_id") AND ("clubs"."creator_id" = "auth"."uid"()))))));
+
+
+
 CREATE POLICY "Club creator can post" ON "public"."club_posts" FOR INSERT TO "authenticated" WITH CHECK ((("auth"."uid"() = "author_id") AND (EXISTS ( SELECT 1
    FROM "public"."clubs"
   WHERE (("clubs"."id" = "club_posts"."club_id") AND ("clubs"."creator_id" = "auth"."uid"()))))));
@@ -1639,7 +2037,19 @@ CREATE POLICY "Creator can delete own club" ON "public"."clubs" FOR DELETE TO "a
 
 
 
+CREATE POLICY "Creator can delete own event" ON "public"."club_events" FOR DELETE TO "authenticated" USING (("auth"."uid"() = "creator_id"));
+
+
+
 CREATE POLICY "Creator can update own club" ON "public"."clubs" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "creator_id"));
+
+
+
+CREATE POLICY "Creator can update own event" ON "public"."club_events" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "creator_id"));
+
+
+
+CREATE POLICY "Eligible users submit requests" ON "public"."club_requests" FOR INSERT TO "authenticated" WITH CHECK (("auth"."uid"() = "requester_id"));
 
 
 
@@ -1667,7 +2077,19 @@ CREATE POLICY "Reader can update own progress" ON "public"."book_progress" FOR U
 
 
 
+CREATE POLICY "Requester views own requests" ON "public"."club_requests" FOR SELECT TO "authenticated" USING (("auth"."uid"() = "requester_id"));
+
+
+
+CREATE POLICY "Requester withdraws own pending request" ON "public"."club_requests" FOR DELETE TO "authenticated" USING ((("auth"."uid"() = "requester_id") AND (("status")::"text" = 'pending'::"text")));
+
+
+
 CREATE POLICY "Super admins can manage settings" ON "public"."platform_settings" TO "authenticated" USING ("public"."is_super_admin"());
+
+
+
+CREATE POLICY "Users can cancel own rsvp" ON "public"."event_rsvps" FOR DELETE TO "authenticated" USING (("auth"."uid"() = "user_id"));
 
 
 
@@ -1725,6 +2147,14 @@ CREATE POLICY "Users can join clubs" ON "public"."club_members" FOR INSERT TO "a
 CREATE POLICY "Users can leave clubs" ON "public"."club_members" FOR DELETE TO "authenticated" USING ((("auth"."uid"() = "user_id") OR (EXISTS ( SELECT 1
    FROM "public"."clubs"
   WHERE (("clubs"."id" = "club_members"."club_id") AND ("clubs"."creator_id" = "auth"."uid"()))))));
+
+
+
+CREATE POLICY "Users can rsvp to events they can access" ON "public"."event_rsvps" FOR INSERT TO "authenticated" WITH CHECK ((("auth"."uid"() = "user_id") AND (EXISTS ( SELECT 1
+   FROM "public"."club_events" "e"
+  WHERE (("e"."id" = "event_rsvps"."event_id") AND ("e"."active" = true) AND (("e"."capacity" IS NULL) OR ("e"."attendee_count" < "e"."capacity")) AND ((("e"."visibility")::"text" = 'public'::"text") OR (EXISTS ( SELECT 1
+           FROM "public"."club_members" "cm"
+          WHERE (("cm"."club_id" = "e"."club_id") AND ("cm"."user_id" = "auth"."uid"()))))))))));
 
 
 
@@ -1826,13 +2256,22 @@ ALTER TABLE "public"."bookmarks" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."books" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."club_events" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."club_members" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."club_posts" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."club_requests" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."clubs" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."event_rsvps" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."genres" ENABLE ROW LEVEL SECURITY;
@@ -1911,6 +2350,13 @@ GRANT ALL ON FUNCTION "public"."admin_get_top_contributors"("lim" integer) TO "s
 
 
 
+REVOKE ALL ON FUNCTION "public"."approve_club_request"("p_request_id" "uuid", "p_note" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."approve_club_request"("p_request_id" "uuid", "p_note" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."approve_club_request"("p_request_id" "uuid", "p_note" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."approve_club_request"("p_request_id" "uuid", "p_note" "text") TO "service_role";
+
+
+
 REVOKE ALL ON FUNCTION "public"."can_notify"("p_target_user" "uuid", "p_context_type" "text", "p_context_id" "uuid") FROM PUBLIC;
 GRANT ALL ON FUNCTION "public"."can_notify"("p_target_user" "uuid", "p_context_type" "text", "p_context_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."can_notify"("p_target_user" "uuid", "p_context_type" "text", "p_context_id" "uuid") TO "authenticated";
@@ -1927,6 +2373,18 @@ GRANT ALL ON FUNCTION "public"."check_book_notes_limits"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."check_club_creation_eligibility"() TO "anon";
 GRANT ALL ON FUNCTION "public"."check_club_creation_eligibility"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."check_club_creation_eligibility"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."check_club_request_eligibility"() TO "anon";
+GRANT ALL ON FUNCTION "public"."check_club_request_eligibility"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."check_club_request_eligibility"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."check_club_request_limits"() TO "anon";
+GRANT ALL ON FUNCTION "public"."check_club_request_limits"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."check_club_request_limits"() TO "service_role";
 
 
 
@@ -1948,9 +2406,9 @@ GRANT ALL ON FUNCTION "public"."enforce_request_rate_limit"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) TO "anon";
-GRANT ALL ON FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision) TO "service_role";
+GRANT ALL ON FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision, "p_limit" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision, "p_limit" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision, "p_limit" integer) TO "service_role";
 
 
 
@@ -1963,6 +2421,12 @@ GRANT ALL ON FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "
 GRANT ALL ON FUNCTION "public"."get_community_stats"() TO "anon";
 GRANT ALL ON FUNCTION "public"."get_community_stats"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_community_stats"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_events_nearby"("user_lat" double precision, "user_lng" double precision) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_events_nearby"("user_lat" double precision, "user_lng" double precision) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_events_nearby"("user_lat" double precision, "user_lng" double precision) TO "service_role";
 
 
 
@@ -2015,9 +2479,22 @@ GRANT ALL ON FUNCTION "public"."match_wishlists_for_book"("p_title" "text", "p_o
 
 
 
+REVOKE ALL ON FUNCTION "public"."reject_club_request"("p_request_id" "uuid", "p_note" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."reject_club_request"("p_request_id" "uuid", "p_note" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."reject_club_request"("p_request_id" "uuid", "p_note" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."reject_club_request"("p_request_id" "uuid", "p_note" "text") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."update_club_member_count"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_club_member_count"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_club_member_count"() TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."update_event_attendee_count"() TO "anon";
+GRANT ALL ON FUNCTION "public"."update_event_attendee_count"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."update_event_attendee_count"() TO "service_role";
 
 
 
@@ -2081,6 +2558,12 @@ GRANT ALL ON TABLE "public"."books" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."club_events" TO "anon";
+GRANT ALL ON TABLE "public"."club_events" TO "authenticated";
+GRANT ALL ON TABLE "public"."club_events" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."club_members" TO "anon";
 GRANT ALL ON TABLE "public"."club_members" TO "authenticated";
 GRANT ALL ON TABLE "public"."club_members" TO "service_role";
@@ -2093,9 +2576,21 @@ GRANT ALL ON TABLE "public"."club_posts" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."club_requests" TO "anon";
+GRANT ALL ON TABLE "public"."club_requests" TO "authenticated";
+GRANT ALL ON TABLE "public"."club_requests" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."clubs" TO "anon";
 GRANT ALL ON TABLE "public"."clubs" TO "authenticated";
 GRANT ALL ON TABLE "public"."clubs" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."event_rsvps" TO "anon";
+GRANT ALL ON TABLE "public"."event_rsvps" TO "authenticated";
+GRANT ALL ON TABLE "public"."event_rsvps" TO "service_role";
 
 
 

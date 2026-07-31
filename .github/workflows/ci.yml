@@ -21,3 +21,28 @@ jobs:
       - run: npm run lint
 
       - run: npm test
+
+  rls-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Starts the full local stack (Postgres, Auth, Storage, ...) via Docker,
+      # then replays every migration from scratch -- same as a fresh
+      # contributor's first `supabase db reset`, so this also catches
+      # migrations that don't apply cleanly in order.
+      - run: supabase start
+      - run: supabase db reset
+
+      - run: npm run test:rls

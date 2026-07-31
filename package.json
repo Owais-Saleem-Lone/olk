@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:rls": "vitest run --config vitest.integration.config.ts",
     "env:local": "cp .env.docker .env.local && echo 'Switched .env.local to the local Docker Supabase stack -- restart npm run dev.'",
     "env:remote": "cp .env.remote .env.local && echo 'Switched .env.local to the remote Supabase project -- restart npm run dev.'",
     "db:reset": "npx supabase db reset",
