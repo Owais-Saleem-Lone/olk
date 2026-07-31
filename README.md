@@ -225,7 +225,7 @@ To update the featured book, insert a new row into the `book_of_the_month` table
 ```sql
 INSERT INTO book_of_the_month (title, author, description, cover_url, active)
 VALUES (
-  'The Kashmir Files',
+  'The Fun Files',
   'Author Name',
   'A gripping tale set in the valley...',
   'https://your-supabase-storage-url/cover.jpg',
@@ -253,7 +253,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## 🙏 Acknowledgements
 
-This project wouldn't have been possible without the incredible open‑source tools and communities that power it. Special thanks to:
+This project wouldn't have been possible without the incredible open‑source tools that power it. Special thanks to:
 
 - **[Next.js](https://nextjs.org/)** – for the React framework that makes full‑stack development a joy.
 - **[Supabase](https://supabase.com/)** – for providing a rock‑solid backend with authentication and realtime features.
