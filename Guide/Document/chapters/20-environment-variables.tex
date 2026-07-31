@@ -16,6 +16,9 @@ Every environment variable actually read anywhere in \pathname{src/}, in one pla
 \codecell{RESEND\_FROM\_EMAIL} & No & Defaults to \codecell{"OLK <notifications@olkashmir.com>"} if unset. Must be a domain verified in your Resend account before real sends will succeed. \\
 \codecell{NEXT\_PUBLIC\_SITE\_URL} & No & Defaults to \codecell{https://olkashmir.com} if unset. Used to build the "View on OLK" link inside notification and digest emails — set this explicitly for any non-production deployment (a staging URL, a preview deploy) so emails sent from that environment link back to the right place instead of the production domain. \\
 \codecell{CRON\_SECRET} & Only for the digest & The shared-secret bearer token \pathcell{/api/digest} checks (Chapter~\ref{ch:server-actions}). Generate a long random string once; it has no relationship to Supabase at all. \\
+\codecell{NEXT\_PUBLIC\_SENTRY\_DSN} & No & Read in \pathcell{src/instrumentation.ts} and \pathcell{src/instrumentation-client.ts}. If unset, Sentry safely no-ops (same convention as \codecell{RESEND\_API\_KEY}) — no errors are captured, but nothing breaks. Set it to enable production error monitoring. \\
+\codecell{SENTRY\_AUTH\_TOKEN} & No & Build-time only, read in \pathcell{next.config.ts}. Enables source-map upload so Sentry shows readable stack traces instead of minified ones. Without it, \codecell{withSentryConfig} skips source-map upload entirely rather than failing the build. \\
+\codecell{SENTRY\_ORG}, \codecell{SENTRY\_PROJECT} & No & Build-time only, paired with \codecell{SENTRY\_AUTH\_TOKEN} for source-map upload. Both come from the Sentry project's settings page. \\
 \bottomrule
 \end{longtable}
 \end{center}
@@ -33,6 +36,7 @@ Every environment variable actually read anywhere in \pathname{src/}, in one pla
 \codecell{SUPABASE\_SERVICE\_ROLE\_KEY} & Usually omitted (email/digest just no-op) & Your hosted project's service role key \\
 \codecell{RESEND\_API\_KEY} & Usually omitted & Set, for real email \\
 \codecell{CRON\_SECRET} & Any placeholder string, for manual \code{curl} testing (Chapter~\ref{ch:server-actions}) & A real, long random secret \\
+\codecell{NEXT\_PUBLIC\_SENTRY\_DSN} & Usually omitted (errors just aren't captured locally) & Set, so production errors are visible \\
 \bottomrule
 \end{longtable}
 \end{center}
@@ -46,5 +50,5 @@ An unset \code{NEXT\_PUBLIC\_SITE\_URL} silently falls back to the production do
 \end{olkhowto}
 
 \begin{olktask}
-Grep the entire \pathname{src/} tree for \code{process.env} (\code{grep -rn "process.env" src/}) and confirm the result set matches exactly the seven variables in this chapter — no more, no fewer. If you ever add an eighth, this chapter needs a matching new row in the same pull request (Chapter~\ref{ch:workflow}'s rule about keeping this manual in sync applies here too).
+Grep the entire \pathname{src/} tree for \code{process.env} (\code{grep -rn "process.env" src/}) and confirm the result set matches exactly the eleven variables in this chapter — no more, no fewer (\code{NEXT\_RUNTIME} is Next.js's own runtime constant, not something a deployer sets, so don't count it). If you ever add a twelfth, this chapter needs a matching new row in the same pull request (Chapter~\ref{ch:workflow}'s rule about keeping this manual in sync applies here too).
 \end{olktask}

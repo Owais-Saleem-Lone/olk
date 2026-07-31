@@ -17,6 +17,7 @@
     "db:pull-data": "bash scripts/pull-remote-data.sh"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.69.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.2",
     "next": "^16.2.11",

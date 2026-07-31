@@ -8,7 +8,7 @@ OLK is a stock Next.js App Router project, which is exactly what Vercel is built
 \begin{enumerate}
   \item Push the repository to GitHub (or GitLab/Bitbucket).
   \item In the Vercel dashboard, "Add New Project," import the repository. Vercel auto-detects Next.js and sets the build command (\code{next build}) and output directory automatically — nothing in \pathname{next.config.ts} needs to change for this.
-  \item Add every environment variable from Chapter~\ref{ch:envvars} in the project's \emph{Settings $\to$ Environment Variables} screen, pointed at your \textbf{production/hosted} Supabase project, not the local Docker stack.
+  \item Add every environment variable from Chapter~\ref{ch:envvars} in the project's \emph{Settings $\to$ Environment Variables} screen, pointed at your \textbf{production/hosted} Supabase project, not the local Docker stack. This includes \code{NEXT\_PUBLIC\_SENTRY\_DSN} (and, if you want readable stack traces rather than minified ones, \code{SENTRY\_AUTH\_TOKEN}/\code{SENTRY\_ORG}/\code{SENTRY\_PROJECT}) — without it, errors in production are invisible again.
   \item Deploy. Every subsequent push to the connected branch redeploys automatically; pull requests get their own preview deployment with the same environment variables.
 \end{enumerate}
 
@@ -55,6 +55,37 @@ Moving the digest from Monday 8am to, say, Friday 5pm is one line in \pathname{v
 \end{olknote}
 
 \code{CRON\_SECRET} itself is just a long random string you generate once and set as an environment variable in both Vercel's dashboard and wherever else the digest is triggered from — there is no Supabase-side concept of this secret, it exists purely as a shared value the route handler compares against the incoming \code{Authorization} header.
+
+\section{Setting up Sentry}
+\label{sec:sentry-setup}
+
+Error monitoring (\pathname{src/instrumentation.ts}, \pathname{src/instrumentation-client.ts}, \pathname{error.tsx}, \pathname{global-error.tsx}) is already wired into the code and no-ops safely with nothing configured — see Chapter~\ref{ch:known-issues}. Making it actually report anywhere is an account-setup step, not a code change:
+
+\begin{enumerate}
+  \item Create a free account at \url{https://sentry.io} — the free tier's error-volume limit is far more than a launch-stage app needs.
+  \item Create a new project, picking \textbf{Next.js} as the platform. This doesn't create a second codebase — it just tells Sentry's dashboard how to parse this app's stack traces and source maps, and generates a DSN scoped to it.
+  \item Copy the DSN from \emph{Settings $\to$ Projects $\to$ (your project) $\to$ Client Keys (DSN)}. It looks like \code{https://<key>@<org>.ingest.<region>.sentry.io/<project-id>} — despite the \code{NEXT\_PUBLIC\_} prefix it'll be set under, this value is meant to be public and safe to embed client-side; it is not the same kind of secret as \code{SUPABASE\_SERVICE\_ROLE\_KEY}.
+  \item Set \code{NEXT\_PUBLIC\_SENTRY\_DSN}, \code{SENTRY\_ORG}, and \code{SENTRY\_PROJECT} (Chapter~\ref{ch:envvars}) in \pathname{.env.local}/\pathname{.env.docker}/\pathname{.env.remote} for local testing, and in Vercel's dashboard for production.
+\end{enumerate}
+
+\begin{olkwarn}
+\textbf{Do not run \code{npx @sentry/wizard} in this repo}, even though Sentry's own onboarding screen suggests it. The wizard writes its own \pathname{instrumentation.ts}/\pathname{instrumentation-client.ts}/config and edits \pathname{next.config.ts} and \pathname{error.tsx} based on \emph{stock} Next.js conventions — it has no awareness that this fork renames \code{middleware.ts} to \code{proxy.ts} (Chapter~\ref{ch:proxy}) or that \code{error.tsx}'s callback is \code{unstable\_retry} rather than \code{reset}, confirmed against \pathname{node\_modules/next/dist/docs} directly rather than assumed. Running it risks silently overwriting the already-correct, already-build-verified integration with something written against the wrong API surface. Everything the wizard would set up already exists by hand; the only thing actually missing after account creation is pasting the DSN into an env var.
+\end{olkwarn}
+
+\begin{olktip}
+To verify the DSN actually works before trusting it in production, send one real test event and check Sentry's Issues tab for it:
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={One-off delivery check -- not part of the app itself}]
+node -e "
+const Sentry = require('@sentry/node');
+Sentry.init({ dsn: 'YOUR_DSN_HERE' });
+Sentry.captureException(new Error('setup verification test'));
+Sentry.close(5000).then((ok) => process.exit(ok ? 0 : 1));
+"
+\end{lstlisting}
+A printed \code{true}/exit code 0 means Sentry's servers accepted the event — confirm it actually shows up in the dashboard too, since that also validates the org/project pairing, not just network reachability.
+\end{olktip}
+
+\code{SENTRY\_AUTH\_TOKEN} (from \emph{Settings $\to$ Auth Tokens}) is the one optional piece: without it, \pathname{next.config.ts}'s \code{withSentryConfig} skips source-map upload entirely and error reports show minified stack traces. Error capture itself works fully without this token — it only affects how readable a stack trace is once you're looking at one.
 
 \section{What Vercel does \emph{not} give you here}
 
