@@ -1,18 +1,21 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAsyncEffect } from '@/hooks/use-async-effect'
-import { createAnnouncement, deleteAnnouncement, manageGenre, manageArea, saveBotm } from '@/lib/admin-actions'
+import { createAnnouncement, deleteAnnouncement, manageGenre, manageArea, saveBotm, featureBook, unfeatureBook } from '@/lib/admin-actions'
 
 type Announcement = { id: string; title: string; body: string | null; type: string; is_banner: boolean; active: boolean; starts_at: string; ends_at: string | null; created_at: string }
 type Genre = { id: string; name: string; display_order: number; active: boolean }
 type Area = { id: string; name: string; district: string | null; active: boolean }
 type BotM = { id: string; title: string; author: string | null; description: string | null; cover_url: string | null; month_label: string | null; active: boolean }
+type FeaturedBook = { id: string; title: string; author: string | null; cover_url: string | null }
+
+const MAX_FEATURED = 5
 
 export default function AdminContentPage() {
   const supabase = createClient()
-  const [tab, setTab] = useState<'announcements' | 'genres' | 'areas' | 'botm'>('announcements')
+  const [tab, setTab] = useState<'announcements' | 'genres' | 'areas' | 'botm' | 'featured'>('announcements')
   const [msg, setMsg] = useState('')
   const [acting, setActing] = useState(false)
 
@@ -41,6 +44,11 @@ export default function AdminContentPage() {
   const [botmCover, setBotmCover] = useState('')
   const [botmLabel, setBotmLabel] = useState('')
 
+  // Featured (From the Community)
+  const [featuredBooks, setFeaturedBooks] = useState<FeaturedBook[]>([])
+  const [featuredSearch, setFeaturedSearch] = useState('')
+  const [featuredResults, setFeaturedResults] = useState<FeaturedBook[]>([])
+
   const loadAnnouncements = useCallback(async () => {
     const { data } = await supabase.from('announcements').select('*').order('created_at', { ascending: false }).limit(50)
     setAnnouncements(data || [])
@@ -68,12 +76,33 @@ export default function AdminContentPage() {
     }
   }, [supabase])
 
+  const loadFeatured = useCallback(async () => {
+    const { data } = await supabase.from('books').select('id, title, author, cover_url').eq('featured', true).order('featured_at', { ascending: true })
+    setFeaturedBooks(data || [])
+  }, [supabase])
+
   useAsyncEffect(() => {
     if (tab === 'announcements') loadAnnouncements()
     if (tab === 'genres') loadGenres()
     if (tab === 'areas') loadAreas()
     if (tab === 'botm') loadBotm()
-  }, [tab, loadAnnouncements, loadGenres, loadAreas, loadBotm])
+    if (tab === 'featured') loadFeatured()
+  }, [tab, loadAnnouncements, loadGenres, loadAreas, loadBotm, loadFeatured])
+
+  useEffect(() => {
+    const term = featuredSearch.trim()
+    const t = setTimeout(async () => {
+      if (tab !== 'featured' || !term) { setFeaturedResults([]); return }
+      const { data } = await supabase
+        .from('books')
+        .select('id, title, author, cover_url')
+        .eq('featured', false)
+        .ilike('title', `%${term.replace(/[,()%]/g, '')}%`)
+        .limit(8)
+      setFeaturedResults(data || [])
+    }, 300)
+    return () => clearTimeout(t)
+  }, [tab, featuredSearch, supabase])
 
   async function handleCreateAnnouncement() {
     if (!annTitle.trim()) return
@@ -124,11 +153,27 @@ export default function AdminContentPage() {
     if (res.success) { setMsg('Book of the Month updated!'); loadBotm() }
   }
 
+  async function handleFeature(bookId: string) {
+    setActing(true)
+    const res = await featureBook(bookId)
+    setActing(false)
+    if (res.success) { setMsg('Book featured'); setFeaturedSearch(''); loadFeatured() }
+    else setMsg(res.error || 'Failed')
+  }
+
+  async function handleUnfeature(bookId: string) {
+    setActing(true)
+    const res = await unfeatureBook(bookId)
+    setActing(false)
+    if (res.success) { setMsg('Book removed from spotlight'); loadFeatured() }
+  }
+
   const TABS = [
     { key: 'announcements' as const, label: 'Announcements' },
     { key: 'genres' as const, label: 'Genres' },
     { key: 'areas' as const, label: 'Areas' },
     { key: 'botm' as const, label: 'Book of Month' },
+    { key: 'featured' as const, label: 'Featured' },
   ]
 
   return (
@@ -275,6 +320,61 @@ export default function AdminContentPage() {
                 {acting ? 'Saving...' : botm ? 'Update & Replace' : 'Set as Book of the Month'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Featured (From the Community) ═══ */}
+      {tab === 'featured' && (
+        <div className="max-w-lg">
+          <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium text-slate-300">Homepage spotlight</h3>
+              <span className="text-xs text-slate-500">{featuredBooks.length} / {MAX_FEATURED} featured</span>
+            </div>
+
+            {featuredBooks.length > 0 ? (
+              <div className="space-y-2 mb-4">
+                {featuredBooks.map(b => (
+                  <div key={b.id} className="flex items-center justify-between gap-3 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-sm text-white truncate">{b.title}</p>
+                      {b.author && <p className="text-xs text-slate-500 truncate">by {b.author}</p>}
+                    </div>
+                    <button onClick={() => handleUnfeature(b.id)} disabled={acting} className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors disabled:opacity-50 flex-shrink-0">
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500 mb-4">No books featured yet — the homepage will show the default decorative shelf.</p>
+            )}
+
+            <input
+              type="text"
+              value={featuredSearch}
+              onChange={e => setFeaturedSearch(e.target.value)}
+              placeholder={featuredBooks.length >= MAX_FEATURED ? `Limit of ${MAX_FEATURED} reached — remove one to add another` : 'Search books by title...'}
+              disabled={featuredBooks.length >= MAX_FEATURED}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal disabled:opacity-50"
+            />
+
+            {featuredResults.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {featuredResults.map(b => (
+                  <div key={b.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-white/5">
+                    <div className="min-w-0">
+                      <p className="text-sm text-slate-200 truncate">{b.title}</p>
+                      {b.author && <p className="text-xs text-slate-500 truncate">by {b.author}</p>}
+                    </div>
+                    <button onClick={() => handleFeature(b.id)} disabled={acting} className="text-xs text-brand-teal-light hover:text-white px-2 py-1 rounded hover:bg-brand-teal/20 transition-colors disabled:opacity-50 flex-shrink-0">
+                      Feature
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import BookOfMonthCard from '@/components/book-of-month'
+import CommunityShelf from '@/components/community-shelf'
 import AboutModal from '@/components/about-modal'
 import AnimatedCounter from '@/components/animated-counter'
 import AnnouncementBanner from '@/components/announcement-banner'
@@ -105,6 +106,13 @@ export default async function Home() {
     .order('starts_at', { ascending: true })
     .limit(6)
 
+  const { data: communityShelfBooks } = await supabase
+    .from('books')
+    .select('id, title, author, cover_url, listing_type')
+    .eq('featured', true)
+    .order('featured_at', { ascending: true })
+    .limit(5)
+
   return (
     <div className="min-h-screen bg-[#FBF6EC] text-slate-900 overflow-x-hidden">
 
@@ -176,6 +184,77 @@ export default async function Home() {
       <div className="relative z-10 max-w-4xl mx-auto px-6 pt-6">
         <AnnouncementBanner />
       </div>
+
+      {/* ── Local Clubs & Upcoming Events ── */}
+      {((activeClubs && activeClubs.length > 0) || (upcomingEvents && upcomingEvents.length > 0)) && (
+        <section className="relative z-10 max-w-6xl mx-auto px-6 pt-8">
+          <div className="grid sm:grid-cols-2 gap-5">
+            {activeClubs && activeClubs.length > 0 && (
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">🏘️ Local Clubs</p>
+                  <Link
+                    href={user ? "/clubs" : "/login"}
+                    className="text-xs text-teal-600 hover:text-teal-500 transition-colors"
+                  >
+                    {user ? 'See all' : 'Join'}
+                  </Link>
+                </div>
+                <div className="space-y-3">
+                  {activeClubs.slice(0, 4).map((club) => (
+                    <Link
+                      key={club.id}
+                      href={user ? `/clubs/${club.id}` : "/login"}
+                      className="flex items-center justify-between gap-2 group"
+                    >
+                      <span className="text-sm text-slate-700 group-hover:text-teal-600 transition-colors truncate">
+                        {club.name}
+                      </span>
+                      <span className="text-xs text-slate-400 flex-shrink-0">{club.member_count}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {upcomingEvents && upcomingEvents.length > 0 && (
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">📅 Upcoming Events</p>
+                  <Link
+                    href={user ? "/events" : "/login"}
+                    className="text-xs text-teal-600 hover:text-teal-500 transition-colors"
+                  >
+                    {user ? 'See all' : 'Join'}
+                  </Link>
+                </div>
+                <div className="space-y-4">
+                  {upcomingEvents.slice(0, 4).map((ev) => {
+                    const club = ev.clubs as unknown as { name: string } | null
+                    return (
+                      <Link
+                        key={ev.id}
+                        href={user ? `/events/${ev.id}` : "/login"}
+                        className="block group"
+                      >
+                        <h4 className="text-sm font-medium text-slate-700 group-hover:text-teal-600 transition-colors truncate">
+                          {ev.title}
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {new Date(ev.starts_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                          {' · '}
+                          {ev.is_online ? 'Online' : (ev.location_name || 'In person')}
+                          {club && ` · ${club.name}`}
+                        </p>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ── Hero ── */}
       <section className="relative z-10 max-w-6xl mx-auto px-6 pt-16 pb-20">
@@ -260,21 +339,27 @@ export default async function Home() {
             </div>
 
             <div className="relative bg-white border border-black/5 rounded-3xl shadow-xl shadow-amber-900/5 p-8">
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-6 text-center">
-                This week&apos;s shelf
-              </p>
-              <div className="flex items-end justify-center gap-2 h-44">
-                {SHELF_SPINES.map((s, i) => (
-                  <div
-                    key={i}
-                    className={`${s.h} ${s.c} w-7 md:w-8 rounded-t-md shadow-sm relative overflow-hidden`}
-                  >
-                    <span className="absolute top-3 left-0 right-0 h-px bg-white/30" />
+              {communityShelfBooks && communityShelfBooks.length > 0 ? (
+                <CommunityShelf books={communityShelfBooks} />
+              ) : (
+                <>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-6 text-center">
+                    This week&apos;s shelf
+                  </p>
+                  <div className="flex items-end justify-center gap-2 h-44">
+                    {SHELF_SPINES.map((s, i) => (
+                      <div
+                        key={i}
+                        className={`${s.h} ${s.c} w-7 md:w-8 rounded-t-md shadow-sm relative overflow-hidden`}
+                      >
+                        <span className="absolute top-3 left-0 right-0 h-px bg-white/30" />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="h-3 bg-gradient-to-b from-amber-700 to-amber-800 rounded-sm shadow-md mt-1" />
-              <div className="h-2 mx-2 bg-amber-900/10 rounded-full blur-sm mt-1" />
+                  <div className="h-3 bg-gradient-to-b from-amber-700 to-amber-800 rounded-sm shadow-md mt-1" />
+                  <div className="h-2 mx-2 bg-amber-900/10 rounded-full blur-sm mt-1" />
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -427,72 +512,6 @@ export default async function Home() {
                 ))}
               </div>
             </div>
-
-            {/* Local Clubs */}
-            {activeClubs && activeClubs.length > 0 && (
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">🏘️ Local Clubs</p>
-                  <Link
-                    href={user ? "/clubs" : "/login"}
-                    className="text-xs text-teal-600 hover:text-teal-500 transition-colors"
-                  >
-                    {user ? 'See all' : 'Join'}
-                  </Link>
-                </div>
-                <div className="space-y-3">
-                  {activeClubs.slice(0, 4).map((club) => (
-                    <Link
-                      key={club.id}
-                      href={user ? `/clubs/${club.id}` : "/login"}
-                      className="flex items-center justify-between gap-2 group"
-                    >
-                      <span className="text-sm text-slate-700 group-hover:text-teal-600 transition-colors truncate">
-                        {club.name}
-                      </span>
-                      <span className="text-xs text-slate-400 flex-shrink-0">{club.member_count}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Upcoming Events */}
-            {upcomingEvents && upcomingEvents.length > 0 && (
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">📅 Upcoming Events</p>
-                  <Link
-                    href={user ? "/events" : "/login"}
-                    className="text-xs text-teal-600 hover:text-teal-500 transition-colors"
-                  >
-                    {user ? 'See all' : 'Join'}
-                  </Link>
-                </div>
-                <div className="space-y-4">
-                  {upcomingEvents.slice(0, 4).map((ev) => {
-                    const club = ev.clubs as unknown as { name: string } | null
-                    return (
-                      <Link
-                        key={ev.id}
-                        href={user ? `/events/${ev.id}` : "/login"}
-                        className="block group"
-                      >
-                        <h4 className="text-sm font-medium text-slate-700 group-hover:text-teal-600 transition-colors truncate">
-                          {ev.title}
-                        </h4>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {new Date(ev.starts_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
-                          {' · '}
-                          {ev.is_online ? 'Online' : (ev.location_name || 'In person')}
-                          {club && ` · ${club.name}`}
-                        </p>
-                      </Link>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* Mini CTA card */}
             <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl p-6 text-center shadow-lg shadow-teal-600/20">

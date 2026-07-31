@@ -48,7 +48,7 @@
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/olk.git
+git clone https://github.com/Owais-Saleem-Lone/olk.git
 cd olk
 ```
 
@@ -236,14 +236,11 @@ VALUES (
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome!  
-Feel free to check the [issues page](https://github.com/your-username/olk/issues).
+Contributions, issues, and feature requests are welcome — this project is built as community/volunteer work, and student and intern contributors especially so. Before opening a PR, read **[`CONTRIBUTING.md`](CONTRIBUTING.md)** — it covers the project's hard rules (migrations, testing, RLS), branch/commit conventions, and how to pick a task. For the deep architecture reference, see **[`Guide/Document/main.pdf`](Guide/Document/main.pdf)**.
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+All contributors are expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md). Found a security or privacy issue? See [`SECURITY.md`](SECURITY.md) instead of filing a public issue.
+
+Check the [issues page](https://github.com/Owais-Saleem-Lone/olk/issues) for open work.
 
 ---
 

@@ -261,6 +261,43 @@ export const bulkHideBooks = withAdminAction(
   }
 )
 
+const MAX_FEATURED_BOOKS = 5
+
+export const featureBook = withAdminAction(
+  'moderator',
+  'feature_book',
+  async ({ supabase }, bookId: string) => {
+    const { count } = await supabase
+      .from('books')
+      .select('id', { count: 'exact', head: true })
+      .eq('featured', true)
+
+    if ((count ?? 0) >= MAX_FEATURED_BOOKS) {
+      throw new Error(`Maximum of ${MAX_FEATURED_BOOKS} featured books — remove one first.`)
+    }
+
+    await supabase.from('books').update({
+      featured: true,
+      featured_at: new Date().toISOString(),
+    }).eq('id', bookId)
+
+    return { targetType: 'book', targetId: bookId }
+  }
+)
+
+export const unfeatureBook = withAdminAction(
+  'moderator',
+  'unfeature_book',
+  async ({ supabase }, bookId: string) => {
+    await supabase.from('books').update({
+      featured: false,
+      featured_at: null,
+    }).eq('id', bookId)
+
+    return { targetType: 'book', targetId: bookId }
+  }
+)
+
 // ═══════════════════════════════════════════
 // REQUEST MANAGEMENT
 // ═══════════════════════════════════════════
