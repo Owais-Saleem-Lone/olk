@@ -37,6 +37,9 @@ Your \code{Authorization} header must be exactly \code{Bearer <CRON\_SECRET valu
 \section*{"Port 3000 (or 54321--54327) is already in use"}
 Something — often a dev server or Supabase stack from a previous session — is still running. \code{ss -ltnp | grep <port>} or \code{lsof -i :<port>} to identify the process; for a stray \code{next dev}, killing it and restarting is safe and stateless. For Supabase container ports, prefer \code{npx supabase stop} over killing Docker containers directly, so the CLI's own bookkeeping stays consistent.
 
+\section*{"Sentry issues show 40+ undifferentiated stack frames and my own code isn't highlighted"}
+Not something wrong with your code specifically — Turbopack emits server/edge stack frames for app code as bare relative paths (\code{src/app/.../route.ts}), which both the Sentry Node SDK's and Sentry's backend's "is this a Node internal" heuristics misread as framework code, marking it \code{in\_app: false} the same as a real \pathname{node\_modules} frame. \pathname{src/instrumentation.ts}'s \code{beforeSend} hook corrects this by rewriting the path to look absolute before the event is sent (Chapter~\ref{ch:envvars}, Chapter~\ref{ch:playbook}'s Sentry-triage entry). If you see this again after touching that file, check the hook is still running and still matching the actual filename shape Turbopack is currently emitting — a Sentry SDK upgrade or a Next.js bundler change could shift it, and the only reliable way to confirm is the same one used to find this bug originally: trigger a real error and check \code{in\_app} on the actual event via the API, not by assumption.
+
 \section*{"I'm not sure if something is really blocked by RLS or just by the UI"}
 This distinction matters enough that it recurs as its own exercise in Chapters~\ref{ch:pages},~\ref{ch:wishlists-clubs}, and~\ref{ch:admin}.
 

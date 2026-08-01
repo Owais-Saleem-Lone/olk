@@ -51,6 +51,18 @@ This isn't a one-time event described elsewhere in this manual as history — it
   \item \textbf{Update this manual in the same pass}, per the entry below — not as an afterthought once the code is merged.
 \end{enumerate}
 
+\section{"I need to check whether a real error has shown up in Sentry"}
+Don't rely on eyeballing the dashboard alone — the API gives you the exact frame, tag, and release data rather than a rendered page, and it's scriptable. Create a Personal Token, \emph{not} an Organization Token (Settings \textrightarrow{} Account \textrightarrow{} API \textrightarrow{} Personal Tokens — Chapter~\ref{ch:envvars} explains why the other kind won't work), with \code{org:read}, \code{project:read}, and \code{event:read} scopes. Put it in \pathname{.env.local} as \code{SENTRY\_AUTH\_TOKEN}, never pasted directly into a chat or terminal session that gets logged anywhere — treat it as compromised the moment it does, and rotate it.
+
+\begin{lstlisting}[style=olkcodebash, language=bash, caption={Listing recent Sentry issues via the API}]
+curl -s -H "Authorization: Bearer $SENTRY_AUTH_TOKEN" \
+  "https://de.sentry.io/api/0/projects/$SENTRY_ORG/$SENTRY_PROJECT/issues/?statsPeriod=24h"
+\end{lstlisting}
+
+The \code{de.} subdomain matches this project's EU data region — check your DSN's host (Chapter~\ref{ch:envvars}) if a different Sentry project ever needs this. Fetch a specific issue's full stack frames, tags, and release info with \code{/api/0/issues/<id>/events/latest/}.
+
+To confirm the whole pipeline still works end to end, add a route that throws (e.g. \pathname{src/app/api/sentry-test/route.ts} with a single \code{throw new Error(...)} in its \code{GET}), hit it with \code{curl}, confirm the event via the API above, then delete the route — never leave a throwing endpoint in the tree.
+
 \section{"Something changed in this codebase and this manual is now wrong"}
 Fix the manual in the same pull request as the code change, in the relevant \pathname{Guide/chapters/*.tex} file. This is not a nice-to-have: Chapter~\ref{ch:schema}'s note about \pathname{schema.sql} having gone five migrations stale is a direct, cautionary illustration of what happens to any documentation artifact that isn't updated as part of the change it describes. Don't let this manual become the next example.
 
