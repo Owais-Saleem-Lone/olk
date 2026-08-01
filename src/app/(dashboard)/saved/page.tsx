@@ -82,17 +82,17 @@ export default function SavedBooksPage() {
                       </div>
                     )}
                     <div className="absolute top-2 left-2">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm ${
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm ${
                         book.listing_type === 'donate'
-                          ? 'bg-brand-teal/20 text-teal-700 border border-brand-teal/30'
-                          : 'bg-blue-500/20 text-blue-700 border border-blue-500/30'
+                          ? 'bg-brand-teal-dark text-white'
+                          : 'bg-blue-600 text-white'
                       }`}>
                         {book.listing_type === 'donate' ? 'Free' : 'Lend'}
                       </span>
                     </div>
                     {book.status === 'given' && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <span className="bg-amber-500/20 text-amber-700 border border-amber-500/30 text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">Donated</span>
+                        <span className="bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm">Donated</span>
                       </div>
                     )}
                   </div>

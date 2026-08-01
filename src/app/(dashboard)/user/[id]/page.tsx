@@ -206,10 +206,10 @@ export default function UserProfilePage() {
                     </div>
                   )}
                   <div className="absolute top-2 left-2">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm ${
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm ${
                       book.listing_type === 'donate'
-                        ? 'bg-brand-teal/20 text-teal-700 border border-brand-teal/30'
-                        : 'bg-blue-500/20 text-blue-700 border border-blue-500/30'
+                        ? 'bg-brand-teal-dark text-white'
+                        : 'bg-blue-600 text-white'
                     }`}>
                       {book.listing_type === 'donate' ? 'Free' : 'Lend'}
                     </span>

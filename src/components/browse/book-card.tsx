@@ -53,24 +53,24 @@ export default function BookCard({
         )}
         {/* Listing type badge over image */}
         <div className="absolute top-2 left-2">
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm ${
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm ${
             book.listing_type === 'donate'
-              ? 'bg-brand-teal/20 text-teal-700 border border-brand-teal/30'
-              : 'bg-blue-500/20 text-blue-700 border border-blue-500/30'
+              ? 'bg-brand-teal-dark text-white'
+              : 'bg-blue-600 text-white'
           }`}>
             {book.listing_type === 'donate' ? '🎁 Donate' : '🤝 Lend'}
           </span>
         </div>
         {book.condition && (
           <div className="absolute top-2 right-2">
-            <span className="text-xs text-slate-700 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full capitalize">
+            <span className="text-xs text-white bg-slate-800 shadow-sm px-2 py-1 rounded-full capitalize">
               {book.condition}
             </span>
           </div>
         )}
         {book.status === 'given' && (
           <div className="absolute inset-0 bg-black/55 flex flex-col items-center justify-center gap-2.5 px-4">
-            <span className="bg-amber-500/20 text-amber-700 border border-amber-500/30 text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
+            <span className="bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm">
               Donated
             </span>
             {progress != null && (
@@ -88,7 +88,7 @@ export default function BookCard({
         )}
         {book.status === 'unavailable' && (
           <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2.5 px-4">
-            <span className="bg-blue-500/20 text-blue-700 border border-blue-500/30 text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">
+            <span className="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm">
               Being Read
             </span>
             {progress != null ? (

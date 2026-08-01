@@ -419,10 +419,10 @@ export default async function Home() {
                         )}
                         {/* Listing type badge */}
                         <div className="absolute top-2 left-2">
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm border ${
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm ${
                             book.listing_type === 'donate'
-                              ? 'bg-teal-50/90 text-teal-700 border-teal-200'
-                              : 'bg-amber-50/90 text-amber-700 border-amber-200'
+                              ? 'bg-teal-600 text-white'
+                              : 'bg-amber-600 text-white'
                           }`}>
                             {book.listing_type === 'donate' ? 'Free' : 'Lend'}
                           </span>
