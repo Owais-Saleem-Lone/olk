@@ -164,25 +164,25 @@ export default function ClubsPage() {
           </Link>
         )}
       </div>
-      <p className="text-slate-400 mb-8">Find interest groups and reading clubs near you</p>
+      <p className="text-slate-600 mb-8">Find interest groups and reading clubs near you</p>
 
       {/* Search & Filter */}
-      <form onSubmit={handleSearch} className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 mb-8">
+      <form onSubmit={handleSearch} className="bg-white border border-black/5 rounded-2xl p-6 mb-8">
         <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search clubs..."
-            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
+            className="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
           />
           <select
             value={filterInterest}
             onChange={e => setFilterInterest(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-teal"
+            className="bg-slate-100 border border-slate-200 rounded-lg px-3 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-teal"
           >
-            <option value="" className="bg-brand-slate">All Interests</option>
-            {CLUB_INTERESTS.map(i => <option key={i} value={i} className="bg-brand-slate">{i}</option>)}
+            <option value="" className="bg-white">All Interests</option>
+            {CLUB_INTERESTS.map(i => <option key={i} value={i} className="bg-white">{i}</option>)}
           </select>
           <button type="submit" className="bg-brand-teal hover:bg-brand-teal-light text-white font-semibold px-6 py-3 rounded-lg transition-colors text-sm">
             Search
@@ -190,13 +190,13 @@ export default function ClubsPage() {
         </div>
       </form>
 
-      {loading && <p className="text-slate-400 text-center py-20">Loading clubs...</p>}
+      {loading && <p className="text-slate-600 text-center py-20">Loading clubs...</p>}
 
       {!loading && clubs.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="text-5xl mb-4">🏘️</div>
           <h2 className="text-xl font-semibold mb-2">No clubs found</h2>
-          <p className="text-slate-400 max-w-md">
+          <p className="text-slate-600 max-w-md">
             {searchQuery || filterInterest
               ? 'No clubs match your search. Try different filters!'
               : 'Be the first to start a local club in your area.'}
@@ -207,9 +207,9 @@ export default function ClubsPage() {
       {!loading && clubs.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {clubs.map(club => (
-            <div key={club.id} className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden hover:border-brand-teal/30 transition-colors flex flex-col">
+            <div key={club.id} className="bg-white border border-black/5 rounded-2xl overflow-hidden hover:border-brand-teal/30 transition-colors flex flex-col">
               {/* Cover */}
-              <div className="w-full h-32 bg-gradient-to-br from-brand-slate-light to-brand-slate overflow-hidden relative">
+              <div className="w-full h-32 bg-gradient-to-br from-teal-50 to-slate-100 overflow-hidden relative">
                 {club.cover_url ? (
                   <Image src={club.cover_url} alt={club.name} fill unoptimized sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover" referrerPolicy="no-referrer" />
                 ) : (
@@ -218,7 +218,7 @@ export default function ClubsPage() {
                 {club.interests.length > 0 && (
                   <div className="absolute top-2 left-2 flex flex-wrap gap-1 max-w-[90%]">
                     {club.interests.slice(0, 2).map(i => (
-                      <span key={i} className="text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      <span key={i} className="text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm bg-purple-500/20 text-purple-700 border border-purple-500/30">
                         {i}
                       </span>
                     ))}
@@ -227,18 +227,18 @@ export default function ClubsPage() {
               </div>
 
               <div className="p-4 flex flex-col flex-1">
-                <Link href={`/clubs/${club.id}`} className="text-base font-semibold text-white hover:text-brand-teal-light transition-colors mb-1">
+                <Link href={`/clubs/${club.id}`} className="text-base font-semibold text-slate-900 hover:text-brand-teal-dark transition-colors mb-1">
                   {club.name}
                 </Link>
                 {club.description && (
-                  <p className="text-xs text-slate-400 line-clamp-2 mb-3">{club.description}</p>
+                  <p className="text-xs text-slate-600 line-clamp-2 mb-3">{club.description}</p>
                 )}
 
-                <div className="mt-auto pt-3 border-t border-white/5 flex items-center justify-between">
+                <div className="mt-auto pt-3 border-t border-black/5 flex items-center justify-between">
                   <div className="text-xs text-slate-500">
-                    <span className="text-slate-300 font-medium">{club.member_count}</span> {club.member_count === 1 ? 'member' : 'members'}
+                    <span className="text-slate-700 font-medium">{club.member_count}</span> {club.member_count === 1 ? 'member' : 'members'}
                     {club.distance_km != null && (
-                      <span className="ml-2 text-brand-teal-light font-medium">{formatDistance(club.distance_km)}</span>
+                      <span className="ml-2 text-brand-teal-dark font-medium">{formatDistance(club.distance_km)}</span>
                     )}
                     {club.area_name && <span className="ml-1">· 📍 {club.area_name}</span>}
                   </div>
@@ -246,16 +246,16 @@ export default function ClubsPage() {
 
                 <div className="mt-3">
                   {!currentUserId ? (
-                    <Link href="/login" className="w-full block text-center bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-2 rounded-lg text-sm transition-colors">
+                    <Link href="/login" className="w-full block text-center bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-900 font-medium py-2 rounded-lg text-sm transition-colors">
                       Login to Join
                     </Link>
                   ) : joinedClubs.has(club.id) ? (
-                    <Link href={`/clubs/${club.id}`} className="w-full block text-center bg-brand-teal/10 text-brand-teal-light border border-brand-teal/20 font-medium py-2 rounded-lg text-sm">
+                    <Link href={`/clubs/${club.id}`} className="w-full block text-center bg-brand-teal/10 text-brand-teal-dark border border-brand-teal/20 font-medium py-2 rounded-lg text-sm">
                       Member ✓
                     </Link>
                   ) : (
                     <button onClick={() => handleJoin(club.id)} disabled={joiningClub === club.id}
-                      className="w-full bg-white/5 hover:bg-white/10 disabled:opacity-40 border border-white/10 text-white font-medium py-2 rounded-lg text-sm transition-colors">
+                      className="w-full bg-slate-50 hover:bg-slate-100 disabled:opacity-40 border border-slate-200 text-slate-900 font-medium py-2 rounded-lg text-sm transition-colors">
                       {joiningClub === club.id ? 'Joining...' : 'Join Club'}
                     </button>
                   )}

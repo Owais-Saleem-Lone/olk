@@ -39,7 +39,7 @@ export default function AboutModal() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="text-sm text-slate-600 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-black/5"
+        className="text-sm text-slate-400 hover:text-slate-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-black/5"
       >
         About
       </button>
@@ -70,7 +70,7 @@ export default function AboutModal() {
 
             {/* ── Header ── */}
             <div className="text-center mb-20">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center font-bold text-sm text-white shadow-xl shadow-teal-600/20 mx-auto mb-5">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center font-bold text-sm text-slate-900 shadow-xl shadow-teal-600/20 mx-auto mb-5">
                 OLK
               </div>
               <h1 className="text-4xl md:text-5xl font-bold mb-3 tracking-tight text-slate-900">About Us</h1>
@@ -80,7 +80,7 @@ export default function AboutModal() {
             {/* ── I. Vision ── */}
             <section className="mb-24">
               <div className="flex items-center gap-5 mb-10">
-                <span className="text-4xl font-thin text-amber-400 select-none leading-none">I</span>
+                <span className="text-4xl font-thin text-amber-600 select-none leading-none">I</span>
                 <div className="flex-1 h-px bg-gradient-to-r from-amber-300 to-transparent" />
               </div>
 
@@ -92,7 +92,7 @@ export default function AboutModal() {
                 </p>
               </div>
 
-              <div className="space-y-6 text-slate-600 leading-relaxed text-[15px]">
+              <div className="space-y-6 text-slate-400 leading-relaxed text-[15px]">
                 <p>For millennia, education was the pursuit of light—to understand the self, to wrestle with contradictions, and to shape a better world. Somewhere along the way, we traded that light for a paycheck.</p>
                 <p><span className="text-slate-900 font-semibold">Open Library Kashmir (OLK)</span> is a quiet rebellion against the mechanical.</p>
                 <p>We believe a physicist should know poetry. We believe a philosopher should marvel at quantum mechanics. And we believe a sincere artist—the one told their craft is &quot;worthless&quot;—is, at least, as valuable as any other white-collar job acquired after degrees.</p>
@@ -104,7 +104,7 @@ export default function AboutModal() {
             {/* ── II. This Platform ── */}
             <section className="mb-24">
               <div className="flex items-center gap-5 mb-10">
-                <span className="text-4xl font-thin text-teal-400 select-none leading-none">II</span>
+                <span className="text-4xl font-thin text-teal-600 select-none leading-none">II</span>
                 <div className="flex-1 h-px bg-gradient-to-r from-teal-300 to-transparent" />
               </div>
 
@@ -116,7 +116,7 @@ export default function AboutModal() {
                 </p>
               </div>
 
-              <div className="space-y-6 text-slate-600 leading-relaxed text-[15px] mb-10">
+              <div className="space-y-6 text-slate-400 leading-relaxed text-[15px] mb-10">
                 <p>OLK begins not with a building, but with a belief. Our platform is a baby step—small, tender, but alive with possibility.</p>
                 <p>Imagine a place where books do not collect dust on forgotten shelves. They travel. A donated novel from the city reaches a seeker in a remote valley. A textbook on philosophy finds a home where it is truly needed. No middlemen. No gatekeepers.</p>
                 <p>Just people. And the passion that connects them.</p>
@@ -124,7 +124,7 @@ export default function AboutModal() {
 
               <div className="bg-teal-50 border border-teal-100 rounded-2xl p-7">
                 <h3 className="text-sm font-bold text-teal-700 uppercase tracking-widest mb-4">Join the Community</h3>
-                <div className="space-y-4 text-[15px] text-slate-600 leading-relaxed">
+                <div className="space-y-4 text-[15px] text-slate-400 leading-relaxed">
                   <p>This is a space where we actively support the dreamer who wants to write, the traveler who wants to document, and the student who wants to understand <em>why</em> before they learn <em>how</em>.</p>
                   <p className="text-slate-800 font-medium">OLK is not just a library. It is a living ecosystem of enlightenment.</p>
                 </div>
@@ -147,15 +147,15 @@ export default function AboutModal() {
                     className="bg-white border border-black/5 hover:border-teal-200 rounded-2xl p-6 transition-colors shadow-sm"
                   >
                     <div className="flex gap-5 items-start">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-200 to-slate-100 border border-black/5 flex items-center justify-center text-slate-600 font-semibold text-sm flex-shrink-0">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-200 to-slate-100 border border-black/5 flex items-center justify-center text-slate-400 font-semibold text-sm flex-shrink-0">
                         {member.initials}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-slate-900 leading-snug">{member.name}</p>
                         <p className="text-xs text-slate-500 mt-0.5 mb-4">{member.role}</p>
                         {member.bio
-                          ? <p className="text-sm text-slate-600 leading-relaxed">{member.bio}</p>
-                          : <p className="text-xs text-slate-400 italic">Biography coming soon.</p>
+                          ? <p className="text-sm text-slate-400 leading-relaxed">{member.bio}</p>
+                          : <p className="text-xs text-slate-600 italic">Biography coming soon.</p>
                         }
                         {member.website && (
                           <a
@@ -179,7 +179,7 @@ export default function AboutModal() {
 
             {/* ── Footer ── */}
             <div className="text-center mt-24 pb-4">
-              <p className="text-slate-400 text-xs">Built with ❤️ for the people of Kashmir</p>
+              <p className="text-slate-600 text-xs">Built with ❤️ for the people of Kashmir</p>
             </div>
 
           </div>

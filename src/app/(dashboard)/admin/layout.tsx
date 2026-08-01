@@ -7,10 +7,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-[80vh]">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Admin Dashboard</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Signed in as <span className="text-slate-400">{admin.display_name || admin.email}</span>
-          {' '}<span className="text-xs bg-brand-teal/10 text-brand-teal-light border border-brand-teal/20 px-2 py-0.5 rounded-full">{admin.admin_role.replace('_', ' ')}</span>
+          Signed in as <span className="text-slate-600">{admin.display_name || admin.email}</span>
+          {' '}<span className="text-xs bg-brand-teal/10 text-brand-teal-dark border border-brand-teal/20 px-2 py-0.5 rounded-full">{admin.admin_role.replace('_', ' ')}</span>
         </p>
       </div>
       <AdminNav role={admin.admin_role} />

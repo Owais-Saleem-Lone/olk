@@ -29,8 +29,8 @@ export default async function DashboardLayout({
   // Guest: simple responsive top navbar, no sidebar
   if (!userId) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white">
-        <header className="sticky top-0 z-50 border-b border-white/[0.06] backdrop-blur-md bg-slate-950/80">
+      <div className="min-h-screen bg-cream text-slate-900">
+        <header className="sticky top-0 z-50 border-b border-black/5 backdrop-blur-md bg-cream/85">
           <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 max-w-7xl mx-auto">
             <Link href="/" className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-brand-teal flex items-center justify-center font-bold text-sm">OLK</div>
@@ -39,7 +39,7 @@ export default async function DashboardLayout({
             <div className="flex items-center gap-2">
               <Link
                 href="/login"
-                className="text-sm text-slate-400 hover:text-white transition-colors px-3 md:px-4 py-2 rounded-lg hover:bg-white/5"
+                className="text-sm text-slate-600 hover:text-slate-900 transition-colors px-3 md:px-4 py-2 rounded-lg hover:bg-slate-100"
               >
                 Login
               </Link>

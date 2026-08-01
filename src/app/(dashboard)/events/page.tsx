@@ -101,18 +101,18 @@ export default function EventsPage() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-2">Events</h1>
-      <p className="text-slate-400 mb-8">Upcoming meetups from clubs across the community</p>
+      <p className="text-slate-600 mb-8">Upcoming meetups from clubs across the community</p>
 
-      <form onSubmit={handleSearch} className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 mb-8">
+      <form onSubmit={handleSearch} className="bg-white border border-black/5 rounded-2xl p-6 mb-8">
         <div className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search events or clubs..."
-            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
+            className="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
           />
-          <label className="flex items-center gap-2 px-3 text-sm text-slate-300 cursor-pointer">
+          <label className="flex items-center gap-2 px-3 text-sm text-slate-700 cursor-pointer">
             <input type="checkbox" checked={onlineOnly} onChange={e => setOnlineOnly(e.target.checked)} className="accent-brand-teal" />
             Online only
           </label>
@@ -122,13 +122,13 @@ export default function EventsPage() {
         </div>
       </form>
 
-      {loading && <p className="text-slate-400 text-center py-20">Loading events...</p>}
+      {loading && <p className="text-slate-600 text-center py-20">Loading events...</p>}
 
       {!loading && events.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="text-5xl mb-4">📅</div>
           <h2 className="text-xl font-semibold mb-2">No upcoming events</h2>
-          <p className="text-slate-400 max-w-md">
+          <p className="text-slate-600 max-w-md">
             {searchQuery || onlineOnly
               ? 'No events match your search. Try different filters!'
               : 'Join a club and be the first to schedule a meetup.'}
@@ -142,9 +142,9 @@ export default function EventsPage() {
             <Link
               key={ev.id}
               href={`/events/${ev.id}`}
-              className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden hover:border-brand-teal/30 transition-colors flex flex-col"
+              className="bg-white border border-black/5 rounded-2xl overflow-hidden hover:border-brand-teal/30 transition-colors flex flex-col"
             >
-              <div className="w-full h-32 bg-gradient-to-br from-brand-slate-light to-brand-slate overflow-hidden relative">
+              <div className="w-full h-32 bg-gradient-to-br from-teal-50 to-slate-100 overflow-hidden relative">
                 {ev.cover_url ? (
                   <Image src={ev.cover_url} alt={ev.title} fill unoptimized sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover" referrerPolicy="no-referrer" />
                 ) : (
@@ -152,7 +152,7 @@ export default function EventsPage() {
                 )}
                 {ev.visibility === 'members_only' && (
                   <div className="absolute top-2 left-2">
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm bg-amber-500/20 text-amber-700 border border-amber-500/30">
                       Members only
                     </span>
                   </div>
@@ -160,20 +160,20 @@ export default function EventsPage() {
               </div>
 
               <div className="p-4 flex flex-col flex-1">
-                <p className="text-base font-semibold text-white mb-1">{ev.title}</p>
-                <p className="text-xs text-brand-teal-light mb-2">{ev.club_name || ev.clubs?.name}</p>
+                <p className="text-base font-semibold text-slate-900 mb-1">{ev.title}</p>
+                <p className="text-xs text-brand-teal-dark mb-2">{ev.club_name || ev.clubs?.name}</p>
                 {ev.description && (
-                  <p className="text-xs text-slate-400 line-clamp-2 mb-3">{ev.description}</p>
+                  <p className="text-xs text-slate-600 line-clamp-2 mb-3">{ev.description}</p>
                 )}
 
-                <div className="mt-auto pt-3 border-t border-white/5 text-xs text-slate-500 space-y-1">
+                <div className="mt-auto pt-3 border-t border-black/5 text-xs text-slate-500 space-y-1">
                   <p>{new Date(ev.starts_at).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</p>
                   <p>
                     {ev.is_online ? '💻 Online' : ev.location_name ? `📍 ${ev.location_name}` : '📍 TBA'}
                     {ev.distance_km != null && (
-                      <span className="ml-2 text-brand-teal-light font-medium">{formatDistance(ev.distance_km)}</span>
+                      <span className="ml-2 text-brand-teal-dark font-medium">{formatDistance(ev.distance_km)}</span>
                     )}
-                    {' · '}<span className="text-slate-300 font-medium">{ev.attendee_count}</span> going
+                    {' · '}<span className="text-slate-700 font-medium">{ev.attendee_count}</span> going
                   </p>
                 </div>
               </div>

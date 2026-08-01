@@ -41,14 +41,14 @@ export default function SearchFilters({
   const [showFilters, setShowFilters] = useState(false)
 
   return (
-    <form onSubmit={onSearch} className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 mb-8">
+    <form onSubmit={onSearch} className="bg-white border border-black/5 rounded-2xl p-6 mb-8">
       <div className="flex flex-col sm:flex-row gap-3">
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchQueryChange(e.target.value)}
           placeholder="Search by title or author..."
-          className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
+          className="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
         />
         <div className="flex gap-3">
           <button
@@ -61,7 +61,7 @@ export default function SearchFilters({
             <button
               type="button"
               onClick={onClearSearch}
-              className="flex-1 sm:flex-initial bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-4 py-3 rounded-lg transition-colors"
+              className="flex-1 sm:flex-initial bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-900 font-medium px-4 py-3 rounded-lg transition-colors"
             >
               Clear
             </button>
@@ -73,14 +73,14 @@ export default function SearchFilters({
       <button
         type="button"
         onClick={() => setShowFilters(!showFilters)}
-        className="mt-4 text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2"
+        className="mt-4 text-sm text-slate-600 hover:text-slate-900 transition-colors flex items-center gap-2"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
         </svg>
         Filters
         {(filterGenre || filterType || filterCondition || filterArea || radiusKm != null) && (
-          <span className="bg-brand-teal/20 text-brand-teal-light text-xs font-bold px-1.5 py-0.5 rounded-full">
+          <span className="bg-brand-teal/20 text-brand-teal-dark text-xs font-bold px-1.5 py-0.5 rounded-full">
             {[filterGenre, filterType, filterCondition, filterArea, radiusKm != null ? 'radius' : ''].filter(Boolean).length}
           </span>
         )}
@@ -92,29 +92,29 @@ export default function SearchFilters({
             value={filterGenre}
             onChange={onFilterGenreChange}
             allOptionLabel="All Genres"
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-teal"
+            className="bg-slate-100 border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-teal"
           />
 
           <select
             value={filterType}
             onChange={(e) => onFilterTypeChange(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-teal"
+            className="bg-slate-100 border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-teal"
           >
-            <option value="" className="bg-brand-slate">All Types</option>
-            <option value="donate" className="bg-brand-slate">Donate</option>
-            <option value="lend" className="bg-brand-slate">Lend</option>
+            <option value="" className="bg-white">All Types</option>
+            <option value="donate" className="bg-white">Donate</option>
+            <option value="lend" className="bg-white">Lend</option>
           </select>
 
           <select
             value={filterCondition}
             onChange={(e) => onFilterConditionChange(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-teal"
+            className="bg-slate-100 border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-teal"
           >
-            <option value="" className="bg-brand-slate">Any Condition</option>
-            <option value="excellent" className="bg-brand-slate">Excellent</option>
-            <option value="good" className="bg-brand-slate">Good</option>
-            <option value="fair" className="bg-brand-slate">Fair</option>
-            <option value="poor" className="bg-brand-slate">Poor</option>
+            <option value="" className="bg-white">Any Condition</option>
+            <option value="excellent" className="bg-white">Excellent</option>
+            <option value="good" className="bg-white">Good</option>
+            <option value="fair" className="bg-white">Fair</option>
+            <option value="poor" className="bg-white">Poor</option>
           </select>
 
           <input
@@ -122,14 +122,14 @@ export default function SearchFilters({
             value={filterArea}
             onChange={(e) => onFilterAreaChange(e.target.value)}
             placeholder="Filter by area..."
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
+            className="bg-slate-100 border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
           />
 
           {hasLocation && (
-            <div className="sm:col-span-2 lg:col-span-4 bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+            <div className="sm:col-span-2 lg:col-span-4 bg-slate-100 border border-slate-200 rounded-lg px-4 py-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-slate-300">Distance</span>
-                <span className="text-sm text-brand-teal-light font-medium">
+                <span className="text-sm text-slate-700">Distance</span>
+                <span className="text-sm text-brand-teal-dark font-medium">
                   {radiusKm == null ? 'Any distance' : `Within ${radiusKm}km`}
                 </span>
               </div>

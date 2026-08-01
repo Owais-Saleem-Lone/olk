@@ -91,7 +91,7 @@ export default function UserProfilePage() {
   useAsyncEffect(() => fetchUserProfile(), [fetchUserProfile])
 
   if (loading) {
-    return <p className="text-slate-400 text-center py-20">Loading profile...</p>
+    return <p className="text-slate-600 text-center py-20">Loading profile...</p>
   }
 
   if (notFound) {
@@ -99,8 +99,8 @@ export default function UserProfilePage() {
       <div className="text-center py-20">
         <div className="text-5xl mb-4">👤</div>
         <h2 className="text-xl font-semibold mb-2">User not found</h2>
-        <p className="text-slate-400 mb-6">This profile doesn&apos;t exist or has been removed.</p>
-        <Link href="/browse" className="text-brand-teal-light hover:text-teal-300 text-sm">
+        <p className="text-slate-600 mb-6">This profile doesn&apos;t exist or has been removed.</p>
+        <Link href="/browse" className="text-brand-teal-dark hover:text-teal-700 text-sm">
           ← Back to Browse
         </Link>
       </div>
@@ -116,14 +116,14 @@ export default function UserProfilePage() {
   return (
     <div>
       {/* Profile Header */}
-      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8 mb-8">
+      <div className="bg-white border border-black/5 rounded-2xl p-8 mb-8">
         <div className="flex items-start gap-5">
-          <div className="w-16 h-16 rounded-full bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-brand-teal-light font-bold text-2xl flex-shrink-0">
+          <div className="w-16 h-16 rounded-full bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-brand-teal-dark font-bold text-2xl flex-shrink-0">
             {(profile?.display_name || '?')[0].toUpperCase()}
           </div>
           <div className="flex-1">
             <h1 className="text-2xl font-bold mb-1">{profile?.display_name || 'Anonymous'}</h1>
-            <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
               {profile?.area_name && (
                 <span className="flex items-center gap-1">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -137,32 +137,32 @@ export default function UserProfilePage() {
                 </span>
               )}
               {rating && (
-                <span className="flex items-center gap-1 text-amber-400">
+                <span className="flex items-center gap-1 text-amber-600">
                   ★ {rating.avg} <span className="text-slate-500">({rating.count} {rating.count === 1 ? 'rating' : 'ratings'})</span>
                 </span>
               )}
             </div>
             {stats.completedExchanges >= 3 && (
               <div className="mt-2">
-                <span className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold px-2.5 py-1 rounded-full">
+                <span className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-600 text-xs font-semibold px-2.5 py-1 rounded-full">
                   ✓ Trusted Sharer
                 </span>
               </div>
             )}
             {profile?.bio && (
-              <p className="text-sm text-slate-300 mt-3 leading-relaxed">{profile.bio}</p>
+              <p className="text-sm text-slate-700 mt-3 leading-relaxed">{profile.bio}</p>
             )}
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/[0.06]">
+        <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-black/5">
           <div className="text-center">
-            <p className="text-2xl font-bold text-white">{stats.totalBooks}</p>
+            <p className="text-2xl font-bold text-slate-900">{stats.totalBooks}</p>
             <p className="text-xs text-slate-500 mt-1">Books Listed</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-brand-teal-light">{stats.availableBooks}</p>
+            <p className="text-2xl font-bold text-brand-teal-dark">{stats.availableBooks}</p>
             <p className="text-xs text-slate-500 mt-1">Available Now</p>
           </div>
           <div className="text-center">
@@ -177,7 +177,7 @@ export default function UserProfilePage() {
         <h2 className="text-xl font-semibold mb-4">Available Books</h2>
 
         {availableBooks.length === 0 ? (
-          <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-8 text-center text-slate-500">
+          <div className="bg-white border border-black/5 rounded-2xl p-8 text-center text-slate-500">
             No books available right now.
           </div>
         ) : (
@@ -186,9 +186,9 @@ export default function UserProfilePage() {
               <Link
                 key={book.id}
                 href={`/browse?q=${encodeURIComponent(book.title)}`}
-                className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden hover:border-brand-teal/30 transition-colors group"
+                className="bg-white border border-black/5 rounded-2xl overflow-hidden hover:border-brand-teal/30 transition-colors group"
               >
-                <div className="relative w-full aspect-[2/3] bg-gradient-to-br from-brand-slate-light to-brand-slate overflow-hidden">
+                <div className="relative w-full aspect-[2/3] bg-gradient-to-br from-teal-50 to-slate-100 overflow-hidden">
                   {book.cover_url ? (
                     <Image
                       src={book.cover_url}
@@ -201,25 +201,25 @@ export default function UserProfilePage() {
                     />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-4">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                      <span className="text-slate-600 text-xs text-center leading-tight">{book.title}</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                      <span className="text-slate-400 text-xs text-center leading-tight">{book.title}</span>
                     </div>
                   )}
                   <div className="absolute top-2 left-2">
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm ${
                       book.listing_type === 'donate'
-                        ? 'bg-brand-teal/20 text-teal-300 border border-brand-teal/30'
-                        : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                        ? 'bg-brand-teal/20 text-teal-700 border border-brand-teal/30'
+                        : 'bg-blue-500/20 text-blue-700 border border-blue-500/30'
                     }`}>
                       {book.listing_type === 'donate' ? 'Free' : 'Lend'}
                     </span>
                   </div>
                 </div>
                 <div className="p-3">
-                  <h3 className="text-sm font-semibold leading-snug mb-0.5 group-hover:text-brand-teal-light transition-colors line-clamp-2">{book.title}</h3>
+                  <h3 className="text-sm font-semibold leading-snug mb-0.5 group-hover:text-brand-teal-dark transition-colors line-clamp-2">{book.title}</h3>
                   {book.author && <p className="text-xs text-slate-500 truncate">by {book.author}</p>}
                   {book.genre && (
-                    <span className="inline-block bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-medium px-2 py-0.5 rounded-full mt-2">{book.genre}</span>
+                    <span className="inline-block bg-purple-500/10 text-purple-600 border border-purple-500/20 text-xs font-medium px-2 py-0.5 rounded-full mt-2">{book.genre}</span>
                   )}
                 </div>
               </Link>
@@ -228,7 +228,7 @@ export default function UserProfilePage() {
         )}
       </div>
 
-      <Link href="/browse" className="text-sm text-slate-400 hover:text-brand-teal-light transition-colors">
+      <Link href="/browse" className="text-sm text-slate-600 hover:text-brand-teal-dark transition-colors">
         ← Back to Browse
       </Link>
     </div>

@@ -116,13 +116,13 @@ export default function AddBookForm({ onAdded }: { onAdded: () => void }) {
   }
 
   return (
-    <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8">
+    <div className="bg-white border border-black/5 rounded-2xl p-8">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold">Add a New Book</h2>
         <button
           type="button"
           onClick={() => setShowScanner(true)}
-          className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white font-medium px-3 py-1.5 rounded-lg text-xs transition-colors"
+          className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 font-medium px-3 py-1.5 rounded-lg text-xs transition-colors"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" x2="17" y1="12" y2="12"/></svg>
           Scan ISBN
@@ -131,16 +131,16 @@ export default function AddBookForm({ onAdded }: { onAdded: () => void }) {
       <form onSubmit={handleAddBook} className="space-y-5">
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">Book Title</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Book Title</label>
           <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
+            className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
             placeholder="e.g., The Alchemist" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">Author</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Author</label>
           <input type="text" value={author} onChange={(e) => setAuthor(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
+            className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
             placeholder="e.g., Paulo Coelho" />
         </div>
 
@@ -153,57 +153,57 @@ export default function AddBookForm({ onAdded }: { onAdded: () => void }) {
         />
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">Category</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Category</label>
           <GenreSelect value={genre} onChange={setGenre} />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">Publication Year <span className="text-slate-500 font-normal">(optional)</span></label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Publication Year <span className="text-slate-500 font-normal">(optional)</span></label>
           <input type="number" min="1000" max="2200" value={publicationYear} onChange={(e) => setPublicationYear(e.target.value)}
             placeholder="e.g., 2008"
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+            className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">Description <span className="text-slate-500 font-normal">(optional)</span></label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Description <span className="text-slate-500 font-normal">(optional)</span></label>
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
             placeholder="A short blurb about the book..."
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none" />
+            className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">Condition</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Condition</label>
           <select value={condition} onChange={(e) => setCondition(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-brand-teal">
-            <option value="excellent" className="bg-brand-slate">Excellent</option>
-            <option value="good" className="bg-brand-slate">Good</option>
-            <option value="fair" className="bg-brand-slate">Fair</option>
-            <option value="poor" className="bg-brand-slate">Poor</option>
+            className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-teal">
+            <option value="excellent" className="bg-white">Excellent</option>
+            <option value="good" className="bg-white">Good</option>
+            <option value="fair" className="bg-white">Fair</option>
+            <option value="poor" className="bg-white">Poor</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">I want to</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">I want to</label>
           <div className="flex gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="radio" value="donate" checked={listingType === 'donate'} onChange={(e) => setListingType(e.target.value)} className="accent-brand-teal" />
-              <span className="text-white">Donate</span>
+              <span className="text-slate-900">Donate</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="radio" value="lend" checked={listingType === 'lend'} onChange={(e) => setListingType(e.target.value)} className="accent-brand-teal" />
-              <span className="text-white">Lend</span>
+              <span className="text-slate-900">Lend</span>
             </label>
           </div>
         </div>
 
         {listingType === 'lend' && (
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Lending Period</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Lending Period</label>
             <div className="flex gap-5">
               {([1, 2, 3] as const).map(m => (
                 <label key={m} className="flex items-center gap-2 cursor-pointer">
                   <input type="radio" value={m} checked={lendingDuration === m} onChange={() => setLendingDuration(m)} className="accent-brand-teal" />
-                  <span className="text-white text-sm">{m} {m === 1 ? 'month' : 'months'}</span>
+                  <span className="text-slate-900 text-sm">{m} {m === 1 ? 'month' : 'months'}</span>
                 </label>
               ))}
             </div>
@@ -216,7 +216,7 @@ export default function AddBookForm({ onAdded }: { onAdded: () => void }) {
         </button>
 
         {message && (
-          <p className={`text-sm text-center ${message.includes('success') ? 'text-brand-teal-light' : 'text-red-400'}`}>
+          <p className={`text-sm text-center ${message.includes('success') ? 'text-brand-teal-dark' : 'text-red-600'}`}>
             {message}
           </p>
         )}

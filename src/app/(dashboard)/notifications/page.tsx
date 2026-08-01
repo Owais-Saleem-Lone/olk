@@ -63,7 +63,7 @@ export default function NotificationsPage() {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
   }
 
-  if (loading) return <p className="text-slate-400">Loading notifications...</p>
+  if (loading) return <p className="text-slate-600">Loading notifications...</p>
 
   const unread = notifications.filter(n => !n.read).length
 
@@ -72,12 +72,12 @@ export default function NotificationsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold mb-2">Notifications</h1>
-          <p className="text-slate-400">{unread > 0 ? `${unread} unread` : 'All caught up!'}</p>
+          <p className="text-slate-600">{unread > 0 ? `${unread} unread` : 'All caught up!'}</p>
         </div>
         {unread > 0 && (
           <button
             onClick={markAllRead}
-            className="text-sm text-brand-teal-light hover:text-teal-300 bg-brand-teal/10 hover:bg-brand-teal/20 border border-brand-teal/20 px-4 py-2 rounded-lg transition-colors self-start"
+            className="text-sm text-brand-teal-dark hover:text-teal-700 bg-brand-teal/10 hover:bg-brand-teal/20 border border-brand-teal/20 px-4 py-2 rounded-lg transition-colors self-start"
           >
             Mark all as read
           </button>
@@ -85,10 +85,10 @@ export default function NotificationsPage() {
       </div>
 
       {notifications.length === 0 ? (
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-16 text-center">
+        <div className="bg-white border border-black/5 rounded-2xl p-16 text-center">
           <div className="text-5xl mb-4">🔔</div>
           <h2 className="text-lg font-semibold mb-2">No notifications yet</h2>
-          <p className="text-slate-400 text-sm max-w-sm mx-auto">
+          <p className="text-slate-600 text-sm max-w-sm mx-auto">
             You&apos;ll be notified when someone requests your book, accepts a request, or sends you a message.
           </p>
         </div>
@@ -102,16 +102,16 @@ export default function NotificationsPage() {
               className={`flex items-start gap-4 p-4 rounded-xl border transition-colors ${
                 !n.read
                   ? 'bg-brand-teal/[0.04] border-brand-teal/10 hover:border-brand-teal/20'
-                  : 'bg-white/[0.02] border-white/[0.06] hover:border-white/10'
+                  : 'bg-white border-black/5 hover:border-slate-200'
               }`}
             >
               <span className="text-xl flex-shrink-0">{ICONS[n.type] || '🔔'}</span>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm leading-snug ${!n.read ? 'text-white font-medium' : 'text-slate-300'}`}>
+                <p className={`text-sm leading-snug ${!n.read ? 'text-slate-900 font-medium' : 'text-slate-700'}`}>
                   {n.title}
                 </p>
                 {n.body && <p className="text-xs text-slate-500 mt-1">{n.body}</p>}
-                <p className="text-xs text-slate-600 mt-2">{timeAgo(n.created_at)}</p>
+                <p className="text-xs text-slate-400 mt-2">{timeAgo(n.created_at)}</p>
               </div>
               {!n.read && <div className="w-2 h-2 rounded-full bg-brand-teal-light flex-shrink-0 mt-2" />}
             </Link>

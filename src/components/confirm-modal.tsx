@@ -19,9 +19,9 @@ export default function ConfirmModal({
 }) {
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4" onClick={onCancel}>
-      <div className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
         <h3 className="text-lg font-semibold mb-1">{title}</h3>
-        <p className="text-sm text-slate-400 mb-5">{message}</p>
+        <p className="text-sm text-slate-600 mb-5">{message}</p>
 
         <div className="flex gap-3">
           <button
@@ -34,7 +34,7 @@ export default function ConfirmModal({
           </button>
           <button
             onClick={onCancel}
-            className="px-4 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+            className="px-4 py-2.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
           >
             Cancel
           </button>

@@ -179,14 +179,14 @@ export default function AdminContentPage() {
   return (
     <div>
       {msg && (
-        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-light text-sm px-4 py-2 rounded-lg flex justify-between">
-          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-light/50 hover:text-brand-teal-light">×</button>
+        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-dark text-sm px-4 py-2 rounded-lg flex justify-between">
+          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-dark/50 hover:text-brand-teal-dark">×</button>
         </div>
       )}
 
       <div className="flex gap-1 mb-6">
         {TABS.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${tab === t.key ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5'}`}>
+          <button key={t.key} onClick={() => setTab(t.key)} className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${tab === t.key ? 'bg-slate-50 text-slate-900' : 'text-slate-600 hover:bg-slate-100'}`}>
             {t.label}
           </button>
         ))}
@@ -195,13 +195,13 @@ export default function AdminContentPage() {
       {/* ═══ Announcements ═══ */}
       {tab === 'announcements' && (
         <div className="space-y-4">
-          <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
-            <h3 className="text-sm font-medium text-slate-300 mb-4">New Announcement</h3>
+          <div className="bg-white border border-black/5 rounded-2xl p-5">
+            <h3 className="text-sm font-medium text-slate-700 mb-4">New Announcement</h3>
             <div className="space-y-3">
-              <input type="text" value={annTitle} onChange={e => setAnnTitle(e.target.value)} placeholder="Title" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
-              <textarea value={annBody} onChange={e => setAnnBody(e.target.value)} placeholder="Body (optional)" rows={3} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none" />
+              <input type="text" value={annTitle} onChange={e => setAnnTitle(e.target.value)} placeholder="Title" className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+              <textarea value={annBody} onChange={e => setAnnBody(e.target.value)} placeholder="Body (optional)" rows={3} className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none" />
               <div className="flex gap-3">
-                <select value={annType} onChange={e => setAnnType(e.target.value)} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-teal">
+                <select value={annType} onChange={e => setAnnType(e.target.value)} className="bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-teal">
                   <option value="info">Info</option>
                   <option value="warning">Warning</option>
                   <option value="success">Success</option>
@@ -209,9 +209,9 @@ export default function AdminContentPage() {
                 </select>
                 <label className="flex items-center gap-2">
                   <input type="checkbox" checked={annBanner} onChange={e => setAnnBanner(e.target.checked)} className="rounded" />
-                  <span className="text-sm text-slate-300">Show as banner</span>
+                  <span className="text-sm text-slate-700">Show as banner</span>
                 </label>
-                <input type="datetime-local" value={annEndsAt} onChange={e => setAnnEndsAt(e.target.value)} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+                <input type="datetime-local" value={annEndsAt} onChange={e => setAnnEndsAt(e.target.value)} className="bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
               </div>
               <button onClick={handleCreateAnnouncement} disabled={!annTitle.trim() || acting} className="bg-brand-teal hover:bg-brand-teal-light text-white font-medium py-2.5 px-6 rounded-lg text-sm transition-colors disabled:opacity-50">
                 {acting ? 'Creating...' : 'Create Announcement'}
@@ -221,23 +221,23 @@ export default function AdminContentPage() {
 
           <div className="space-y-2">
             {announcements.map(a => (
-              <div key={a.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+              <div key={a.id} className="bg-white border border-black/5 rounded-xl p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-medium text-white">{a.title}</p>
+                      <p className="text-sm font-medium text-slate-900">{a.title}</p>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        a.type === 'warning' ? 'bg-amber-500/10 text-amber-400' :
-                        a.type === 'success' ? 'bg-green-500/10 text-green-400' :
-                        a.type === 'event' ? 'bg-purple-500/10 text-purple-400' :
-                        'bg-blue-500/10 text-blue-400'
+                        a.type === 'warning' ? 'bg-amber-500/10 text-amber-600' :
+                        a.type === 'success' ? 'bg-green-500/10 text-green-600' :
+                        a.type === 'event' ? 'bg-purple-500/10 text-purple-600' :
+                        'bg-blue-500/10 text-blue-600'
                       }`}>{a.type}</span>
-                      {a.is_banner && <span className="text-xs bg-brand-teal/10 text-brand-teal-light px-2 py-0.5 rounded-full">Banner</span>}
+                      {a.is_banner && <span className="text-xs bg-brand-teal/10 text-brand-teal-dark px-2 py-0.5 rounded-full">Banner</span>}
                     </div>
-                    {a.body && <p className="text-xs text-slate-400">{a.body}</p>}
-                    <p className="text-xs text-slate-600 mt-1">{new Date(a.created_at).toLocaleDateString()} {a.ends_at ? `· Ends ${new Date(a.ends_at).toLocaleDateString()}` : ''}</p>
+                    {a.body && <p className="text-xs text-slate-600">{a.body}</p>}
+                    <p className="text-xs text-slate-400 mt-1">{new Date(a.created_at).toLocaleDateString()} {a.ends_at ? `· Ends ${new Date(a.ends_at).toLocaleDateString()}` : ''}</p>
                   </div>
-                  <button onClick={() => handleDeleteAnn(a.id)} className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors">Delete</button>
+                  <button onClick={() => handleDeleteAnn(a.id)} className="text-xs text-red-600 hover:text-red-700 px-2 py-1 rounded hover:bg-red-500/10 transition-colors">Delete</button>
                 </div>
               </div>
             ))}
@@ -249,7 +249,7 @@ export default function AdminContentPage() {
       {tab === 'genres' && (
         <div>
           <div className="flex gap-2 mb-4">
-            <input type="text" value={newGenre} onChange={e => setNewGenre(e.target.value)} placeholder="New genre name" className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" onKeyDown={e => e.key === 'Enter' && handleAddGenre()} />
+            <input type="text" value={newGenre} onChange={e => setNewGenre(e.target.value)} placeholder="New genre name" className="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" onKeyDown={e => e.key === 'Enter' && handleAddGenre()} />
             <button onClick={handleAddGenre} disabled={!newGenre.trim() || acting} className="bg-brand-teal hover:bg-brand-teal-light text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-colors disabled:opacity-50">Add</button>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -258,7 +258,7 @@ export default function AdminContentPage() {
                 key={g.id}
                 onClick={() => handleToggleGenre(g.name, g.active)}
                 className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${
-                  g.active ? 'bg-brand-teal/10 text-brand-teal-light border-brand-teal/20 hover:bg-brand-teal/20' : 'bg-white/[0.03] text-slate-500 border-white/[0.06] hover:bg-white/5 line-through'
+                  g.active ? 'bg-brand-teal/10 text-brand-teal-dark border-brand-teal/20 hover:bg-brand-teal/20' : 'bg-white text-slate-500 border-black/5 hover:bg-slate-100 line-through'
                 }`}
               >
                 {g.name}
@@ -272,8 +272,8 @@ export default function AdminContentPage() {
       {tab === 'areas' && (
         <div>
           <div className="flex gap-2 mb-4">
-            <input type="text" value={newAreaName} onChange={e => setNewAreaName(e.target.value)} placeholder="Area name" className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
-            <input type="text" value={newAreaDistrict} onChange={e => setNewAreaDistrict(e.target.value)} placeholder="District" className="w-40 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+            <input type="text" value={newAreaName} onChange={e => setNewAreaName(e.target.value)} placeholder="Area name" className="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+            <input type="text" value={newAreaDistrict} onChange={e => setNewAreaDistrict(e.target.value)} placeholder="District" className="w-40 bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
             <button onClick={handleAddArea} disabled={!newAreaName.trim() || acting} className="bg-brand-teal hover:bg-brand-teal-light text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-colors disabled:opacity-50">Add</button>
           </div>
           {(() => {
@@ -292,7 +292,7 @@ export default function AdminContentPage() {
                       key={a.id}
                       onClick={() => handleToggleArea(a.name, a.active)}
                       className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${
-                        a.active ? 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10' : 'bg-white/[0.02] text-slate-600 border-white/[0.04] line-through'
+                        a.active ? 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100' : 'bg-white text-slate-400 border-black/5 line-through'
                       }`}
                     >
                       {a.name}
@@ -308,14 +308,14 @@ export default function AdminContentPage() {
       {/* ═══ Book of the Month ═══ */}
       {tab === 'botm' && (
         <div className="max-w-lg">
-          <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6">
-            <h3 className="text-sm font-medium text-slate-300 mb-4">{botm ? 'Update Book of the Month' : 'Set Book of the Month'}</h3>
+          <div className="bg-white border border-black/5 rounded-2xl p-6">
+            <h3 className="text-sm font-medium text-slate-700 mb-4">{botm ? 'Update Book of the Month' : 'Set Book of the Month'}</h3>
             <div className="space-y-3">
-              <input type="text" value={botmTitle} onChange={e => setBotmTitle(e.target.value)} placeholder="Title" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
-              <input type="text" value={botmAuthor} onChange={e => setBotmAuthor(e.target.value)} placeholder="Author" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
-              <textarea value={botmDesc} onChange={e => setBotmDesc(e.target.value)} placeholder="Why this book?" rows={3} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none" />
-              <input type="url" value={botmCover} onChange={e => setBotmCover(e.target.value)} placeholder="Cover Image URL" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
-              <input type="text" value={botmLabel} onChange={e => setBotmLabel(e.target.value)} placeholder="e.g. July 2026" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+              <input type="text" value={botmTitle} onChange={e => setBotmTitle(e.target.value)} placeholder="Title" className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+              <input type="text" value={botmAuthor} onChange={e => setBotmAuthor(e.target.value)} placeholder="Author" className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+              <textarea value={botmDesc} onChange={e => setBotmDesc(e.target.value)} placeholder="Why this book?" rows={3} className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none" />
+              <input type="url" value={botmCover} onChange={e => setBotmCover(e.target.value)} placeholder="Cover Image URL" className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+              <input type="text" value={botmLabel} onChange={e => setBotmLabel(e.target.value)} placeholder="e.g. July 2026" className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
               <button onClick={handleSaveBotm} disabled={!botmTitle.trim() || acting} className="w-full bg-brand-teal hover:bg-brand-teal-light text-white font-semibold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50">
                 {acting ? 'Saving...' : botm ? 'Update & Replace' : 'Set as Book of the Month'}
               </button>
@@ -327,21 +327,21 @@ export default function AdminContentPage() {
       {/* ═══ Featured (From the Community) ═══ */}
       {tab === 'featured' && (
         <div className="max-w-lg">
-          <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 mb-4">
+          <div className="bg-white border border-black/5 rounded-2xl p-6 mb-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-slate-300">Homepage spotlight</h3>
+              <h3 className="text-sm font-medium text-slate-700">Homepage spotlight</h3>
               <span className="text-xs text-slate-500">{featuredBooks.length} / {MAX_FEATURED} featured</span>
             </div>
 
             {featuredBooks.length > 0 ? (
               <div className="space-y-2 mb-4">
                 {featuredBooks.map(b => (
-                  <div key={b.id} className="flex items-center justify-between gap-3 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+                  <div key={b.id} className="flex items-center justify-between gap-3 bg-slate-100 border border-slate-200 rounded-lg px-3 py-2">
                     <div className="min-w-0">
-                      <p className="text-sm text-white truncate">{b.title}</p>
+                      <p className="text-sm text-slate-900 truncate">{b.title}</p>
                       {b.author && <p className="text-xs text-slate-500 truncate">by {b.author}</p>}
                     </div>
-                    <button onClick={() => handleUnfeature(b.id)} disabled={acting} className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors disabled:opacity-50 flex-shrink-0">
+                    <button onClick={() => handleUnfeature(b.id)} disabled={acting} className="text-xs text-red-600 hover:text-red-700 px-2 py-1 rounded hover:bg-red-500/10 transition-colors disabled:opacity-50 flex-shrink-0">
                       Remove
                     </button>
                   </div>
@@ -357,18 +357,18 @@ export default function AdminContentPage() {
               onChange={e => setFeaturedSearch(e.target.value)}
               placeholder={featuredBooks.length >= MAX_FEATURED ? `Limit of ${MAX_FEATURED} reached — remove one to add another` : 'Search books by title...'}
               disabled={featuredBooks.length >= MAX_FEATURED}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal disabled:opacity-50"
+              className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal disabled:opacity-50"
             />
 
             {featuredResults.length > 0 && (
               <div className="mt-2 space-y-1">
                 {featuredResults.map(b => (
-                  <div key={b.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-white/5">
+                  <div key={b.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-slate-100">
                     <div className="min-w-0">
-                      <p className="text-sm text-slate-200 truncate">{b.title}</p>
+                      <p className="text-sm text-slate-700 truncate">{b.title}</p>
                       {b.author && <p className="text-xs text-slate-500 truncate">by {b.author}</p>}
                     </div>
-                    <button onClick={() => handleFeature(b.id)} disabled={acting} className="text-xs text-brand-teal-light hover:text-white px-2 py-1 rounded hover:bg-brand-teal/20 transition-colors disabled:opacity-50 flex-shrink-0">
+                    <button onClick={() => handleFeature(b.id)} disabled={acting} className="text-xs text-brand-teal-dark hover:text-white px-2 py-1 rounded hover:bg-brand-teal/20 transition-colors disabled:opacity-50 flex-shrink-0">
                       Feature
                     </button>
                   </div>

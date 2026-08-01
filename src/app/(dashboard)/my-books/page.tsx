@@ -55,7 +55,7 @@ export default function MyBooksPage() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-2">My Books</h1>
-      <p className="text-slate-400 mb-8">Add a book to donate or lend</p>
+      <p className="text-slate-600 mb-8">Add a book to donate or lend</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <AddBookForm onAdded={fetchMyBooks} />

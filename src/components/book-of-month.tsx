@@ -13,7 +13,7 @@ type BookOfMonth = {
 }
 
 const BookIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400">
+  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600">
     <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
     <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
   </svg>
@@ -57,7 +57,7 @@ export default function BookOfMonthCard({ book }: { book: BookOfMonth }) {
             <div className="flex items-center gap-2 mb-3">
               <span className="text-amber-600 text-xs font-bold uppercase tracking-widest">✦ Book of the Month</span>
               {book.month_label && (
-                <span className="text-xs text-slate-400">— {book.month_label}</span>
+                <span className="text-xs text-slate-600">— {book.month_label}</span>
               )}
             </div>
 
@@ -66,7 +66,7 @@ export default function BookOfMonthCard({ book }: { book: BookOfMonth }) {
               <p className="text-slate-500 text-sm mb-4">by {book.author}</p>
             )}
             {book.description && (
-              <p className="text-slate-600 text-sm leading-relaxed line-clamp-3 mb-5">
+              <p className="text-slate-400 text-sm leading-relaxed line-clamp-3 mb-5">
                 {book.description}
               </p>
             )}
@@ -147,7 +147,7 @@ export default function BookOfMonthCard({ book }: { book: BookOfMonth }) {
               {book.description ? (
                 <p className="relative text-slate-700 text-sm leading-relaxed">{book.description}</p>
               ) : (
-                <p className="relative text-slate-400 text-sm italic">No description added yet.</p>
+                <p className="relative text-slate-600 text-sm italic">No description added yet.</p>
               )}
             </div>
           </div>

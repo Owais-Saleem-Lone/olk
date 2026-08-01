@@ -211,14 +211,14 @@ export default function ClubDetailPage() {
     setPosts(prev => prev.filter(p => p.id !== postId))
   }
 
-  if (loading) return <p className="text-slate-400 text-center py-20">Loading club...</p>
+  if (loading) return <p className="text-slate-600 text-center py-20">Loading club...</p>
 
   if (notFound) {
     return (
       <div className="text-center py-20">
         <div className="text-5xl mb-4">🏘️</div>
         <h2 className="text-xl font-semibold mb-2">Club not found</h2>
-        <Link href="/clubs" className="text-brand-teal-light hover:text-teal-300 text-sm">← Back to Clubs</Link>
+        <Link href="/clubs" className="text-brand-teal-dark hover:text-teal-700 text-sm">← Back to Clubs</Link>
       </div>
     )
   }
@@ -228,7 +228,7 @@ export default function ClubDetailPage() {
   return (
     <div>
       {/* Header */}
-      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden mb-8">
+      <div className="bg-white border border-black/5 rounded-2xl overflow-hidden mb-8">
         {club?.cover_url && (
           <div className="relative w-full h-40 overflow-hidden">
             <Image src={club.cover_url} alt={club.name} fill unoptimized sizes="100vw" className="object-cover" referrerPolicy="no-referrer" />
@@ -240,45 +240,45 @@ export default function ClubDetailPage() {
               {editing ? (
                 <div className="space-y-3 mb-4">
                   <input value={editName} onChange={e => setEditName(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+                    className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
                   <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} rows={3}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none" />
+                    className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-2 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none" />
                   <div className="flex gap-2">
                     <button onClick={handleSaveEdit} className="bg-brand-teal hover:bg-brand-teal-light text-white font-semibold px-4 py-1.5 rounded-lg text-sm transition-colors">Save</button>
-                    <button onClick={() => setEditing(false)} className="text-sm text-slate-400 hover:text-white px-3 py-1.5">Cancel</button>
+                    <button onClick={() => setEditing(false)} className="text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5">Cancel</button>
                   </div>
                 </div>
               ) : (
                 <>
                   <h1 className="text-2xl font-bold mb-1">{club?.name}</h1>
-                  {club?.description && <p className="text-slate-400 text-sm mb-3">{club.description}</p>}
+                  {club?.description && <p className="text-slate-600 text-sm mb-3">{club.description}</p>}
                 </>
               )}
-              <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
+              <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
                 {club?.interests?.map(i => (
-                  <span key={i} className="bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-medium px-2.5 py-1 rounded-full">{i}</span>
+                  <span key={i} className="bg-purple-500/10 text-purple-600 border border-purple-500/20 text-xs font-medium px-2.5 py-1 rounded-full">{i}</span>
                 ))}
                 {club?.area_name && <span>📍 {club.area_name}</span>}
                 <span>Founded {joinDate}</span>
-                <span>by <Link href={`/user/${club?.creator_id}`} className="text-brand-teal-light hover:text-teal-300">{creatorName}</Link></span>
+                <span>by <Link href={`/user/${club?.creator_id}`} className="text-brand-teal-dark hover:text-teal-700">{creatorName}</Link></span>
               </div>
             </div>
 
             {/* Action Buttons */}
             <div className="flex flex-col gap-2 flex-shrink-0">
               {!currentUserId ? (
-                <Link href="/login" className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors text-center">
+                <Link href="/login" className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-900 font-medium px-5 py-2 rounded-lg text-sm transition-colors text-center">
                   Login to Join
                 </Link>
               ) : isCreator ? (
                 <>
                   {!editing && (
-                    <button onClick={() => setEditing(true)} className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-4 py-2 rounded-lg text-xs transition-colors">Edit</button>
+                    <button onClick={() => setEditing(true)} className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-900 font-medium px-4 py-2 rounded-lg text-xs transition-colors">Edit</button>
                   )}
-                  <button onClick={() => setConfirmingDelete(true)} className="text-xs text-red-400/70 hover:text-red-400 transition-colors px-4 py-1.5">Delete Club</button>
+                  <button onClick={() => setConfirmingDelete(true)} className="text-xs text-red-600/70 hover:text-red-600 transition-colors px-4 py-1.5">Delete Club</button>
                 </>
               ) : isMember ? (
-                <button onClick={handleLeave} className="bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors">
+                <button onClick={handleLeave} className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 font-medium px-5 py-2 rounded-lg text-sm transition-colors">
                   Leave Club
                 </button>
               ) : (
@@ -290,13 +290,13 @@ export default function ClubDetailPage() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-white/[0.06]">
+          <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-black/5">
             <div className="text-center">
-              <p className="text-2xl font-bold text-white">{club?.member_count || 0}</p>
+              <p className="text-2xl font-bold text-slate-900">{club?.member_count || 0}</p>
               <p className="text-xs text-slate-500 mt-1">Members</p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-brand-teal-light">{postCount}</p>
+              <p className="text-2xl font-bold text-brand-teal-dark">{postCount}</p>
               <p className="text-xs text-slate-500 mt-1">Announcements</p>
             </div>
             <div className="text-center">
@@ -308,7 +308,7 @@ export default function ClubDetailPage() {
       </div>
 
       {/* Upcoming Events */}
-      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 mb-8">
+      <div className="bg-white border border-black/5 rounded-2xl p-6 mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Upcoming Events</h2>
           {isCreator && (
@@ -329,15 +329,15 @@ export default function ClubDetailPage() {
               <Link
                 key={ev.id}
                 href={`/events/${ev.id}`}
-                className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 hover:border-brand-teal/20 transition-colors"
+                className="bg-white border border-black/5 rounded-xl p-4 hover:border-brand-teal/20 transition-colors"
               >
                 <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <p className="text-sm font-semibold text-white truncate">{ev.title}</p>
+                  <p className="text-sm font-semibold text-slate-900 truncate">{ev.title}</p>
                   {ev.visibility === 'members_only' && (
-                    <span className="flex-shrink-0 text-[10px] font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-full">Members</span>
+                    <span className="flex-shrink-0 text-[10px] font-medium text-amber-600 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-full">Members</span>
                   )}
                 </div>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-600">
                   {new Date(ev.starts_at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
@@ -356,13 +356,13 @@ export default function ClubDetailPage() {
           <h2 className="text-xl font-semibold mb-4">Announcements</h2>
 
           {isCreator && (
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 mb-4">
+            <div className="bg-white border border-black/5 rounded-xl p-4 mb-4">
               <textarea
                 value={newPost}
                 onChange={e => setNewPost(e.target.value)}
                 placeholder="Write an announcement for your club..."
                 rows={3}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-3"
+                className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-3"
               />
               <button
                 onClick={handlePost}
@@ -375,20 +375,20 @@ export default function ClubDetailPage() {
           )}
 
           {posts.length === 0 ? (
-            <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-8 text-center text-slate-500">
+            <div className="bg-white border border-black/5 rounded-xl p-8 text-center text-slate-500">
               No announcements yet.
             </div>
           ) : (
             <div className="space-y-3">
               {posts.map(post => (
-                <div key={post.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
-                  <p className="text-sm text-white leading-relaxed whitespace-pre-wrap">{post.content}</p>
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
+                <div key={post.id} className="bg-white border border-black/5 rounded-xl p-5">
+                  <p className="text-sm text-slate-900 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-black/5">
                     <p className="text-xs text-slate-500">
                       {post.profiles?.display_name || 'Admin'} · {new Date(post.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
                     {isCreator && (
-                      <button onClick={() => handleDeletePost(post.id)} className="text-xs text-slate-600 hover:text-red-400 transition-colors">Delete</button>
+                      <button onClick={() => handleDeletePost(post.id)} className="text-xs text-slate-400 hover:text-red-600 transition-colors">Delete</button>
                     )}
                   </div>
                 </div>
@@ -410,19 +410,19 @@ export default function ClubDetailPage() {
                 <Link
                   key={m.user_id}
                   href={`/user/${m.user_id}`}
-                  className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 hover:border-brand-teal/20 transition-colors"
+                  className="flex items-center gap-3 bg-white border border-black/5 rounded-lg p-3 hover:border-brand-teal/20 transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-brand-teal-light font-bold text-sm flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-brand-teal-dark font-bold text-sm flex-shrink-0">
                     {(m.profiles?.display_name || '?')[0].toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm text-white font-medium">{m.profiles?.display_name || 'Anonymous'}</p>
+                    <p className="text-sm text-slate-900 font-medium">{m.profiles?.display_name || 'Anonymous'}</p>
                     {m.profiles?.area_name && (
                       <p className="text-xs text-slate-500">{m.profiles.area_name}</p>
                     )}
                   </div>
                   {m.user_id === club?.creator_id && (
-                    <span className="ml-auto text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">Admin</span>
+                    <span className="ml-auto text-xs text-amber-600 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">Admin</span>
                   )}
                 </Link>
               ))}
@@ -432,7 +432,7 @@ export default function ClubDetailPage() {
       </div>
 
       <div className="mt-8">
-        <Link href="/clubs" className="text-sm text-slate-400 hover:text-brand-teal-light transition-colors">← Back to Clubs</Link>
+        <Link href="/clubs" className="text-sm text-slate-600 hover:text-brand-teal-dark transition-colors">← Back to Clubs</Link>
       </div>
 
       {confirmingDelete && (

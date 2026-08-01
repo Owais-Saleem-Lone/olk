@@ -14,8 +14,8 @@ export default function Toaster() {
           role="status"
           className={`rounded-lg px-4 py-3 text-sm shadow-lg border backdrop-blur-md ${
             t.variant === 'error'
-              ? 'bg-red-500/10 border-red-500/20 text-red-400'
-              : 'bg-brand-teal/10 border-brand-teal/20 text-brand-teal-light'
+              ? 'bg-red-500/10 border-red-500/20 text-red-600'
+              : 'bg-brand-teal/10 border-brand-teal/20 text-brand-teal-dark'
           }`}
         >
           {t.message}

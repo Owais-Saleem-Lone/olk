@@ -201,14 +201,14 @@ export default function ISBNScanner({ onResult, onClose }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4" onClick={() => { stopCamera(); onClose() }}>
-      <div className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
         <h3 className="text-lg font-semibold mb-1">Scan ISBN</h3>
-        <p className="text-sm text-slate-400 mb-5">Auto-fill book details from barcode</p>
+        <p className="text-sm text-slate-600 mb-5">Auto-fill book details from barcode</p>
 
         {loading && (
           <div className="text-center py-8">
-            <svg className="animate-spin h-6 w-6 text-brand-teal-light mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-            <p className="text-sm text-slate-400">Looking up book...</p>
+            <svg className="animate-spin h-6 w-6 text-brand-teal-dark mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            <p className="text-sm text-slate-600">Looking up book...</p>
           </div>
         )}
 
@@ -218,7 +218,7 @@ export default function ISBNScanner({ onResult, onClose }: {
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
               Scan with Camera
             </button>
-            <button onClick={() => setMode('manual')} className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium py-3 rounded-lg transition-colors text-sm">
+            <button onClick={() => setMode('manual')} className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-900 font-medium py-3 rounded-lg transition-colors text-sm">
               Type ISBN Manually
             </button>
           </div>
@@ -230,7 +230,7 @@ export default function ISBNScanner({ onResult, onClose }: {
               <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
             </div>
             <p className="text-xs text-slate-500 text-center mb-3">Point camera at the barcode on the back of the book</p>
-            <button onClick={() => { stopCamera(); setMode('manual') }} className="w-full text-sm text-slate-400 hover:text-white py-2 transition-colors">
+            <button onClick={() => { stopCamera(); setMode('manual') }} className="w-full text-sm text-slate-600 hover:text-slate-900 py-2 transition-colors">
               Type ISBN instead
             </button>
           </div>
@@ -243,7 +243,7 @@ export default function ISBNScanner({ onResult, onClose }: {
               value={manualISBN}
               onChange={e => setManualISBN(e.target.value)}
               placeholder="Enter ISBN (e.g., 9780141439518)"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm mb-3"
+              className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm mb-3"
               autoFocus
             />
             <button type="submit" disabled={!manualISBN.trim()} className="w-full bg-brand-teal hover:bg-brand-teal-light disabled:opacity-40 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">
@@ -252,9 +252,9 @@ export default function ISBNScanner({ onResult, onClose }: {
           </form>
         )}
 
-        {error && <p className="text-xs text-red-400 mt-3">{error}</p>}
+        {error && <p className="text-xs text-red-600 mt-3">{error}</p>}
 
-        <button onClick={() => { stopCamera(); onClose() }} className="w-full mt-3 text-sm text-slate-500 hover:text-white py-2 transition-colors">
+        <button onClick={() => { stopCamera(); onClose() }} className="w-full mt-3 text-sm text-slate-500 hover:text-slate-900 py-2 transition-colors">
           Cancel
         </button>
       </div>

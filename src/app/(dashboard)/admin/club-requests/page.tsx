@@ -112,8 +112,8 @@ export default function AdminClubRequestsPage() {
   return (
     <div>
       {msg && (
-        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-light text-sm px-4 py-2 rounded-lg flex justify-between">
-          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-light/50 hover:text-brand-teal-light">×</button>
+        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-dark text-sm px-4 py-2 rounded-lg flex justify-between">
+          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-dark/50 hover:text-brand-teal-dark">×</button>
         </div>
       )}
 
@@ -123,7 +123,7 @@ export default function AdminClubRequestsPage() {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-              filter === f ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5'
+              filter === f ? 'bg-slate-50 text-slate-900' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -142,19 +142,19 @@ export default function AdminClubRequestsPage() {
               <button
                 key={r.id}
                 onClick={() => selectRequest(r)}
-                className={`w-full text-left bg-white/[0.03] border rounded-xl p-4 transition-colors ${
-                  selected?.id === r.id ? 'border-brand-teal/30 bg-brand-teal/5' : 'border-white/[0.06] hover:bg-white/[0.05]'
+                className={`w-full text-left bg-white border rounded-xl p-4 transition-colors ${
+                  selected?.id === r.id ? 'border-brand-teal/30 bg-brand-teal/5' : 'border-black/5 hover:bg-slate-50'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-white truncate">
+                    <p className="text-sm font-medium text-slate-900 truncate">
                       {r.name}
                       {r.status !== 'pending' && (
                         <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full border ${
                           r.status === 'approved'
-                            ? 'text-green-400 bg-green-500/10 border-green-500/20'
-                            : 'text-red-400 bg-red-500/10 border-red-500/20'
+                            ? 'text-green-600 bg-green-500/10 border-green-500/20'
+                            : 'text-red-600 bg-red-500/10 border-red-500/20'
                         }`}>{r.status}</span>
                       )}
                     </p>
@@ -162,7 +162,7 @@ export default function AdminClubRequestsPage() {
                       {r.requester?.display_name || 'Unknown'} · {new Date(r.created_at).toLocaleDateString()} · {r.interests.join(', ') || 'General'}
                     </p>
                   </div>
-                  <span className="text-slate-600 text-xs">→</span>
+                  <span className="text-slate-400 text-xs">→</span>
                 </div>
               </button>
             ))
@@ -171,15 +171,15 @@ export default function AdminClubRequestsPage() {
 
         {selected && (
           <div className="flex-1 min-w-0 space-y-4">
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
+            <div className="bg-white border border-black/5 rounded-2xl p-5">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-lg font-semibold text-white">{selected.name}</h3>
+                  <h3 className="text-lg font-semibold text-slate-900">{selected.name}</h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     by {selected.requester?.display_name || 'Unknown'} · submitted {new Date(selected.created_at).toLocaleDateString()}
                   </p>
                 </div>
-                <button onClick={() => setSelected(null)} className="text-slate-500 hover:text-white text-lg">×</button>
+                <button onClick={() => setSelected(null)} className="text-slate-500 hover:text-slate-900 text-lg">×</button>
               </div>
 
               {selected.cover_url && (
@@ -190,7 +190,7 @@ export default function AdminClubRequestsPage() {
 
               <div className="flex flex-wrap gap-1.5 mb-4">
                 {selected.interests.map(i => (
-                  <span key={i} className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">{i}</span>
+                  <span key={i} className="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 border border-purple-500/20">{i}</span>
                 ))}
                 {selected.area_name && <span className="text-xs text-slate-500">📍 {selected.area_name}</span>}
               </div>
@@ -198,18 +198,18 @@ export default function AdminClubRequestsPage() {
               <div className="space-y-3 text-sm mb-4">
                 <div>
                   <p className="text-xs text-slate-500 mb-1">Description</p>
-                  <p className="text-slate-300 whitespace-pre-wrap">{selected.description}</p>
+                  <p className="text-slate-700 whitespace-pre-wrap">{selected.description}</p>
                 </div>
                 {selected.goal && (
                   <div>
                     <p className="text-xs text-slate-500 mb-1">Goal</p>
-                    <p className="text-slate-300 whitespace-pre-wrap">{selected.goal}</p>
+                    <p className="text-slate-700 whitespace-pre-wrap">{selected.goal}</p>
                   </div>
                 )}
                 {selected.target_members && (
                   <div>
                     <p className="text-xs text-slate-500 mb-1">Target Members</p>
-                    <p className="text-slate-300 whitespace-pre-wrap">{selected.target_members}</p>
+                    <p className="text-slate-700 whitespace-pre-wrap">{selected.target_members}</p>
                   </div>
                 )}
               </div>
@@ -217,18 +217,18 @@ export default function AdminClubRequestsPage() {
               {/* Requester track record -- the lightweight substitute for formal ID
                   verification: real signal already in the system, no new infra. */}
               <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="text-center py-2 bg-white/[0.03] rounded-lg">
-                  <p className="text-lg font-bold text-white">{trackRecord ? trackRecord.completedExchanges : '…'}</p>
+                <div className="text-center py-2 bg-white rounded-lg">
+                  <p className="text-lg font-bold text-slate-900">{trackRecord ? trackRecord.completedExchanges : '…'}</p>
                   <p className="text-xs text-slate-500">Completed exchanges</p>
                 </div>
-                <div className="text-center py-2 bg-white/[0.03] rounded-lg">
-                  <p className={`text-lg font-bold ${trackRecord && trackRecord.reportCount > 0 ? 'text-red-400' : 'text-white'}`}>
+                <div className="text-center py-2 bg-white rounded-lg">
+                  <p className={`text-lg font-bold ${trackRecord && trackRecord.reportCount > 0 ? 'text-red-600' : 'text-slate-900'}`}>
                     {trackRecord ? trackRecord.reportCount : '…'}
                   </p>
                   <p className="text-xs text-slate-500">Reports against them</p>
                 </div>
-                <div className="text-center py-2 bg-white/[0.03] rounded-lg">
-                  <p className="text-sm text-slate-300">
+                <div className="text-center py-2 bg-white rounded-lg">
+                  <p className="text-sm text-slate-700">
                     {selected.requester?.created_at ? new Date(selected.requester.created_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '—'}
                   </p>
                   <p className="text-xs text-slate-500">Member since</p>
@@ -238,11 +238,11 @@ export default function AdminClubRequestsPage() {
               {selected.status === 'pending' ? (
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs text-slate-400">Review note (shown to the requester)</label>
-                    <span className={`text-xs ${noteOverLimit ? 'text-red-400' : 'text-slate-600'}`}>{noteWords}/100 words</span>
+                    <label className="block text-xs text-slate-600">Review note (shown to the requester)</label>
+                    <span className={`text-xs ${noteOverLimit ? 'text-red-600' : 'text-slate-400'}`}>{noteWords}/100 words</span>
                   </div>
                   <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
-                    className={`w-full bg-white/5 border rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-3 ${noteOverLimit ? 'border-red-500/50' : 'border-white/10'}`}
+                    className={`w-full bg-slate-100 border rounded-lg px-3 py-2 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-3 ${noteOverLimit ? 'border-red-500/50' : 'border-slate-200'}`}
                     placeholder="Optional note — required if rejecting, so they know what to fix" />
                   <div className="flex gap-2">
                     <button onClick={handleApprove} disabled={acting || noteOverLimit}
@@ -250,14 +250,14 @@ export default function AdminClubRequestsPage() {
                       {acting ? 'Working...' : 'Approve'}
                     </button>
                     <button onClick={handleReject} disabled={acting || noteOverLimit}
-                      className="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-semibold py-2 rounded-lg text-sm transition-colors">
+                      className="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-600 font-semibold py-2 rounded-lg text-sm transition-colors">
                       {acting ? 'Working...' : 'Reject'}
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="text-sm text-slate-400 bg-white/[0.02] rounded-lg p-3">
-                  <p className="font-medium text-slate-300 mb-1">{selected.status === 'approved' ? 'Approved' : 'Rejected'}</p>
+                <div className="text-sm text-slate-600 bg-white rounded-lg p-3">
+                  <p className="font-medium text-slate-700 mb-1">{selected.status === 'approved' ? 'Approved' : 'Rejected'}</p>
                   {selected.review_note && <p>Note: {selected.review_note}</p>}
                 </div>
               )}

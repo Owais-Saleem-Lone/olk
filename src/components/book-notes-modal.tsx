@@ -102,18 +102,18 @@ export default function BookNotesModal({
       onClick={onClose}
     >
       <div
-        className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-lg max-h-[80vh] flex flex-col"
+        className="bg-white border border-slate-200 rounded-2xl p-6 w-full max-w-lg max-h-[80vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-start justify-between mb-5 flex-shrink-0">
           <div>
             <h3 className="text-lg font-semibold">Community Notes</h3>
-            <p className="text-sm text-slate-400 mt-0.5 line-clamp-1">{bookTitle}</p>
+            <p className="text-sm text-slate-600 mt-0.5 line-clamp-1">{bookTitle}</p>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-500 hover:text-white transition-colors ml-4 mt-0.5 flex-shrink-0 text-lg leading-none"
+            className="text-slate-500 hover:text-slate-900 transition-colors ml-4 mt-0.5 flex-shrink-0 text-lg leading-none"
           >
             ✕
           </button>
@@ -135,10 +135,10 @@ export default function BookNotesModal({
               className={`rounded-xl p-4 border ${
                 n.user_id === currentUserId
                   ? 'bg-brand-teal/[0.05] border-brand-teal/20'
-                  : 'bg-white/[0.03] border-white/[0.06]'
+                  : 'bg-white border-black/5'
               }`}
             >
-              <p className="text-sm text-slate-300 leading-relaxed">{n.note}</p>
+              <p className="text-sm text-slate-700 leading-relaxed">{n.note}</p>
               <div className="flex items-center justify-between mt-2.5">
                 <span className="text-xs text-slate-500">
                   {n.profiles?.display_name || 'Reader'}
@@ -146,7 +146,7 @@ export default function BookNotesModal({
                     <span className="ml-1.5 text-brand-teal font-medium">(you)</span>
                   )}
                 </span>
-                <span className="text-xs text-slate-600">
+                <span className="text-xs text-slate-400">
                   {new Date(n.created_at).toLocaleDateString([], {
                     day: 'numeric', month: 'short', year: 'numeric',
                   })}
@@ -157,12 +157,12 @@ export default function BookNotesModal({
         </div>
 
         {/* Add / edit own note */}
-        <div className="border-t border-white/[0.06] pt-4 flex-shrink-0">
+        <div className="border-t border-black/5 pt-4 flex-shrink-0">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-medium text-slate-400">
+            <label className="text-xs font-medium text-slate-600">
               {hasMyNote ? 'Edit your note' : 'Add your note'}
             </label>
-            <span className={`text-xs ${overLimit ? 'text-red-400' : 'text-slate-600'}`}>
+            <span className={`text-xs ${overLimit ? 'text-red-600' : 'text-slate-400'}`}>
               {words}/100 words
             </span>
           </div>
@@ -171,15 +171,15 @@ export default function BookNotesModal({
             onChange={e => { setMyNote(e.target.value); setMessage('') }}
             placeholder="Share your personal experience with this book..."
             rows={3}
-            className={`w-full bg-white/5 border rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-3 ${
-              overLimit ? 'border-red-500/50' : 'border-white/10'
+            className={`w-full bg-slate-100 border rounded-lg px-4 py-2.5 text-slate-900 text-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-3 ${
+              overLimit ? 'border-red-500/50' : 'border-slate-200'
             }`}
           />
           {message && (
             <p className={`text-xs mb-3 ${
               message.startsWith('Error') || message.includes('already has') || message.includes('Please')
-                ? 'text-red-400'
-                : 'text-brand-teal-light'
+                ? 'text-red-600'
+                : 'text-brand-teal-dark'
             }`}>
               {message}
             </p>
@@ -195,7 +195,7 @@ export default function BookNotesModal({
             {hasMyNote && (
               <button
                 onClick={handleDelete}
-                className="px-4 py-2.5 text-sm text-red-400/60 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                className="px-4 py-2.5 text-sm text-red-600/60 hover:text-red-600 hover:bg-red-500/10 rounded-lg transition-colors"
               >
                 Delete
               </button>

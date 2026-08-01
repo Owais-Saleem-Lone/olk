@@ -14,6 +14,7 @@
     "db:reset": "npx supabase db reset",
     "db:reset-full": "npx supabase db reset && npm run db:pull-data",
     "db:push": "npx supabase db push",
+    "db:seed-demo": "node scripts/seed-demo-data.mjs",
     "db:pull-data": "bash scripts/pull-remote-data.sh"
   },
   "dependencies": {

@@ -42,18 +42,18 @@ export default function RequestsPage() {
     router.push(`/messages/${requestId}`)
   }
 
-  if (loading) return <p className="text-slate-400">Loading requests...</p>
+  if (loading) return <p className="text-slate-600">Loading requests...</p>
 
   return (
     <div>
       <h1 className="text-3xl font-bold mb-2">Book Requests</h1>
-      <p className="text-slate-400 mb-8">Manage incoming and outgoing book requests</p>
+      <p className="text-slate-600 mb-8">Manage incoming and outgoing book requests</p>
 
       {/* Incoming Requests */}
       <div className="mb-12">
         <h2 className="text-xl font-semibold mb-4">📩 Incoming Requests</h2>
         {incomingRequests.length === 0 ? (
-          <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 text-center text-slate-500">
+          <div className="bg-white border border-black/5 rounded-2xl p-6 text-center text-slate-500">
             No one has requested your books yet.
           </div>
         ) : (
@@ -105,7 +105,7 @@ export default function RequestsPage() {
       <div>
         <h2 className="text-xl font-semibold mb-4">📤 Outgoing Requests</h2>
         {outgoingRequests.length === 0 ? (
-          <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 text-center text-slate-500">
+          <div className="bg-white border border-black/5 rounded-2xl p-6 text-center text-slate-500">
             You haven&apos;t requested any books yet.
           </div>
         ) : (

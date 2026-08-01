@@ -53,10 +53,10 @@ export default function RatingModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4" onClick={onClose}>
-      <div className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
         <h3 className="text-lg font-semibold mb-1">Rate your experience</h3>
-        <p className="text-sm text-slate-400 mb-5">
-          How was your exchange with <span className="text-white">{ratedUserName}</span> for <span className="text-brand-teal-light">&quot;{bookTitle}&quot;</span>?
+        <p className="text-sm text-slate-600 mb-5">
+          How was your exchange with <span className="text-slate-900">{ratedUserName}</span> for <span className="text-brand-teal-dark">&quot;{bookTitle}&quot;</span>?
         </p>
 
         {/* Stars */}
@@ -75,7 +75,7 @@ export default function RatingModal({
           ))}
         </div>
         {displayScore > 0 && (
-          <p className="text-center text-sm text-slate-400 mb-4">
+          <p className="text-center text-sm text-slate-600 mb-4">
             {['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent'][displayScore]}
           </p>
         )}
@@ -86,11 +86,11 @@ export default function RatingModal({
           onChange={e => setComment(e.target.value)}
           placeholder="Optional comment..."
           rows={2}
-          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-4"
+          className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 text-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-4"
         />
 
         {error && (
-          <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4">{error}</p>
+          <p className="text-sm text-red-600 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-4">{error}</p>
         )}
 
         <div className="flex gap-3">
@@ -103,7 +103,7 @@ export default function RatingModal({
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+            className="px-4 py-2.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
           >
             Skip
           </button>

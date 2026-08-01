@@ -162,7 +162,7 @@ export default function ChatPage() {
     setSending(false)
   }
 
-  if (loading) return <div className="flex items-center justify-center h-64"><p className="text-slate-400">Loading chat...</p></div>
+  if (loading) return <div className="flex items-center justify-center h-64"><p className="text-slate-600">Loading chat...</p></div>
 
   // Build a list with date separators injected
   let lastDateLabel = ''
@@ -179,16 +179,16 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col h-[calc(100dvh-7rem)] md:h-[calc(100vh-4rem)]">
       {/* Header */}
-      <div className="flex items-center gap-3 pb-4 mb-4 border-b border-white/5">
-        <Link href="/messages" className="text-slate-400 hover:text-white transition-colors text-xl leading-none">
+      <div className="flex items-center gap-3 pb-4 mb-4 border-b border-black/5">
+        <Link href="/messages" className="text-slate-600 hover:text-slate-900 transition-colors text-xl leading-none">
           ←
         </Link>
-        <Link href={otherUserId ? `/user/${otherUserId}` : '#'} className="w-10 h-10 rounded-full bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-brand-teal-light font-bold flex-shrink-0 hover:bg-brand-teal/20 transition-colors">
+        <Link href={otherUserId ? `/user/${otherUserId}` : '#'} className="w-10 h-10 rounded-full bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-brand-teal-dark font-bold flex-shrink-0 hover:bg-brand-teal/20 transition-colors">
           {(otherUser?.display_name || '?')[0].toUpperCase()}
         </Link>
         <div>
           <h1 className="text-base font-semibold leading-tight">
-            <Link href={otherUserId ? `/user/${otherUserId}` : '#'} className="hover:text-brand-teal-light transition-colors">
+            <Link href={otherUserId ? `/user/${otherUserId}` : '#'} className="hover:text-brand-teal-dark transition-colors">
               {otherUser?.display_name || 'Anonymous'}
             </Link>
           </h1>
@@ -212,9 +212,9 @@ export default function ChatPage() {
           if (item.type === 'separator') {
             return (
               <div key={`sep-${i}`} className="flex items-center gap-3 py-4">
-                <div className="flex-1 h-px bg-white/[0.05]" />
-                <span className="text-xs text-slate-600 px-2">{item.label}</span>
-                <div className="flex-1 h-px bg-white/[0.05]" />
+                <div className="flex-1 h-px bg-slate-50" />
+                <span className="text-xs text-slate-400 px-2">{item.label}</span>
+                <div className="flex-1 h-px bg-slate-50" />
               </div>
             )
           }
@@ -226,10 +226,10 @@ export default function ChatPage() {
               <div className={`max-w-xs lg:max-w-md rounded-2xl px-4 py-2.5 ${
                 isMe
                   ? 'bg-brand-teal text-white rounded-br-sm'
-                  : 'bg-white/[0.06] text-white rounded-bl-sm'
+                  : 'bg-slate-50 text-slate-900 rounded-bl-sm'
               }`}>
                 <p className="text-sm leading-relaxed">{msg.content}</p>
-                <p className={`text-xs mt-1 ${isMe ? 'text-teal-100/60' : 'text-slate-600'}`}>
+                <p className={`text-xs mt-1 ${isMe ? 'text-teal-100/60' : 'text-slate-400'}`}>
                   {formatTime(msg.created_at)}
                 </p>
               </div>
@@ -240,13 +240,13 @@ export default function ChatPage() {
       </div>
 
       {/* Input */}
-      <form onSubmit={(e) => { e.preventDefault(); handleSend() }} className="flex gap-3 pt-4 border-t border-white/5">
+      <form onSubmit={(e) => { e.preventDefault(); handleSend() }} className="flex gap-3 pt-4 border-t border-black/5">
         <input
           type="text"
           value={content}
           onChange={e => setContent(e.target.value)}
           placeholder="Type a message..."
-          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
+          className="flex-1 bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal text-sm"
         />
         <button
           type="submit"

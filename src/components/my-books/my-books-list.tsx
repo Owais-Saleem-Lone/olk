@@ -121,7 +121,7 @@ export default function MyBooksList({ books, onChange }: { books: Book[]; onChan
       <h2 className="text-xl font-semibold mb-6">Your Listed Books</h2>
 
       {books.length === 0 && (
-        <div className="text-center py-10 bg-white/[0.02] border border-white/[0.06] rounded-2xl">
+        <div className="text-center py-10 bg-white border border-black/5 rounded-2xl">
           <p className="text-slate-500">You haven&apos;t added any books yet.</p>
         </div>
       )}
@@ -130,26 +130,26 @@ export default function MyBooksList({ books, onChange }: { books: Book[]; onChan
         {books.map((book) => (
           <div key={book.id}>
             {/* Book row */}
-            <div className={`bg-white/[0.03] border rounded-xl p-4 flex gap-4 items-center transition-colors ${
-              editingBookId === book.id ? 'border-brand-teal/30' : 'border-white/[0.06]'
+            <div className={`bg-white border rounded-xl p-4 flex gap-4 items-center transition-colors ${
+              editingBookId === book.id ? 'border-brand-teal/30' : 'border-black/5'
             }`}>
-              <div className="relative w-12 h-16 rounded-lg overflow-hidden bg-brand-slate-light flex-shrink-0 border border-white/5">
+              <div className="relative w-12 h-16 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 border border-black/5">
                 {book.cover_url ? (
                   <Image src={book.cover_url} alt={book.title} fill unoptimized sizes="48px" className="object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-600 text-lg font-bold">
+                  <div className="w-full h-full flex items-center justify-center text-slate-400 text-lg font-bold">
                     {book.title[0]?.toUpperCase()}
                   </div>
                 )}
               </div>
 
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-white truncate">{book.title}</h3>
-                {book.author && <p className="text-sm text-slate-400 truncate">by {book.author}</p>}
+                <h3 className="font-semibold text-slate-900 truncate">{book.title}</h3>
+                {book.author && <p className="text-sm text-slate-600 truncate">by {book.author}</p>}
                 <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                  {book.genre && <span className="text-xs text-brand-teal-light">{book.genre}</span>}
+                  {book.genre && <span className="text-xs text-brand-teal-dark">{book.genre}</span>}
                   {book.acquired_via_donation && (
-                    <span className="text-xs text-amber-400/80">· 🔄 In Circulation</span>
+                    <span className="text-xs text-amber-600/80">· 🔄 In Circulation</span>
                   )}
                   {book.read_count > 0 && (
                     <span className="text-xs text-slate-500">· Read {book.read_count}×</span>
@@ -160,7 +160,7 @@ export default function MyBooksList({ books, onChange }: { books: Book[]; onChan
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
                   book.status === 'available'
-                    ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                    ? 'bg-green-500/10 text-green-600 border border-green-500/20'
                     : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
                 }`}>
                   {book.status}
@@ -168,31 +168,31 @@ export default function MyBooksList({ books, onChange }: { books: Book[]; onChan
 
                 {editingBookId === book.id ? (
                   <button onClick={cancelEdit}
-                    className="text-xs text-slate-500 hover:text-white px-2 py-1 rounded transition-colors">
+                    className="text-xs text-slate-500 hover:text-slate-900 px-2 py-1 rounded transition-colors">
                     Cancel
                   </button>
                 ) : (
                   <>
                     <button onClick={() => startEdit(book)}
-                      className="text-xs text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors">
+                      className="text-xs text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg transition-colors">
                       Edit
                     </button>
                     {!book.acquired_via_donation && (
                       confirmDeleteId === book.id ? (
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-slate-400">Sure?</span>
+                          <span className="text-xs text-slate-600">Sure?</span>
                           <button onClick={() => handleDelete(book.id)}
-                            className="text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 px-2.5 py-1.5 rounded-lg transition-colors">
+                            className="text-xs bg-red-500/20 text-red-600 hover:bg-red-500/30 px-2.5 py-1.5 rounded-lg transition-colors">
                             Yes, delete
                           </button>
                           <button onClick={() => setConfirmDeleteId(null)}
-                            className="text-xs text-slate-500 hover:text-white px-2 py-1.5 rounded-lg transition-colors">
+                            className="text-xs text-slate-500 hover:text-slate-900 px-2 py-1.5 rounded-lg transition-colors">
                             No
                           </button>
                         </div>
                       ) : (
                         <button onClick={() => setConfirmDeleteId(book.id)}
-                          className="text-xs text-red-400/70 hover:text-red-400 bg-red-500/5 hover:bg-red-500/10 px-3 py-1.5 rounded-lg transition-colors">
+                          className="text-xs text-red-600/70 hover:text-red-600 bg-red-500/5 hover:bg-red-500/10 px-3 py-1.5 rounded-lg transition-colors">
                           Delete
                         </button>
                       )
@@ -204,53 +204,53 @@ export default function MyBooksList({ books, onChange }: { books: Book[]; onChan
 
             {/* Inline edit panel */}
             {editingBookId === book.id && (
-              <div className="mt-1 bg-white/[0.02] border border-brand-teal/20 border-t-0 rounded-b-xl px-5 pb-5 pt-4 space-y-4">
+              <div className="mt-1 bg-white border border-brand-teal/20 border-t-0 rounded-b-xl px-5 pb-5 pt-4 space-y-4">
                 {book.acquired_via_donation && (
-                  <p className="text-xs text-amber-400/80 bg-amber-500/5 border border-amber-500/15 rounded-lg px-3 py-2">
+                  <p className="text-xs text-amber-600/80 bg-amber-500/5 border border-amber-500/15 rounded-lg px-3 py-2">
                     🔄 This book is in permanent circulation — it can only be donated forward, not deleted.
                   </p>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Title</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Title</label>
                     <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+                      className="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Author</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Author</label>
                     <input type="text" value={editAuthor} onChange={(e) => setEditAuthor(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
+                      className="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Status</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
                     <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-teal">
-                      <option value="available" className="bg-brand-slate">Available</option>
-                      <option value="unavailable" className="bg-brand-slate">Unavailable</option>
-                      <option value="given" className="bg-brand-slate">Given Away</option>
+                      className="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-teal">
+                      <option value="available" className="bg-white">Available</option>
+                      <option value="unavailable" className="bg-white">Unavailable</option>
+                      <option value="given" className="bg-white">Given Away</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Category</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Category</label>
                     <GenreSelect
                       value={editGenre}
                       onChange={setEditGenre}
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-teal"
+                      className="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-teal"
                     />
                   </div>
                 </div>
 
                 {book.listing_type === 'lend' && (
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-2">Lending Period</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-2">Lending Period</label>
                     <div className="flex gap-5">
                       {([1, 2, 3] as const).map(m => (
                         <label key={m} className="flex items-center gap-2 cursor-pointer">
                           <input type="radio" value={m} checked={editLendingDuration === m} onChange={() => setEditLendingDuration(m)} className="accent-brand-teal" />
-                          <span className="text-white text-sm">{m} {m === 1 ? 'month' : 'months'}</span>
+                          <span className="text-slate-900 text-sm">{m} {m === 1 ? 'month' : 'months'}</span>
                         </label>
                       ))}
                     </div>
@@ -258,7 +258,7 @@ export default function MyBooksList({ books, onChange }: { books: Book[]; onChan
                 )}
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-2">Cover Photo</label>
+                  <label className="block text-xs font-medium text-slate-600 mb-2">Cover Photo</label>
                   <CoverInput
                     preview={editCoverPreview}
                     onFileChange={makeFileHandler(setEditCoverFile, setEditCoverPreview, setEditCoverUrl, setEditMessage)}
@@ -268,7 +268,7 @@ export default function MyBooksList({ books, onChange }: { books: Book[]; onChan
                   />
                 </div>
 
-                {editMessage && <p className="text-xs text-red-400">{editMessage}</p>}
+                {editMessage && <p className="text-xs text-red-600">{editMessage}</p>}
 
                 <div className="flex gap-3 pt-1">
                   <button onClick={() => handleSaveEdit(book.id)} disabled={editLoading}
@@ -276,7 +276,7 @@ export default function MyBooksList({ books, onChange }: { books: Book[]; onChan
                     {editLoading ? 'Saving...' : 'Save Changes'}
                   </button>
                   <button onClick={cancelEdit}
-                    className="text-sm text-slate-400 hover:text-white px-4 py-2 rounded-lg hover:bg-white/5 transition-colors">
+                    className="text-sm text-slate-600 hover:text-slate-900 px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors">
                     Cancel
                   </button>
                 </div>

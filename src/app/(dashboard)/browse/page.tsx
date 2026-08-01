@@ -277,7 +277,7 @@ export default function BrowsePage() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-2">Browse Books</h1>
-      <p className="text-slate-400 mb-8">Find your next read from someone nearby</p>
+      <p className="text-slate-600 mb-8">Find your next read from someone nearby</p>
 
       <SearchFilters
         searchQuery={searchQuery}
@@ -299,7 +299,7 @@ export default function BrowsePage() {
 
       {/* Loading State */}
       {loading && (
-        <p className="text-slate-400 text-center py-20">Loading books...</p>
+        <p className="text-slate-600 text-center py-20">Loading books...</p>
       )}
 
       {/* Empty State */}
@@ -307,7 +307,7 @@ export default function BrowsePage() {
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="text-6xl mb-4">📖</div>
           <h2 className="text-xl font-semibold mb-2">No books found</h2>
-          <p className="text-slate-400 max-w-md">
+          <p className="text-slate-600 max-w-md">
             {(searchQuery || filterGenre || filterType || filterCondition || filterArea)
               ? 'No books match your filters. Try adjusting your search!'
               : 'Be the first to add a book to the community!'}

@@ -136,14 +136,14 @@ export default function EventDetailPage() {
     router.push(`/clubs/${event?.club_id}`)
   }
 
-  if (loading) return <p className="text-slate-400 text-center py-20">Loading event...</p>
+  if (loading) return <p className="text-slate-600 text-center py-20">Loading event...</p>
 
   if (notFound || !event) {
     return (
       <div className="text-center py-20">
         <div className="text-5xl mb-4">📅</div>
         <h2 className="text-xl font-semibold mb-2">Event not found</h2>
-        <Link href="/events" className="text-brand-teal-light hover:text-teal-300 text-sm">← Back to Events</Link>
+        <Link href="/events" className="text-brand-teal-dark hover:text-teal-700 text-sm">← Back to Events</Link>
       </div>
     )
   }
@@ -157,7 +157,7 @@ export default function EventDetailPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden mb-8">
+      <div className="bg-white border border-black/5 rounded-2xl overflow-hidden mb-8">
         {event.cover_url && (
           <div className="relative w-full h-48 overflow-hidden">
             <Image src={event.cover_url} alt={event.title} fill unoptimized sizes="100vw" className="object-cover" referrerPolicy="no-referrer" />
@@ -166,32 +166,32 @@ export default function EventDetailPage() {
         <div className="p-6">
           <div className="flex items-start justify-between gap-4 mb-2">
             <div>
-              <p className="text-sm text-brand-teal-light mb-1">
-                <Link href={`/clubs/${event.club_id}`} className="hover:text-teal-300">{event.clubs?.name}</Link>
+              <p className="text-sm text-brand-teal-dark mb-1">
+                <Link href={`/clubs/${event.club_id}`} className="hover:text-teal-700">{event.clubs?.name}</Link>
               </p>
               <h1 className="text-2xl font-bold">{event.title}</h1>
             </div>
             {event.visibility === 'members_only' && (
-              <span className="flex-shrink-0 text-xs font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full">Members only</span>
+              <span className="flex-shrink-0 text-xs font-medium text-amber-600 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-full">Members only</span>
             )}
           </div>
 
-          {event.description && <p className="text-slate-400 text-sm mb-4 whitespace-pre-wrap">{event.description}</p>}
+          {event.description && <p className="text-slate-600 text-sm mb-4 whitespace-pre-wrap">{event.description}</p>}
 
-          <div className="space-y-1.5 text-sm text-slate-300 mb-5">
+          <div className="space-y-1.5 text-sm text-slate-700 mb-5">
             <p>🗓️ {startsLabel}{endsLabel ? ` – ${endsLabel}` : ''}</p>
             <p>{event.is_online ? '💻 Online event' : `📍 ${event.location_name || 'Location TBA'}`}</p>
-            <p>👤 Organized by <Link href={`/user/${event.creator_id}`} className="text-brand-teal-light hover:text-teal-300">{creatorName}</Link></p>
+            <p>👤 Organized by <Link href={`/user/${event.creator_id}`} className="text-brand-teal-dark hover:text-teal-700">{creatorName}</Link></p>
             {event.capacity && <p>🎟️ {event.attendee_count} / {event.capacity} spots filled</p>}
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             {!currentUserId ? (
-              <Link href="/login" className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors">
+              <Link href="/login" className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-900 font-medium px-5 py-2 rounded-lg text-sm transition-colors">
                 Login to RSVP
               </Link>
             ) : !canRsvp ? (
-              <Link href={`/clubs/${event.club_id}`} className="bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors">
+              <Link href={`/clubs/${event.club_id}`} className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-900 font-medium px-5 py-2 rounded-lg text-sm transition-colors">
                 Join the club to RSVP
               </Link>
             ) : (
@@ -200,7 +200,7 @@ export default function EventDetailPage() {
                 disabled={rsvping || isFull}
                 className={`font-semibold px-5 py-2 rounded-lg text-sm transition-colors disabled:opacity-40 ${
                   isGoing
-                    ? 'bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300'
+                    ? 'bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700'
                     : 'bg-brand-teal hover:bg-brand-teal-light text-white'
                 }`}
               >
@@ -209,17 +209,17 @@ export default function EventDetailPage() {
             )}
 
             {event.is_online && event.meeting_url && (isGoing || isCreator) && (
-              <a href={event.meeting_url} target="_blank" rel="noopener noreferrer" className="text-sm text-brand-teal-light hover:text-teal-300">
+              <a href={event.meeting_url} target="_blank" rel="noopener noreferrer" className="text-sm text-brand-teal-dark hover:text-teal-700">
                 Join meeting link →
               </a>
             )}
 
-            <a href={`/api/events/${eventId}/ics`} className="text-sm text-slate-400 hover:text-white transition-colors">
+            <a href={`/api/events/${eventId}/ics`} className="text-sm text-slate-600 hover:text-slate-900 transition-colors">
               📆 Add to calendar
             </a>
 
             {isCreator && (
-              <button onClick={() => setConfirmingCancel(true)} className="text-sm text-red-400/70 hover:text-red-400 transition-colors ml-auto">
+              <button onClick={() => setConfirmingCancel(true)} className="text-sm text-red-600/70 hover:text-red-600 transition-colors ml-auto">
                 Cancel Event
               </button>
             )}
@@ -242,12 +242,12 @@ export default function EventDetailPage() {
                 <Link
                   key={a.user_id}
                   href={`/user/${a.user_id}`}
-                  className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 hover:border-brand-teal/20 transition-colors"
+                  className="flex items-center gap-3 bg-white border border-black/5 rounded-lg p-3 hover:border-brand-teal/20 transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-brand-teal-light font-bold text-sm flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-brand-teal-dark font-bold text-sm flex-shrink-0">
                     {(a.profiles?.display_name || '?')[0].toUpperCase()}
                   </div>
-                  <p className="text-sm text-white font-medium">{a.profiles?.display_name || 'Anonymous'}</p>
+                  <p className="text-sm text-slate-900 font-medium">{a.profiles?.display_name || 'Anonymous'}</p>
                 </Link>
               ))}
             </div>
@@ -256,7 +256,7 @@ export default function EventDetailPage() {
       </div>
 
       <div className="mt-8">
-        <Link href="/events" className="text-sm text-slate-400 hover:text-brand-teal-light transition-colors">← Back to Events</Link>
+        <Link href="/events" className="text-sm text-slate-600 hover:text-brand-teal-dark transition-colors">← Back to Events</Link>
       </div>
 
       {confirmingCancel && (

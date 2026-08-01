@@ -72,21 +72,21 @@ export default function AdminSettingsPage() {
   const otherSettings = settings.filter(s => !isFeatureFlag(s.key))
 
   const actionColor: Record<string, string> = {
-    ban_user: 'text-red-400',
-    unban_user: 'text-green-400',
+    ban_user: 'text-red-600',
+    unban_user: 'text-green-600',
     warn_user: 'text-orange-400',
-    hide_book: 'text-red-400',
-    unhide_book: 'text-green-400',
-    set_admin_role: 'text-amber-400',
-    update_setting: 'text-purple-400',
-    broadcast_notification: 'text-blue-400',
+    hide_book: 'text-red-600',
+    unhide_book: 'text-green-600',
+    set_admin_role: 'text-amber-600',
+    update_setting: 'text-purple-600',
+    broadcast_notification: 'text-blue-600',
   }
 
   return (
     <div>
       {msg && (
-        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-light text-sm px-4 py-2 rounded-lg flex justify-between">
-          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-light/50 hover:text-brand-teal-light">×</button>
+        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-dark text-sm px-4 py-2 rounded-lg flex justify-between">
+          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-dark/50 hover:text-brand-teal-dark">×</button>
         </div>
       )}
 
@@ -95,7 +95,7 @@ export default function AdminSettingsPage() {
           { key: 'settings' as const, label: 'Platform Settings' },
           { key: 'audit' as const, label: 'Audit Log' },
         ].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${tab === t.key ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5'}`}>
+          <button key={t.key} onClick={() => setTab(t.key)} className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${tab === t.key ? 'bg-slate-50 text-slate-900' : 'text-slate-600 hover:bg-slate-100'}`}>
             {t.label}
           </button>
         ))}
@@ -106,19 +106,19 @@ export default function AdminSettingsPage() {
         <div className="space-y-6">
           {/* Feature Flags */}
           <div>
-            <h3 className="text-sm font-medium text-slate-300 mb-3">Feature Flags</h3>
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl divide-y divide-white/[0.04]">
+            <h3 className="text-sm font-medium text-slate-700 mb-3">Feature Flags</h3>
+            <div className="bg-white border border-black/5 rounded-2xl divide-y divide-white/[0.04]">
               {featureSettings.map(s => (
                 <div key={s.key} className="flex items-center justify-between p-4">
                   <div>
-                    <p className="text-sm text-white">{s.key.replace('feature_', '').replace('_', ' ').replace(/^\w/, c => c.toUpperCase())}</p>
+                    <p className="text-sm text-slate-900">{s.key.replace('feature_', '').replace('_', ' ').replace(/^\w/, c => c.toUpperCase())}</p>
                     <p className="text-xs text-slate-500">{s.description}</p>
                   </div>
                   <button
                     onClick={() => toggleFeature(s.key, s.value)}
                     disabled={acting}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      s.value === 'true' ? 'bg-brand-teal' : 'bg-white/10'
+                      s.value === 'true' ? 'bg-brand-teal' : 'bg-slate-100'
                     }`}
                   >
                     <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
@@ -132,12 +132,12 @@ export default function AdminSettingsPage() {
 
           {/* Rate Limits & Config */}
           <div>
-            <h3 className="text-sm font-medium text-slate-300 mb-3">Configuration</h3>
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl divide-y divide-white/[0.04]">
+            <h3 className="text-sm font-medium text-slate-700 mb-3">Configuration</h3>
+            <div className="bg-white border border-black/5 rounded-2xl divide-y divide-white/[0.04]">
               {otherSettings.map(s => (
                 <div key={s.key} className="flex items-center justify-between p-4">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white">{s.key.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase())}</p>
+                    <p className="text-sm text-slate-900">{s.key.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase())}</p>
                     <p className="text-xs text-slate-500">{s.description}</p>
                   </div>
                   {editingSetting === s.key ? (
@@ -146,18 +146,18 @@ export default function AdminSettingsPage() {
                         type="text"
                         value={editValue}
                         onChange={e => setEditValue(e.target.value)}
-                        className="w-24 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
+                        className="w-24 bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
                         autoFocus
                       />
                       <button onClick={() => handleSaveSetting(s.key)} disabled={acting} className="text-xs bg-brand-teal text-white px-3 py-1.5 rounded-lg hover:bg-brand-teal-light disabled:opacity-50">Save</button>
-                      <button onClick={() => setEditingSetting(null)} className="text-xs text-slate-400 px-2 py-1.5">Cancel</button>
+                      <button onClick={() => setEditingSetting(null)} className="text-xs text-slate-600 px-2 py-1.5">Cancel</button>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 ml-4">
-                      <span className="text-sm text-brand-teal-light font-mono">{s.value}</span>
+                      <span className="text-sm text-brand-teal-dark font-mono">{s.value}</span>
                       <button
                         onClick={() => { setEditingSetting(s.key); setEditValue(s.value) }}
-                        className="text-xs text-slate-500 hover:text-white px-2 py-1 rounded hover:bg-white/5 transition-colors"
+                        className="text-xs text-slate-500 hover:text-slate-900 px-2 py-1 rounded hover:bg-slate-100 transition-colors"
                       >
                         Edit
                       </button>
@@ -177,7 +177,7 @@ export default function AdminSettingsPage() {
             <select
               value={auditFilter}
               onChange={e => { setAuditFilter(e.target.value); setAuditPage(0) }}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-teal"
+              className="bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-teal"
             >
               <option value="">All Actions</option>
               {['ban_user', 'unban_user', 'warn_user', 'hide_book', 'unhide_book', 'edit_book', 'cancel_request', 'force_return', 'update_report', 'set_admin_role', 'update_setting', 'broadcast_notification', 'create_announcement', 'deactivate_club'].map(a => (
@@ -186,14 +186,14 @@ export default function AdminSettingsPage() {
             </select>
           </div>
 
-          <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl overflow-hidden">
+          <div className="bg-white border border-black/5 rounded-xl overflow-hidden">
             {audit.length === 0 ? (
               <p className="text-slate-500 py-8 text-center">No audit entries</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-slate-500 border-b border-white/5">
+                    <tr className="text-left text-slate-500 border-b border-black/5">
                       <th className="p-3 font-medium">Time</th>
                       <th className="p-3 font-medium">Admin</th>
                       <th className="p-3 font-medium">Action</th>
@@ -203,19 +203,19 @@ export default function AdminSettingsPage() {
                   </thead>
                   <tbody>
                     {audit.map(a => (
-                      <tr key={a.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
+                      <tr key={a.id} className="border-b border-black/5 hover:bg-white">
                         <td className="p-3 text-slate-500 text-xs whitespace-nowrap">{new Date(a.created_at).toLocaleString()}</td>
-                        <td className="p-3 text-slate-300">{(a.admin as { display_name: string | null } | null)?.display_name || 'Unknown'}</td>
+                        <td className="p-3 text-slate-700">{(a.admin as { display_name: string | null } | null)?.display_name || 'Unknown'}</td>
                         <td className="p-3">
-                          <span className={`font-medium ${actionColor[a.action] || 'text-slate-300'}`}>
+                          <span className={`font-medium ${actionColor[a.action] || 'text-slate-700'}`}>
                             {a.action.replace(/_/g, ' ')}
                           </span>
                         </td>
-                        <td className="p-3 text-slate-400">
+                        <td className="p-3 text-slate-600">
                           <span className="text-xs">{a.target_type}</span>
-                          {a.target_id && <span className="text-xs text-slate-600 font-mono ml-1">{a.target_id.slice(0, 8)}</span>}
+                          {a.target_id && <span className="text-xs text-slate-400 font-mono ml-1">{a.target_id.slice(0, 8)}</span>}
                         </td>
-                        <td className="p-3 text-xs text-slate-600 hidden lg:table-cell max-w-48 truncate">
+                        <td className="p-3 text-xs text-slate-400 hidden lg:table-cell max-w-48 truncate">
                           {Object.keys(a.details).length > 0 ? JSON.stringify(a.details) : '—'}
                         </td>
                       </tr>
@@ -227,9 +227,9 @@ export default function AdminSettingsPage() {
           </div>
 
           <div className="flex gap-2 mt-4 justify-center">
-            <button onClick={() => setAuditPage(Math.max(0, auditPage - 1))} disabled={auditPage === 0} className="text-sm text-slate-400 hover:text-white disabled:opacity-30 px-3 py-1.5 rounded-lg hover:bg-white/5">← Prev</button>
+            <button onClick={() => setAuditPage(Math.max(0, auditPage - 1))} disabled={auditPage === 0} className="text-sm text-slate-600 hover:text-slate-900 disabled:opacity-30 px-3 py-1.5 rounded-lg hover:bg-slate-100">← Prev</button>
             <span className="text-sm text-slate-500 py-1.5">Page {auditPage + 1}</span>
-            <button onClick={() => setAuditPage(auditPage + 1)} disabled={audit.length < PAGE_SIZE} className="text-sm text-slate-400 hover:text-white disabled:opacity-30 px-3 py-1.5 rounded-lg hover:bg-white/5">Next →</button>
+            <button onClick={() => setAuditPage(auditPage + 1)} disabled={audit.length < PAGE_SIZE} className="text-sm text-slate-600 hover:text-slate-900 disabled:opacity-30 px-3 py-1.5 rounded-lg hover:bg-slate-100">Next →</button>
           </div>
         </div>
       )}

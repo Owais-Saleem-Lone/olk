@@ -115,27 +115,27 @@ export default function ProfilePage() {
     setSaving(false)
   }
 
-  if (loading) return <p className="text-slate-400">Loading profile...</p>
+  if (loading) return <p className="text-slate-600">Loading profile...</p>
 
   return (
     <div>
       <h1 className="text-3xl font-bold mb-2">Your Profile</h1>
-      <p className="text-slate-400 mb-8">Tell the community who you are and where you are located</p>
+      <p className="text-slate-600 mb-8">Tell the community who you are and where you are located</p>
 
       {myClubs.length > 0 && (
         <div className="max-w-lg mb-6">
-          <h2 className="text-sm font-semibold text-slate-300 mb-2">My Club{myClubs.length > 1 ? 's' : ''}</h2>
+          <h2 className="text-sm font-semibold text-slate-700 mb-2">My Club{myClubs.length > 1 ? 's' : ''}</h2>
           <div className="space-y-2">
             {myClubs.map(club => (
               <Link
                 key={club.id}
                 href={`/clubs/${club.id}`}
-                className="flex items-center justify-between bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 hover:border-brand-teal/20 transition-colors"
+                className="flex items-center justify-between bg-white border border-black/5 rounded-xl p-4 hover:border-brand-teal/20 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-lg flex-shrink-0">🏘️</div>
                   <div>
-                    <p className="text-sm font-medium text-white">{club.name}</p>
+                    <p className="text-sm font-medium text-slate-900">{club.name}</p>
                     <p className="text-xs text-slate-500">{club.member_count} {club.member_count === 1 ? 'member' : 'members'} · Edit here →</p>
                   </div>
                 </div>
@@ -145,12 +145,12 @@ export default function ProfilePage() {
         </div>
       )}
 
-      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8 max-w-lg">
+      <div className="bg-white border border-black/5 rounded-2xl p-8 max-w-lg">
         <form onSubmit={handleSave} className="space-y-5">
 
           <div>
             <div className="flex items-baseline justify-between mb-1.5">
-              <label className="block text-sm font-medium text-slate-300">Display Name</label>
+              <label className="block text-sm font-medium text-slate-700">Display Name</label>
               <span className="text-xs text-slate-500">{displayName.length}/50</span>
             </div>
             <input
@@ -158,19 +158,19 @@ export default function ProfilePage() {
               required
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value.slice(0, 50))}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
+              className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
               placeholder="e.g., Owais S."
             />
             <p className="text-xs text-slate-500 mt-1">This is visible to other users when they see your books</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Area / Locality</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Area / Locality</label>
             <input
               type="text"
               value={areaName}
               onChange={(e) => setAreaName(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
+              className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
               placeholder="e.g., Srinagar - Rajbagh"
             />
             <p className="text-xs text-slate-500 mt-1">Keep it approximate for privacy (no exact house numbers!)</p>
@@ -178,14 +178,14 @@ export default function ProfilePage() {
 
           <div>
             <div className="flex items-baseline justify-between mb-1.5">
-              <label className="block text-sm font-medium text-slate-300">Bio</label>
+              <label className="block text-sm font-medium text-slate-700">Bio</label>
               <span className="text-xs text-slate-500">{bio.length}/300</span>
             </div>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value.slice(0, 300))}
               rows={3}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none"
+              className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none"
               placeholder="A few words about yourself and the kinds of books you love..."
             />
             <p className="text-xs text-slate-500 mt-1">Shown on your public profile to help others get to know you</p>
@@ -193,17 +193,17 @@ export default function ProfilePage() {
 
           {/* Location Section */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Location</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Location</label>
             {latitude !== null && longitude !== null ? (
               <div className="flex items-center gap-3 bg-brand-teal/10 border border-brand-teal/20 rounded-lg px-4 py-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-brand-teal-light flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-brand-teal-dark flex-shrink-0">
                   <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
                 </svg>
-                <span className="text-sm text-teal-300 flex-1">Location saved</span>
+                <span className="text-sm text-teal-700 flex-1">Location saved</span>
                 <button
                   type="button"
                   onClick={handleRemoveLocation}
-                  className="text-xs text-slate-400 hover:text-red-400 transition-colors"
+                  className="text-xs text-slate-600 hover:text-red-600 transition-colors"
                 >
                   Remove
                 </button>
@@ -213,11 +213,11 @@ export default function ProfilePage() {
                 type="button"
                 onClick={handleGetLocation}
                 disabled={locating}
-                className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-300 hover:text-white transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-700 hover:text-slate-900 transition-colors disabled:opacity-50"
               >
                 {locating ? (
                   <>
-                    <svg className="animate-spin h-4 w-4 text-brand-teal-light" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    <svg className="animate-spin h-4 w-4 text-brand-teal-dark" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                     Getting location...
                   </>
                 ) : (
@@ -228,7 +228,7 @@ export default function ProfilePage() {
                 )}
               </button>
             )}
-            {locationError && <p className="text-xs text-red-400 mt-1.5">{locationError}</p>}
+            {locationError && <p className="text-xs text-red-600 mt-1.5">{locationError}</p>}
             <p className="text-xs text-slate-500 mt-1.5">Helps show books nearby. Your exact coordinates are never shown to others.</p>
           </div>
 
@@ -242,7 +242,7 @@ export default function ProfilePage() {
                 className="w-4 h-4 accent-brand-teal rounded"
               />
               <div>
-                <p className="text-sm font-medium text-slate-300">Weekly digest email</p>
+                <p className="text-sm font-medium text-slate-700">Weekly digest email</p>
                 <p className="text-xs text-slate-500">Get notified about new books near you every week</p>
               </div>
             </label>
@@ -257,7 +257,7 @@ export default function ProfilePage() {
           </button>
 
           {message && (
-            <p className={`text-sm text-center ${message.includes('successfully') ? 'text-brand-teal-light' : 'text-red-400'}`}>
+            <p className={`text-sm text-center ${message.includes('successfully') ? 'text-brand-teal-dark' : 'text-red-600'}`}>
               {message}
             </p>
           )}

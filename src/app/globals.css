@@ -25,6 +25,11 @@
   --color-brand-teal: #14b8a6;
   --color-brand-teal-dark: #0d9488;
   --color-brand-teal-light: #2dd4bf;
+
+  /* Warm cream shell used across the dashboard (matches the marketing
+     homepage's background) so authenticated pages feel like part of the
+     same welcoming, light space instead of a separate dark admin panel. */
+  --color-cream: #fbf6ec;
 }
 
 @media (prefers-color-scheme: dark) {

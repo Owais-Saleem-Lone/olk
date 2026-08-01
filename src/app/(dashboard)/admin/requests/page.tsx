@@ -112,18 +112,18 @@ export default function AdminRequestsPage() {
   }
 
   const statusColor: Record<string, string> = {
-    pending: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    accepted: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    declined: 'bg-red-500/10 text-red-400 border-red-500/20',
-    handed_over: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-    returned: 'bg-green-500/10 text-green-400 border-green-500/20',
+    pending: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+    accepted: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+    declined: 'bg-red-500/10 text-red-600 border-red-500/20',
+    handed_over: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+    returned: 'bg-green-500/10 text-green-600 border-green-500/20',
   }
 
   return (
     <div>
       {msg && (
-        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-light text-sm px-4 py-2 rounded-lg flex justify-between">
-          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-light/50 hover:text-brand-teal-light">×</button>
+        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-dark text-sm px-4 py-2 rounded-lg flex justify-between">
+          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-dark/50 hover:text-brand-teal-dark">×</button>
         </div>
       )}
 
@@ -134,7 +134,7 @@ export default function AdminRequestsPage() {
             key={t}
             onClick={() => { setTab(t); setPage(0) }}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tab === t ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5'
+              tab === t ? 'bg-slate-50 text-slate-900' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             {t === 'all' ? 'All Requests' : `Overdue Books ${overdue.length > 0 ? `(${overdue.length})` : ''}`}
@@ -150,7 +150,7 @@ export default function AdminRequestsPage() {
               key={f}
               onClick={() => { setFilter(f); setPage(0) }}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                filter === f ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5'
+                filter === f ? 'bg-slate-50 text-slate-900' : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
               {f === 'all' ? 'All' : f.replace('_', ' ').replace(/^\w/, c => c.toUpperCase())}
@@ -161,14 +161,14 @@ export default function AdminRequestsPage() {
 
       {tab === 'all' ? (
         <>
-          <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl overflow-hidden">
+          <div className="bg-white border border-black/5 rounded-xl overflow-hidden">
             {loading ? (
               <p className="text-slate-500 py-8 text-center">Loading...</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-slate-500 border-b border-white/5">
+                    <tr className="text-left text-slate-500 border-b border-black/5">
                       <th className="p-3 font-medium">Book</th>
                       <th className="p-3 font-medium hidden md:table-cell">Owner</th>
                       <th className="p-3 font-medium hidden md:table-cell">Requester</th>
@@ -180,15 +180,15 @@ export default function AdminRequestsPage() {
                   <tbody>
                     {requests.map(r => {
                       return (
-                        <tr key={r.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
+                        <tr key={r.id} className="border-b border-black/5 hover:bg-white">
                           <td className="p-3">
-                            <p className="text-white truncate max-w-48">{r.book_title || 'Deleted'}</p>
+                            <p className="text-slate-900 truncate max-w-48">{r.book_title || 'Deleted'}</p>
                             <p className="text-xs text-slate-500">{r.book_listing_type}</p>
                           </td>
-                          <td className="p-3 text-slate-400 hidden md:table-cell">{r.owner_name || '—'}</td>
-                          <td className="p-3 text-slate-400 hidden md:table-cell">{r.requester_name || '—'}</td>
+                          <td className="p-3 text-slate-600 hidden md:table-cell">{r.owner_name || '—'}</td>
+                          <td className="p-3 text-slate-600 hidden md:table-cell">{r.requester_name || '—'}</td>
                           <td className="p-3">
-                            <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColor[r.status] || 'bg-white/5 text-slate-400 border-white/10'}`}>
+                            <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColor[r.status] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
                               {r.status.replace('_', ' ')}
                             </span>
                           </td>
@@ -197,9 +197,9 @@ export default function AdminRequestsPage() {
                             {(r.status === 'pending' || r.status === 'accepted' || r.status === 'handed_over') && (
                               <div className="flex gap-1 justify-end">
                                 {r.status === 'handed_over' && (
-                                  <button onClick={() => handleForceReturn(r.id)} disabled={acting} className="text-xs text-green-400 hover:text-green-300 px-2 py-1 rounded hover:bg-green-500/10 transition-colors disabled:opacity-50">Force Return</button>
+                                  <button onClick={() => handleForceReturn(r.id)} disabled={acting} className="text-xs text-green-600 hover:text-green-700 px-2 py-1 rounded hover:bg-green-500/10 transition-colors disabled:opacity-50">Force Return</button>
                                 )}
-                                <button onClick={() => setCancelModal(r.id)} className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors">Cancel</button>
+                                <button onClick={() => setCancelModal(r.id)} className="text-xs text-red-600 hover:text-red-700 px-2 py-1 rounded hover:bg-red-500/10 transition-colors">Cancel</button>
                               </div>
                             )}
                           </td>
@@ -213,14 +213,14 @@ export default function AdminRequestsPage() {
           </div>
 
           <div className="flex gap-2 mt-4 justify-center">
-            <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} className="text-sm text-slate-400 hover:text-white disabled:opacity-30 px-3 py-1.5 rounded-lg hover:bg-white/5">← Prev</button>
+            <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} className="text-sm text-slate-600 hover:text-slate-900 disabled:opacity-30 px-3 py-1.5 rounded-lg hover:bg-slate-100">← Prev</button>
             <span className="text-sm text-slate-500 py-1.5">Page {page + 1}</span>
-            <button onClick={() => setPage(page + 1)} disabled={requests.length < PAGE_SIZE} className="text-sm text-slate-400 hover:text-white disabled:opacity-30 px-3 py-1.5 rounded-lg hover:bg-white/5">Next →</button>
+            <button onClick={() => setPage(page + 1)} disabled={requests.length < PAGE_SIZE} className="text-sm text-slate-600 hover:text-slate-900 disabled:opacity-30 px-3 py-1.5 rounded-lg hover:bg-slate-100">Next →</button>
           </div>
         </>
       ) : (
         /* Overdue tab */
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl overflow-hidden">
+        <div className="bg-white border border-black/5 rounded-xl overflow-hidden">
           {loading ? (
             <p className="text-slate-500 py-8 text-center">Loading...</p>
           ) : overdue.length === 0 ? (
@@ -229,7 +229,7 @@ export default function AdminRequestsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-slate-500 border-b border-white/5">
+                  <tr className="text-left text-slate-500 border-b border-black/5">
                     <th className="p-3 font-medium">Book</th>
                     <th className="p-3 font-medium">Owner</th>
                     <th className="p-3 font-medium">Borrower</th>
@@ -240,18 +240,18 @@ export default function AdminRequestsPage() {
                 </thead>
                 <tbody>
                   {overdue.map(o => (
-                    <tr key={o.request_id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
-                      <td className="p-3 text-white">{o.book_title}</td>
-                      <td className="p-3 text-slate-400">{o.owner_name || '—'}</td>
-                      <td className="p-3 text-slate-400">{o.borrower_name || '—'}</td>
+                    <tr key={o.request_id} className="border-b border-black/5 hover:bg-white">
+                      <td className="p-3 text-slate-900">{o.book_title}</td>
+                      <td className="p-3 text-slate-600">{o.owner_name || '—'}</td>
+                      <td className="p-3 text-slate-600">{o.borrower_name || '—'}</td>
                       <td className="p-3 text-slate-500 text-xs">{new Date(o.handed_over_at).toLocaleDateString()}</td>
                       <td className="p-3">
-                        <span className={`text-sm font-semibold ${o.days_overdue > 60 ? 'text-red-400' : o.days_overdue > 30 ? 'text-orange-400' : 'text-amber-400'}`}>
+                        <span className={`text-sm font-semibold ${o.days_overdue > 60 ? 'text-red-600' : o.days_overdue > 30 ? 'text-orange-400' : 'text-amber-600'}`}>
                           {o.days_overdue}d
                         </span>
                       </td>
                       <td className="p-3 text-right">
-                        <button onClick={() => handleForceReturn(o.request_id)} disabled={acting} className="text-xs text-green-400 hover:text-green-300 px-2 py-1 rounded hover:bg-green-500/10 transition-colors disabled:opacity-50">Force Return</button>
+                        <button onClick={() => handleForceReturn(o.request_id)} disabled={acting} className="text-xs text-green-600 hover:text-green-700 px-2 py-1 rounded hover:bg-green-500/10 transition-colors disabled:opacity-50">Force Return</button>
                       </td>
                     </tr>
                   ))}
@@ -265,17 +265,17 @@ export default function AdminRequestsPage() {
       {/* Cancel Modal */}
       {cancelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setCancelModal(null)}>
-          <div className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-white mb-4">Cancel Request</h3>
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Cancel Request</h3>
             <textarea
               value={cancelReason}
               onChange={e => setCancelReason(e.target.value)}
               placeholder="Reason for cancellation..."
               rows={3}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none mb-4"
+              className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none mb-4"
             />
             <div className="flex gap-2">
-              <button onClick={() => setCancelModal(null)} className="flex-1 bg-white/5 text-slate-400 py-2 rounded-lg text-sm hover:bg-white/10">Cancel</button>
+              <button onClick={() => setCancelModal(null)} className="flex-1 bg-slate-50 text-slate-600 py-2 rounded-lg text-sm hover:bg-slate-100">Cancel</button>
               <button onClick={() => handleCancel(cancelModal)} disabled={!cancelReason.trim() || acting} className="flex-1 bg-red-500 text-white py-2 rounded-lg text-sm hover:bg-red-400 disabled:opacity-50">
                 {acting ? 'Cancelling...' : 'Cancel Request'}
               </button>

@@ -152,16 +152,16 @@ export default function AdminReportsPage() {
   }
 
   const statusColor: Record<string, string> = {
-    pending: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    resolved: 'bg-green-500/10 text-green-400 border-green-500/20',
-    dismissed: 'bg-white/5 text-slate-400 border-white/10',
+    pending: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+    resolved: 'bg-green-500/10 text-green-600 border-green-500/20',
+    dismissed: 'bg-slate-100 text-slate-600 border-slate-200',
   }
 
   return (
     <div>
       {msg && (
-        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-light text-sm px-4 py-2 rounded-lg flex justify-between">
-          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-light/50 hover:text-brand-teal-light">×</button>
+        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-dark text-sm px-4 py-2 rounded-lg flex justify-between">
+          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-dark/50 hover:text-brand-teal-dark">×</button>
         </div>
       )}
 
@@ -172,7 +172,7 @@ export default function AdminReportsPage() {
               key={f}
               onClick={() => setFilter(f)}
               className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                filter === f ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5'
+                filter === f ? 'bg-slate-50 text-slate-900' : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
               {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -182,7 +182,7 @@ export default function AdminReportsPage() {
         <select
           value={filterCat}
           onChange={e => setFilterCat(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-teal"
+          className="bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-teal"
         >
           <option value="">All Categories</option>
           {CATEGORIES.map(c => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
@@ -201,24 +201,24 @@ export default function AdminReportsPage() {
               <button
                 key={r.id}
                 onClick={() => selectReport(r)}
-                className={`w-full text-left bg-white/[0.03] border rounded-xl p-4 transition-colors ${
-                  selected?.id === r.id ? 'border-brand-teal/30 bg-brand-teal/5' : 'border-white/[0.06] hover:bg-white/[0.05]'
+                className={`w-full text-left bg-white border rounded-xl p-4 transition-colors ${
+                  selected?.id === r.id ? 'border-brand-teal/30 bg-brand-teal/5' : 'border-black/5 hover:bg-slate-50'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-white truncate">{r.reason}</p>
+                    <p className="text-sm font-medium text-slate-900 truncate">{r.reason}</p>
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                       <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColor[r.status] || ''}`}>{r.status}</span>
                       {r.category && r.category !== 'other' && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-slate-400 border border-white/10">{r.category.replace('_', ' ')}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">{r.category.replace('_', ' ')}</span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-600 mt-1.5">
+                    <p className="text-xs text-slate-400 mt-1.5">
                       By {r.reporter_name || 'Unknown'} · {new Date(r.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <span className="text-slate-600 text-xs">→</span>
+                  <span className="text-slate-400 text-xs">→</span>
                 </div>
               </button>
             ))
@@ -228,13 +228,13 @@ export default function AdminReportsPage() {
         {/* Report detail */}
         {selected && (
           <div className="flex-1 min-w-0 space-y-4">
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
+            <div className="bg-white border border-black/5 rounded-2xl p-5">
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-lg font-semibold text-white">{selected.reason}</h3>
-                <button onClick={() => setSelected(null)} className="text-slate-500 hover:text-white text-lg">×</button>
+                <h3 className="text-lg font-semibold text-slate-900">{selected.reason}</h3>
+                <button onClick={() => setSelected(null)} className="text-slate-500 hover:text-slate-900 text-lg">×</button>
               </div>
 
-              {selected.details && <p className="text-sm text-slate-400 mb-3">{selected.details}</p>}
+              {selected.details && <p className="text-sm text-slate-600 mb-3">{selected.details}</p>}
 
               <div className="flex flex-wrap gap-2 mb-4 text-xs text-slate-500">
                 <span>Reporter: {selected.reporter_name || 'Unknown'}</span>
@@ -252,7 +252,7 @@ export default function AdminReportsPage() {
                       key={c}
                       onClick={() => handleCategory(c)}
                       className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${
-                        selected.category === c ? 'bg-brand-teal/10 text-brand-teal-light border-brand-teal/20' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
+                        selected.category === c ? 'bg-brand-teal/10 text-brand-teal-dark border-brand-teal/20' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                       }`}
                     >
                       {c.replace('_', ' ')}
@@ -264,30 +264,30 @@ export default function AdminReportsPage() {
               {/* Status actions */}
               {selected.status === 'pending' && (
                 <div className="flex flex-wrap gap-2 mb-4">
-                  <button onClick={() => handleStatus('resolved')} disabled={acting} className="text-xs bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">Resolve</button>
-                  <button onClick={() => handleStatus('dismissed')} disabled={acting} className="text-xs bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">Dismiss</button>
+                  <button onClick={() => handleStatus('resolved')} disabled={acting} className="text-xs bg-green-500/10 text-green-600 border border-green-500/20 hover:bg-green-500/20 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">Resolve</button>
+                  <button onClick={() => handleStatus('dismissed')} disabled={acting} className="text-xs bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">Dismiss</button>
                 </div>
               )}
 
               {/* Quick actions */}
-              <div className="border-t border-white/5 pt-4 mb-4">
+              <div className="border-t border-black/5 pt-4 mb-4">
                 <p className="text-xs text-slate-500 mb-2">Quick Actions</p>
                 <div className="flex flex-wrap gap-2">
                   {selected.reported_user_id && (
                     <>
-                      <button onClick={() => setQuickAction('ban')} className="text-xs bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 px-3 py-1.5 rounded-lg transition-colors">Ban User</button>
+                      <button onClick={() => setQuickAction('ban')} className="text-xs bg-red-500/10 text-red-600 border border-red-500/20 hover:bg-red-500/20 px-3 py-1.5 rounded-lg transition-colors">Ban User</button>
                       <button onClick={() => setQuickAction('warn')} className="text-xs bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 px-3 py-1.5 rounded-lg transition-colors">Warn User</button>
                     </>
                   )}
                   {selected.reported_book_id && (
-                    <button onClick={() => setQuickAction('hide')} className="text-xs bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 px-3 py-1.5 rounded-lg transition-colors">Hide Book</button>
+                    <button onClick={() => setQuickAction('hide')} className="text-xs bg-purple-500/10 text-purple-600 border border-purple-500/20 hover:bg-purple-500/20 px-3 py-1.5 rounded-lg transition-colors">Hide Book</button>
                   )}
                 </div>
               </div>
 
               {/* Resolution info */}
               {selected.resolved_at && (
-                <div className="text-xs text-slate-500 border-t border-white/5 pt-3">
+                <div className="text-xs text-slate-500 border-t border-black/5 pt-3">
                   Resolved {new Date(selected.resolved_at).toLocaleString()}
                   {selected.resolved_by_name && ` by ${selected.resolved_by_name}`}
                 </div>
@@ -295,16 +295,16 @@ export default function AdminReportsPage() {
             </div>
 
             {/* Admin notes */}
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
-              <p className="text-sm font-medium text-slate-300 mb-3">Internal Notes</p>
+            <div className="bg-white border border-black/5 rounded-2xl p-5">
+              <p className="text-sm font-medium text-slate-700 mb-3">Internal Notes</p>
               {notes.length === 0 ? (
-                <p className="text-xs text-slate-600 mb-3">No notes yet</p>
+                <p className="text-xs text-slate-400 mb-3">No notes yet</p>
               ) : (
                 <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
                   {notes.map(n => (
-                    <div key={n.id} className="bg-white/[0.03] border border-white/[0.04] rounded-lg p-3">
-                      <p className="text-sm text-slate-300">{n.content}</p>
-                      <p className="text-xs text-slate-600 mt-1">{n.admin_name || 'Admin'} · {new Date(n.created_at).toLocaleString()}</p>
+                    <div key={n.id} className="bg-white border border-black/5 rounded-lg p-3">
+                      <p className="text-sm text-slate-700">{n.content}</p>
+                      <p className="text-xs text-slate-400 mt-1">{n.admin_name || 'Admin'} · {new Date(n.created_at).toLocaleString()}</p>
                     </div>
                   ))}
                 </div>
@@ -315,7 +315,7 @@ export default function AdminReportsPage() {
                   value={newNote}
                   onChange={e => setNewNote(e.target.value)}
                   placeholder="Add internal note..."
-                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
+                  className="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
                   onKeyDown={e => e.key === 'Enter' && handleAddNote()}
                 />
                 <button onClick={handleAddNote} disabled={!newNote.trim() || acting} className="bg-brand-teal text-white px-4 py-2 rounded-lg text-sm hover:bg-brand-teal-light disabled:opacity-50 transition-colors">Add</button>
@@ -328,8 +328,8 @@ export default function AdminReportsPage() {
       {/* Quick Action Modal */}
       {quickAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setQuickAction(null)}>
-          <div className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-white mb-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">
               {quickAction === 'ban' ? 'Ban User' : quickAction === 'warn' ? 'Warn User' : 'Hide Book'}
             </h3>
             <textarea
@@ -337,22 +337,22 @@ export default function AdminReportsPage() {
               onChange={e => setQuickReason(e.target.value)}
               placeholder="Reason..."
               rows={3}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-4"
+              className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-4"
             />
             {quickAction === 'ban' && (
               <div className="mb-4">
-                <label className="text-sm text-slate-400">Duration (days)</label>
+                <label className="text-sm text-slate-600">Duration (days)</label>
                 <input
                   type="number"
                   value={quickBanDays}
                   onChange={e => setQuickBanDays(Number(e.target.value))}
                   min={1}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-brand-teal"
+                  className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-2 text-slate-900 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-brand-teal"
                 />
               </div>
             )}
             <div className="flex gap-2">
-              <button onClick={() => setQuickAction(null)} className="flex-1 bg-white/5 text-slate-400 py-2 rounded-lg text-sm hover:bg-white/10">Cancel</button>
+              <button onClick={() => setQuickAction(null)} className="flex-1 bg-slate-50 text-slate-600 py-2 rounded-lg text-sm hover:bg-slate-100">Cancel</button>
               <button onClick={handleQuickAction} disabled={!quickReason.trim() || acting} className="flex-1 bg-red-500 text-white py-2 rounded-lg text-sm hover:bg-red-400 disabled:opacity-50">
                 {acting ? 'Processing...' : 'Confirm'}
               </button>

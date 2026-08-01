@@ -68,7 +68,7 @@ export default function AdminOverview() {
     load()
   }, [supabase])
 
-  if (loading) return <div className="text-slate-400 py-12 text-center">Loading dashboard...</div>
+  if (loading) return <div className="text-slate-600 py-12 text-center">Loading dashboard...</div>
 
   const ratingMax = Math.max(...ratingDist.map(r => Number(r.count)), 1)
 
@@ -77,13 +77,13 @@ export default function AdminOverview() {
       {/* Quick Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {[
-          { label: 'Users', value: stats.users, icon: '👥', color: 'text-blue-400' },
-          { label: 'Books', value: stats.books, icon: '📚', color: 'text-brand-teal-light' },
-          { label: 'Requests', value: stats.requests, icon: '📩', color: 'text-purple-400' },
-          { label: 'Reports', value: stats.reports, icon: '🚩', color: 'text-red-400' },
-          { label: 'Clubs', value: stats.clubs, icon: '🏘️', color: 'text-amber-400' },
+          { label: 'Users', value: stats.users, icon: '👥', color: 'text-blue-600' },
+          { label: 'Books', value: stats.books, icon: '📚', color: 'text-brand-teal-dark' },
+          { label: 'Requests', value: stats.requests, icon: '📩', color: 'text-purple-600' },
+          { label: 'Reports', value: stats.reports, icon: '🚩', color: 'text-red-600' },
+          { label: 'Clubs', value: stats.clubs, icon: '🏘️', color: 'text-amber-600' },
         ].map(s => (
-          <div key={s.label} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+          <div key={s.label} className="bg-white border border-black/5 rounded-xl p-4">
             <div className="text-lg mb-1">{s.icon}</div>
             <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
             <p className="text-xs text-slate-500">{s.label}</p>
@@ -101,9 +101,9 @@ export default function AdminOverview() {
         ].map(chart => {
           const total = daily.reduce((sum, d) => sum + Number(d[chart.key]), 0)
           return (
-            <div key={chart.title} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
+            <div key={chart.title} className="bg-white border border-black/5 rounded-xl p-5">
               <div className="flex justify-between items-center mb-3">
-                <p className="text-sm font-medium text-slate-300">{chart.title}</p>
+                <p className="text-sm font-medium text-slate-700">{chart.title}</p>
                 <span className="text-xs text-slate-500">Total: {total}</span>
               </div>
               <MiniBar data={daily} dataKey={chart.key} color={chart.color} />
@@ -115,20 +115,20 @@ export default function AdminOverview() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Exchange Stats */}
         {exchangeStats && (
-          <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
-            <p className="text-sm font-medium text-slate-300 mb-4">Exchange Health</p>
+          <div className="bg-white border border-black/5 rounded-xl p-5">
+            <p className="text-sm font-medium text-slate-700 mb-4">Exchange Health</p>
             <div className="text-center mb-4">
-              <p className="text-4xl font-bold text-brand-teal-light">{exchangeStats.success_rate}%</p>
+              <p className="text-4xl font-bold text-brand-teal-dark">{exchangeStats.success_rate}%</p>
               <p className="text-xs text-slate-500">Success Rate</p>
             </div>
             <div className="grid grid-cols-2 gap-2 text-center">
               {[
-                { label: 'Pending', v: exchangeStats.pending_count, c: 'text-amber-400' },
-                { label: 'Accepted', v: exchangeStats.accepted_count, c: 'text-blue-400' },
-                { label: 'Handed Over', v: exchangeStats.handed_over_count, c: 'text-purple-400' },
-                { label: 'Returned', v: exchangeStats.returned_count, c: 'text-green-400' },
-                { label: 'Declined', v: exchangeStats.declined_count, c: 'text-red-400' },
-                { label: 'Total', v: exchangeStats.total_requests, c: 'text-white' },
+                { label: 'Pending', v: exchangeStats.pending_count, c: 'text-amber-600' },
+                { label: 'Accepted', v: exchangeStats.accepted_count, c: 'text-blue-600' },
+                { label: 'Handed Over', v: exchangeStats.handed_over_count, c: 'text-purple-600' },
+                { label: 'Returned', v: exchangeStats.returned_count, c: 'text-green-600' },
+                { label: 'Declined', v: exchangeStats.declined_count, c: 'text-red-600' },
+                { label: 'Total', v: exchangeStats.total_requests, c: 'text-slate-900' },
               ].map(s => (
                 <div key={s.label} className="py-1">
                   <p className={`text-lg font-semibold ${s.c}`}>{s.v}</p>
@@ -140,13 +140,13 @@ export default function AdminOverview() {
         )}
 
         {/* Rating Distribution */}
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
-          <p className="text-sm font-medium text-slate-300 mb-4">Rating Distribution</p>
+        <div className="bg-white border border-black/5 rounded-xl p-5">
+          <p className="text-sm font-medium text-slate-700 mb-4">Rating Distribution</p>
           <div className="space-y-2">
             {ratingDist.map(r => (
               <div key={r.score} className="flex items-center gap-2">
-                <span className="text-sm text-slate-400 w-8">{r.score} ★</span>
-                <div className="flex-1 bg-white/5 rounded-full h-4 overflow-hidden">
+                <span className="text-sm text-slate-600 w-8">{r.score} ★</span>
+                <div className="flex-1 bg-slate-100 rounded-full h-4 overflow-hidden">
                   <div
                     className="h-full bg-amber-400/60 rounded-full transition-all"
                     style={{ width: `${(Number(r.count) / ratingMax) * 100}%` }}
@@ -159,15 +159,15 @@ export default function AdminOverview() {
         </div>
 
         {/* Top Areas */}
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
-          <p className="text-sm font-medium text-slate-300 mb-4">Top Areas</p>
+        <div className="bg-white border border-black/5 rounded-xl p-5">
+          <p className="text-sm font-medium text-slate-700 mb-4">Top Areas</p>
           {areas.length === 0 ? (
             <p className="text-sm text-slate-500">No area data yet</p>
           ) : (
             <div className="space-y-2">
               {areas.slice(0, 8).map((a, i) => (
                 <div key={i} className="flex items-center justify-between py-1">
-                  <span className="text-sm text-slate-300 truncate">{a.area_name}</span>
+                  <span className="text-sm text-slate-700 truncate">{a.area_name}</span>
                   <div className="flex gap-3 text-xs text-slate-500">
                     <span>{a.user_count} users</span>
                     <span>{a.book_count} books</span>
@@ -180,15 +180,15 @@ export default function AdminOverview() {
       </div>
 
       {/* Top Contributors */}
-      <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5">
-        <p className="text-sm font-medium text-slate-300 mb-4">Top Contributors</p>
+      <div className="bg-white border border-black/5 rounded-xl p-5">
+        <p className="text-sm font-medium text-slate-700 mb-4">Top Contributors</p>
         {topContribs.length === 0 ? (
           <p className="text-sm text-slate-500">No contributors yet</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-slate-500 border-b border-white/5">
+                <tr className="text-left text-slate-500 border-b border-black/5">
                   <th className="pb-2 font-medium">User</th>
                   <th className="pb-2 font-medium">Area</th>
                   <th className="pb-2 font-medium text-center">Listed</th>
@@ -199,16 +199,16 @@ export default function AdminOverview() {
               </thead>
               <tbody>
                 {topContribs.map((c, i) => (
-                  <tr key={c.user_id} className="border-b border-white/[0.03]">
-                    <td className="py-2 text-white">
+                  <tr key={c.user_id} className="border-b border-black/5">
+                    <td className="py-2 text-slate-900">
                       <span className="text-slate-500 mr-2">#{i + 1}</span>
                       {c.display_name || 'Unknown'}
                     </td>
-                    <td className="py-2 text-slate-400">{c.area_name || '—'}</td>
-                    <td className="py-2 text-center text-brand-teal-light">{c.books_listed}</td>
-                    <td className="py-2 text-center text-green-400">{c.books_donated}</td>
-                    <td className="py-2 text-center text-blue-400">{c.books_lent}</td>
-                    <td className="py-2 text-center text-amber-400">{c.avg_rating > 0 ? `${c.avg_rating} ★` : '—'}</td>
+                    <td className="py-2 text-slate-600">{c.area_name || '—'}</td>
+                    <td className="py-2 text-center text-brand-teal-dark">{c.books_listed}</td>
+                    <td className="py-2 text-center text-green-600">{c.books_donated}</td>
+                    <td className="py-2 text-center text-blue-600">{c.books_lent}</td>
+                    <td className="py-2 text-center text-amber-600">{c.avg_rating > 0 ? `${c.avg_rating} ★` : '—'}</td>
                   </tr>
                 ))}
               </tbody>

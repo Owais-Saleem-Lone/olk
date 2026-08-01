@@ -49,7 +49,7 @@ export default function ReceivedBooksList({
   if (items.length === 0) return null
 
   return (
-    <div className="border-t border-white/[0.06] pt-6">
+    <div className="border-t border-black/5 pt-6">
       <div className="flex items-center gap-3 mb-1">
         <h2 className="text-xl font-semibold">Books in Your Possession</h2>
         <span className="text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded-full">
@@ -69,37 +69,37 @@ export default function ReceivedBooksList({
             : null
 
           return (
-            <div key={req.id} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 hover:border-white/[0.10] transition-colors">
+            <div key={req.id} className="bg-white border border-black/5 rounded-xl p-4 hover:border-white/[0.10] transition-colors">
               <div className="flex gap-4">
-                <div className="relative w-12 h-16 rounded-lg overflow-hidden bg-brand-slate-light flex-shrink-0 border border-white/5">
+                <div className="relative w-12 h-16 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 border border-black/5">
                   {book.cover_url ? (
                     <Image src={book.cover_url} alt={book.title} fill unoptimized sizes="48px" className="object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-600 text-lg font-bold">
+                    <div className="w-full h-full flex items-center justify-center text-slate-400 text-lg font-bold">
                       {book.title[0]?.toUpperCase()}
                     </div>
                   )}
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-white truncate">{book.title}</h3>
-                  {book.author && <p className="text-sm text-slate-400 truncate">by {book.author}</p>}
+                  <h3 className="font-semibold text-slate-900 truncate">{book.title}</h3>
+                  {book.author && <p className="text-sm text-slate-600 truncate">by {book.author}</p>}
 
                   <div className="flex flex-wrap items-center gap-2 mt-1.5">
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                       isDonated
-                        ? 'bg-brand-teal/10 text-brand-teal-light border border-brand-teal/20'
-                        : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                        ? 'bg-brand-teal/10 text-brand-teal-dark border border-brand-teal/20'
+                        : 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
                     }`}>
                       {isDonated ? 'Donated to you' : 'On Loan'}
                     </span>
                     {daysLeft !== null && (
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         daysLeft < 0
-                          ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                          ? 'bg-red-500/10 text-red-600 border border-red-500/20'
                           : daysLeft === 0
-                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                            : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+                            ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                            : 'bg-slate-500/10 text-slate-600 border border-slate-500/20'
                       }`}>
                         {daysLeft < 0 ? `Overdue by ${Math.abs(daysLeft)}d` : daysLeft === 0 ? 'Due today' : `${daysLeft}d left`}
                       </span>
@@ -114,7 +114,7 @@ export default function ReceivedBooksList({
                           onChange={e => setProgressDraft(Number(e.target.value))}
                           className="flex-1 accent-brand-teal"
                         />
-                        <span className={`text-xs font-semibold w-9 text-right ${isDonated ? 'text-brand-teal-light' : 'text-blue-400'}`}>
+                        <span className={`text-xs font-semibold w-9 text-right ${isDonated ? 'text-brand-teal-dark' : 'text-blue-600'}`}>
                           {progressDraft}%
                         </span>
                       </div>
@@ -127,7 +127,7 @@ export default function ReceivedBooksList({
                         </button>
                         <button
                           onClick={() => setUpdatingProgressId(null)}
-                          className="text-xs text-slate-500 hover:text-white px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                          className="text-xs text-slate-500 hover:text-slate-900 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
                         >
                           Cancel
                         </button>
@@ -139,9 +139,9 @@ export default function ReceivedBooksList({
                         <div className="mb-2">
                           <div className="flex justify-between text-xs mb-1">
                             <span className="text-slate-500">Reading progress</span>
-                            <span className={`font-semibold ${isDonated ? 'text-brand-teal-light' : 'text-blue-400'}`}>{bookProgress}%</span>
+                            <span className={`font-semibold ${isDonated ? 'text-brand-teal-dark' : 'text-blue-600'}`}>{bookProgress}%</span>
                           </div>
-                          <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                          <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all ${isDonated ? 'bg-brand-teal-light' : 'bg-blue-400'}`}
                               style={{ width: `${bookProgress}%` }}
@@ -152,24 +152,24 @@ export default function ReceivedBooksList({
                       <div className="flex flex-wrap gap-2 mt-2">
                         <button
                           onClick={() => { setUpdatingProgressId(req.id); setProgressDraft(bookProgress ?? 0) }}
-                          className="text-xs text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors"
+                          className="text-xs text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg transition-colors"
                         >
                           Update Progress
                         </button>
                         {isDonated && (
                           confirmPassOnId === req.id ? (
                             <div className="flex items-center gap-1.5">
-                              <span className="text-xs text-slate-400">Release to community?</span>
+                              <span className="text-xs text-slate-600">Release to community?</span>
                               <button
                                 onClick={() => handlePassItOn(req.id)}
                                 disabled={passingOnId === req.id}
-                                className="text-xs bg-brand-teal/20 text-brand-teal-light hover:bg-brand-teal/30 border border-brand-teal/30 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                                className="text-xs bg-brand-teal/20 text-brand-teal-dark hover:bg-brand-teal/30 border border-brand-teal/30 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50"
                               >
                                 {passingOnId === req.id ? '...' : 'Yes, pass it on'}
                               </button>
                               <button
                                 onClick={() => setConfirmPassOnId(null)}
-                                className="text-xs text-slate-500 hover:text-white px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                                className="text-xs text-slate-500 hover:text-slate-900 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
                               >
                                 Cancel
                               </button>
@@ -177,7 +177,7 @@ export default function ReceivedBooksList({
                           ) : (
                             <button
                               onClick={() => setConfirmPassOnId(req.id)}
-                              className="text-xs text-brand-teal-light hover:text-teal-300 bg-brand-teal/10 hover:bg-brand-teal/15 border border-brand-teal/20 px-3 py-1.5 rounded-lg transition-colors"
+                              className="text-xs text-brand-teal-dark hover:text-teal-700 bg-brand-teal/10 hover:bg-brand-teal/15 border border-brand-teal/20 px-3 py-1.5 rounded-lg transition-colors"
                             >
                               Pass It On 🔄
                             </button>

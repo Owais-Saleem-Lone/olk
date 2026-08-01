@@ -49,18 +49,18 @@ export default function SavedBooksPage() {
     setSavedBooks(prev => prev.filter(b => b.id !== bookmarkId))
   }
 
-  if (loading) return <p className="text-slate-400">Loading saved books...</p>
+  if (loading) return <p className="text-slate-600">Loading saved books...</p>
 
   return (
     <div>
       <h1 className="text-3xl font-bold mb-2">Saved Books</h1>
-      <p className="text-slate-400 mb-8">Books you&apos;ve bookmarked for later</p>
+      <p className="text-slate-600 mb-8">Books you&apos;ve bookmarked for later</p>
 
       {savedBooks.length === 0 ? (
-        <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-10 text-center">
+        <div className="bg-white border border-black/5 rounded-2xl p-10 text-center">
           <div className="text-4xl mb-3">🔖</div>
           <p className="text-slate-500 mb-4">No saved books yet</p>
-          <Link href="/browse" className="text-sm text-brand-teal-light hover:text-teal-300">
+          <Link href="/browse" className="text-sm text-brand-teal-dark hover:text-teal-700">
             Browse books to save some →
           </Link>
         </div>
@@ -70,29 +70,29 @@ export default function SavedBooksPage() {
             const book = item.books
             if (!book) return null
             return (
-              <div key={item.id} className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden flex flex-col">
+              <div key={item.id} className="bg-white border border-black/5 rounded-2xl overflow-hidden flex flex-col">
                 <Link href={`/browse?q=${encodeURIComponent(book.title)}`}>
-                  <div className="relative w-full aspect-[2/3] bg-gradient-to-br from-brand-slate-light to-brand-slate overflow-hidden">
+                  <div className="relative w-full aspect-[2/3] bg-gradient-to-br from-teal-50 to-slate-100 overflow-hidden">
                     {book.cover_url ? (
                       <Image src={book.cover_url} alt={book.title} fill unoptimized sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw" className="object-cover" referrerPolicy="no-referrer" />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                        <span className="text-slate-600 text-xs text-center">{book.title}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                        <span className="text-slate-400 text-xs text-center">{book.title}</span>
                       </div>
                     )}
                     <div className="absolute top-2 left-2">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm ${
                         book.listing_type === 'donate'
-                          ? 'bg-brand-teal/20 text-teal-300 border border-brand-teal/30'
-                          : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                          ? 'bg-brand-teal/20 text-teal-700 border border-brand-teal/30'
+                          : 'bg-blue-500/20 text-blue-700 border border-blue-500/30'
                       }`}>
                         {book.listing_type === 'donate' ? 'Free' : 'Lend'}
                       </span>
                     </div>
                     {book.status === 'given' && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">Donated</span>
+                        <span className="bg-amber-500/20 text-amber-700 border border-amber-500/30 text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-sm">Donated</span>
                       </div>
                     )}
                   </div>
@@ -102,7 +102,7 @@ export default function SavedBooksPage() {
                   {book.author && <p className="text-xs text-slate-500 truncate mb-2">by {book.author}</p>}
                   <button
                     onClick={() => handleRemove(item.id)}
-                    className="mt-auto w-full text-xs text-slate-500 hover:text-red-400 bg-white/5 hover:bg-red-500/10 border border-white/10 py-2 rounded-lg transition-colors"
+                    className="mt-auto w-full text-xs text-slate-500 hover:text-red-600 bg-slate-100 hover:bg-red-500/10 border border-slate-200 py-2 rounded-lg transition-colors"
                   >
                     Remove from saved
                   </button>

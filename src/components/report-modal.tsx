@@ -52,27 +52,27 @@ export default function ReportModal({
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
       <div
-        className="relative bg-brand-slate border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl"
+        className="relative bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         {submitted ? (
           <div className="text-center py-6">
             <div className="text-4xl mb-3">✅</div>
-            <h3 className="text-lg font-semibold text-white mb-2">Report Submitted</h3>
-            <p className="text-sm text-slate-400 mb-6">Thank you. We&apos;ll review this shortly.</p>
-            <button onClick={onClose} className="text-sm text-brand-teal-light hover:text-teal-300 transition-colors">
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Report Submitted</h3>
+            <p className="text-sm text-slate-600 mb-6">Thank you. We&apos;ll review this shortly.</p>
+            <button onClick={onClose} className="text-sm text-brand-teal-dark hover:text-teal-700 transition-colors">
               Close
             </button>
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-semibold text-white">Report</h3>
-              <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors text-sm">✕</button>
+              <h3 className="text-lg font-semibold text-slate-900">Report</h3>
+              <button onClick={onClose} className="text-slate-500 hover:text-slate-900 transition-colors text-sm">✕</button>
             </div>
 
             {bookTitle && (
-              <p className="text-sm text-slate-400 mb-4">Reporting: <span className="text-white">{bookTitle}</span></p>
+              <p className="text-sm text-slate-600 mb-4">Reporting: <span className="text-slate-900">{bookTitle}</span></p>
             )}
 
             <div className="space-y-3 mb-5">
@@ -86,7 +86,7 @@ export default function ReportModal({
                     onChange={() => setReason(r)}
                     className="accent-brand-teal"
                   />
-                  <span className={`text-sm ${reason === r ? 'text-white' : 'text-slate-400 group-hover:text-slate-300'} transition-colors`}>
+                  <span className={`text-sm ${reason === r ? 'text-slate-900' : 'text-slate-600 group-hover:text-slate-700'} transition-colors`}>
                     {r}
                   </span>
                 </label>
@@ -98,20 +98,20 @@ export default function ReportModal({
               onChange={e => setDetails(e.target.value)}
               placeholder="Add any additional details (optional)..."
               rows={3}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-5"
+              className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-900 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-5"
             />
 
             <div className="flex gap-3">
               <button
                 onClick={handleSubmit}
                 disabled={!reason || submitting}
-                className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-medium py-2.5 rounded-lg text-sm transition-colors disabled:opacity-40"
+                className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-600 border border-red-500/20 font-medium py-2.5 rounded-lg text-sm transition-colors disabled:opacity-40"
               >
                 {submitting ? 'Submitting...' : 'Submit Report'}
               </button>
               <button
                 onClick={onClose}
-                className="px-4 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                className="px-4 py-2.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
               >
                 Cancel
               </button>

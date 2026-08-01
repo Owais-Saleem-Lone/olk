@@ -93,8 +93,8 @@ export default function AdminClubsPage() {
   return (
     <div>
       {msg && (
-        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-light text-sm px-4 py-2 rounded-lg flex justify-between">
-          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-light/50 hover:text-brand-teal-light">×</button>
+        <div className="mb-4 bg-brand-teal/10 border border-brand-teal/20 text-brand-teal-dark text-sm px-4 py-2 rounded-lg flex justify-between">
+          {msg}<button onClick={() => setMsg('')} className="text-brand-teal-dark/50 hover:text-brand-teal-dark">×</button>
         </div>
       )}
 
@@ -104,7 +104,7 @@ export default function AdminClubsPage() {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-              filter === f ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5'
+              filter === f ? 'bg-slate-50 text-slate-900' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -123,19 +123,19 @@ export default function AdminClubsPage() {
               <button
                 key={c.id}
                 onClick={() => selectClub(c)}
-                className={`w-full text-left bg-white/[0.03] border rounded-xl p-4 transition-colors ${
-                  selected?.id === c.id ? 'border-brand-teal/30 bg-brand-teal/5' : 'border-white/[0.06] hover:bg-white/[0.05]'
+                className={`w-full text-left bg-white border rounded-xl p-4 transition-colors ${
+                  selected?.id === c.id ? 'border-brand-teal/30 bg-brand-teal/5' : 'border-black/5 hover:bg-slate-50'
                 } ${!c.active ? 'opacity-60' : ''}`}
               >
                 <div className="flex items-center justify-between">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-white truncate">
+                    <p className="text-sm font-medium text-slate-900 truncate">
                       {c.name}
-                      {!c.active && <span className="ml-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-full">Inactive</span>}
+                      {!c.active && <span className="ml-2 text-xs text-red-600 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-full">Inactive</span>}
                     </p>
                     <p className="text-xs text-slate-500">{c.member_count} members · {c.area_name || 'No area'} · {c.interests.join(', ') || 'General'}</p>
                   </div>
-                  <span className="text-slate-600 text-xs">→</span>
+                  <span className="text-slate-400 text-xs">→</span>
                 </div>
               </button>
             ))
@@ -144,26 +144,26 @@ export default function AdminClubsPage() {
 
         {selected && (
           <div className="flex-1 min-w-0 space-y-4">
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
+            <div className="bg-white border border-black/5 rounded-2xl p-5">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-lg font-semibold text-white">{selected.name}</h3>
-                  {selected.description && <p className="text-sm text-slate-400 mt-1">{selected.description}</p>}
+                  <h3 className="text-lg font-semibold text-slate-900">{selected.name}</h3>
+                  {selected.description && <p className="text-sm text-slate-600 mt-1">{selected.description}</p>}
                 </div>
-                <button onClick={() => setSelected(null)} className="text-slate-500 hover:text-white text-lg">×</button>
+                <button onClick={() => setSelected(null)} className="text-slate-500 hover:text-slate-900 text-lg">×</button>
               </div>
 
               <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="text-center py-2 bg-white/[0.03] rounded-lg">
-                  <p className="text-lg font-bold text-white">{selected.member_count}</p>
+                <div className="text-center py-2 bg-white rounded-lg">
+                  <p className="text-lg font-bold text-slate-900">{selected.member_count}</p>
                   <p className="text-xs text-slate-500">Members</p>
                 </div>
-                <div className="text-center py-2 bg-white/[0.03] rounded-lg">
-                  <p className="text-sm text-slate-300">{selected.interests.join(', ') || '—'}</p>
+                <div className="text-center py-2 bg-white rounded-lg">
+                  <p className="text-sm text-slate-700">{selected.interests.join(', ') || '—'}</p>
                   <p className="text-xs text-slate-500">Interests</p>
                 </div>
-                <div className="text-center py-2 bg-white/[0.03] rounded-lg">
-                  <p className="text-sm text-slate-300">{selected.area_name || '—'}</p>
+                <div className="text-center py-2 bg-white rounded-lg">
+                  <p className="text-sm text-slate-700">{selected.area_name || '—'}</p>
                   <p className="text-xs text-slate-500">Area</p>
                 </div>
               </div>
@@ -178,31 +178,31 @@ export default function AdminClubsPage() {
                   disabled={acting}
                   className={`text-xs px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 ${
                     selected.active
-                      ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20'
-                      : 'bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20'
+                      ? 'bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20'
+                      : 'bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20'
                   }`}
                 >
                   {selected.active ? 'Deactivate' : 'Reactivate'}
                 </button>
-                <button onClick={() => setTransferModal(true)} className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 px-3 py-1.5 rounded-lg transition-colors">Transfer Ownership</button>
+                <button onClick={() => setTransferModal(true)} className="text-xs bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500/20 px-3 py-1.5 rounded-lg transition-colors">Transfer Ownership</button>
               </div>
             </div>
 
             {/* Members list */}
-            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
-              <p className="text-sm font-medium text-slate-300 mb-3">Members ({members.length})</p>
+            <div className="bg-white border border-black/5 rounded-2xl p-5">
+              <p className="text-sm font-medium text-slate-700 mb-3">Members ({members.length})</p>
               <div className="space-y-1.5 max-h-64 overflow-y-auto">
                 {members.map(m => (
-                  <div key={m.id} className="flex items-center justify-between py-2 px-3 bg-white/[0.02] rounded-lg">
+                  <div key={m.id} className="flex items-center justify-between py-2 px-3 bg-white rounded-lg">
                     <div>
-                      <p className="text-sm text-white">{(m.user as { display_name: string | null } | null)?.display_name || 'Unknown'}</p>
-                      <p className="text-xs text-slate-600">Joined {new Date(m.joined_at).toLocaleDateString()}</p>
+                      <p className="text-sm text-slate-900">{(m.user as { display_name: string | null } | null)?.display_name || 'Unknown'}</p>
+                      <p className="text-xs text-slate-400">Joined {new Date(m.joined_at).toLocaleDateString()}</p>
                     </div>
                     {m.user_id !== (selected.creator as { id: string } | null)?.id && (
                       <button
                         onClick={() => handleRemoveMember(m.id, m.user_id)}
                         disabled={acting}
-                        className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                        className="text-xs text-red-600 hover:text-red-700 px-2 py-1 rounded hover:bg-red-500/10 transition-colors disabled:opacity-50"
                       >
                         Remove
                       </button>
@@ -218,13 +218,13 @@ export default function AdminClubsPage() {
       {/* Transfer Modal */}
       {transferModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setTransferModal(false)}>
-          <div className="bg-brand-slate border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-white mb-4">Transfer Club Ownership</h3>
-            <p className="text-sm text-slate-400 mb-3">Choose the new owner (must be a club member).</p>
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Transfer Club Ownership</h3>
+            <p className="text-sm text-slate-600 mb-3">Choose the new owner (must be a club member).</p>
             <select
               value={transferUserId}
               onChange={e => setTransferUserId(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 mb-4"
+              className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 mb-4"
             >
               <option value="">Select a member…</option>
               {members
@@ -236,7 +236,7 @@ export default function AdminClubsPage() {
                 ))}
             </select>
             <div className="flex gap-2">
-              <button onClick={() => setTransferModal(false)} className="flex-1 bg-white/5 text-slate-400 py-2 rounded-lg text-sm hover:bg-white/10">Cancel</button>
+              <button onClick={() => setTransferModal(false)} className="flex-1 bg-slate-50 text-slate-600 py-2 rounded-lg text-sm hover:bg-slate-100">Cancel</button>
               <button onClick={handleTransfer} disabled={!transferUserId.trim() || acting} className="flex-1 bg-amber-500 text-white py-2 rounded-lg text-sm hover:bg-amber-400 disabled:opacity-50">
                 {acting ? 'Transferring...' : 'Transfer'}
               </button>

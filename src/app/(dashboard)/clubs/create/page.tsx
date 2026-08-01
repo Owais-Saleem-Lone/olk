@@ -196,37 +196,37 @@ export default function CreateClubPage() {
     setWithdrawing(false)
   }
 
-  if (loading) return <p className="text-slate-400 text-center py-20">Checking eligibility...</p>
+  if (loading) return <p className="text-slate-600 text-center py-20">Checking eligibility...</p>
 
   if (!eligible) {
     return (
       <div className="max-w-lg mx-auto text-center py-16">
         <div className="text-5xl mb-4">🏘️</div>
         <h1 className="text-2xl font-bold mb-3">Not eligible to request a club yet</h1>
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 text-left space-y-4 mb-6">
+        <div className="bg-white border border-black/5 rounded-2xl p-6 text-left space-y-4 mb-6">
           <div className="flex items-center gap-3">
-            <span className={`text-lg ${exchangeCount >= 5 ? 'text-brand-teal-light' : 'text-slate-600'}`}>
+            <span className={`text-lg ${exchangeCount >= 5 ? 'text-brand-teal-dark' : 'text-slate-400'}`}>
               {exchangeCount >= 5 ? '✓' : '✗'}
             </span>
             <div>
-              <p className="text-sm text-white">5+ completed exchanges</p>
+              <p className="text-sm text-slate-900">5+ completed exchanges</p>
               <p className="text-xs text-slate-500">You have {exchangeCount} so far</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className={`text-lg ${!hasReports ? 'text-brand-teal-light' : 'text-red-400'}`}>
+            <span className={`text-lg ${!hasReports ? 'text-brand-teal-dark' : 'text-red-600'}`}>
               {!hasReports ? '✓' : '✗'}
             </span>
             <div>
-              <p className="text-sm text-white">No reports of misconduct</p>
+              <p className="text-sm text-slate-900">No reports of misconduct</p>
               <p className="text-xs text-slate-500">{hasReports ? 'You have been reported' : 'Clean record'}</p>
             </div>
           </div>
         </div>
-        <p className="text-sm text-slate-400 mb-6">
+        <p className="text-sm text-slate-600 mb-6">
           Keep sharing books and building trust — you&apos;ll be eligible soon!
         </p>
-        <Link href="/clubs" className="text-sm text-brand-teal-light hover:text-teal-300">← Back to Clubs</Link>
+        <Link href="/clubs" className="text-sm text-brand-teal-dark hover:text-teal-700">← Back to Clubs</Link>
       </div>
     )
   }
@@ -236,8 +236,8 @@ export default function CreateClubPage() {
       <div className="max-w-lg mx-auto text-center py-16">
         <div className="text-5xl mb-4">⏳</div>
         <h1 className="text-2xl font-bold mb-3">Your request is under review</h1>
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 text-left mb-6">
-          <p className="text-sm text-white font-semibold mb-1">{latestRequest.name}</p>
+        <div className="bg-white border border-black/5 rounded-2xl p-6 text-left mb-6">
+          <p className="text-sm text-slate-900 font-semibold mb-1">{latestRequest.name}</p>
           <p className="text-xs text-slate-500">
             Submitted {new Date(latestRequest.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })} — an admin will approve or reject it soon.
           </p>
@@ -245,12 +245,12 @@ export default function CreateClubPage() {
         <button
           onClick={handleWithdraw}
           disabled={withdrawing}
-          className="text-sm text-red-400/70 hover:text-red-400 transition-colors disabled:opacity-50 mb-6"
+          className="text-sm text-red-600/70 hover:text-red-600 transition-colors disabled:opacity-50 mb-6"
         >
           {withdrawing ? 'Withdrawing...' : 'Withdraw this request'}
         </button>
         <div>
-          <Link href="/clubs" className="text-sm text-brand-teal-light hover:text-teal-300">← Back to Clubs</Link>
+          <Link href="/clubs" className="text-sm text-brand-teal-dark hover:text-teal-700">← Back to Clubs</Link>
         </div>
       </div>
     )
@@ -259,13 +259,13 @@ export default function CreateClubPage() {
   return (
     <div className="max-w-lg mx-auto">
       <h1 className="text-3xl font-bold mb-2">Request a Club</h1>
-      <p className="text-slate-400 mb-6">Start a local interest group for readers near you — an admin will review your request before it goes live.</p>
+      <p className="text-slate-600 mb-6">Start a local interest group for readers near you — an admin will review your request before it goes live.</p>
 
       {latestRequest?.status === 'rejected' && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
-          <p className="text-sm text-red-300 font-medium mb-1">Your last request, &quot;{latestRequest.name}&quot;, was not approved.</p>
+          <p className="text-sm text-red-700 font-medium mb-1">Your last request, &quot;{latestRequest.name}&quot;, was not approved.</p>
           {latestRequest.review_note && (
-            <p className="text-xs text-slate-400">Admin note: {latestRequest.review_note}</p>
+            <p className="text-xs text-slate-600">Admin note: {latestRequest.review_note}</p>
           )}
           <p className="text-xs text-slate-500 mt-2">Feel free to address the feedback and submit a new request below.</p>
         </div>
@@ -273,9 +273,9 @@ export default function CreateClubPage() {
 
       {latestRequest?.status === 'approved' && latestRequest.created_club_id && (
         <div className="bg-brand-teal/10 border border-brand-teal/20 rounded-xl p-4 mb-6">
-          <p className="text-sm text-brand-teal-light">
+          <p className="text-sm text-brand-teal-dark">
             You already run{' '}
-            <Link href={`/clubs/${latestRequest.created_club_id}`} className="underline hover:text-teal-300">
+            <Link href={`/clubs/${latestRequest.created_club_id}`} className="underline hover:text-teal-700">
               &quot;{latestRequest.name}&quot;
             </Link>
             . You can still request another club below.
@@ -283,23 +283,23 @@ export default function CreateClubPage() {
         </div>
       )}
 
-      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-8">
+      <div className="bg-white border border-black/5 rounded-2xl p-8">
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-sm font-medium text-slate-300">Club Name</label>
-              <span className={`text-xs ${nameWords > 10 ? 'text-red-400' : 'text-slate-600'}`}>{nameWords}/10 words</span>
+              <label className="block text-sm font-medium text-slate-700">Club Name</label>
+              <span className={`text-xs ${nameWords > 10 ? 'text-red-600' : 'text-slate-400'}`}>{nameWords}/10 words</span>
             </div>
             <input type="text" required value={name} onChange={e => setName(e.target.value)}
-              className={`w-full bg-white/5 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal ${nameWords > 10 ? 'border-red-500/50' : 'border-white/10'}`}
+              className={`w-full bg-slate-100 border rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal ${nameWords > 10 ? 'border-red-500/50' : 'border-slate-200'}`}
               placeholder="e.g., English Fiction Club Anantnag" />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Categories</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Categories</label>
             <div className="grid grid-cols-2 gap-2">
               {CLUB_INTERESTS.map(interest => (
-                <label key={interest} className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                <label key={interest} className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
                   <input type="checkbox" checked={interests.includes(interest)} onChange={() => toggleInterest(interest)} className="accent-brand-teal" />
                   {interest}
                 </label>
@@ -310,36 +310,36 @@ export default function CreateClubPage() {
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-sm font-medium text-slate-300">Description</label>
-              <span className={`text-xs ${descWords > 200 ? 'text-red-400' : 'text-slate-600'}`}>{descWords}/200 words</span>
+              <label className="block text-sm font-medium text-slate-700">Description</label>
+              <span className={`text-xs ${descWords > 200 ? 'text-red-600' : 'text-slate-400'}`}>{descWords}/200 words</span>
             </div>
             <textarea required value={description} onChange={e => setDescription(e.target.value)} rows={4}
-              className={`w-full bg-white/5 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none ${descWords > 200 ? 'border-red-500/50' : 'border-white/10'}`}
+              className={`w-full bg-slate-100 border rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none ${descWords > 200 ? 'border-red-500/50' : 'border-slate-200'}`}
               placeholder="What's your club about? What will members actually do together?" />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-sm font-medium text-slate-300">Goal <span className="text-slate-500 font-normal">(optional)</span></label>
-              <span className={`text-xs ${goalWords > 50 ? 'text-red-400' : 'text-slate-600'}`}>{goalWords}/50 words</span>
+              <label className="block text-sm font-medium text-slate-700">Goal <span className="text-slate-500 font-normal">(optional)</span></label>
+              <span className={`text-xs ${goalWords > 50 ? 'text-red-600' : 'text-slate-400'}`}>{goalWords}/50 words</span>
             </div>
             <textarea value={goal} onChange={e => setGoal(e.target.value)} rows={2}
-              className={`w-full bg-white/5 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none ${goalWords > 50 ? 'border-red-500/50' : 'border-white/10'}`}
+              className={`w-full bg-slate-100 border rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none ${goalWords > 50 ? 'border-red-500/50' : 'border-slate-200'}`}
               placeholder="What do you want this club to achieve?" />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-sm font-medium text-slate-300">Target Members <span className="text-slate-500 font-normal">(optional)</span></label>
-              <span className={`text-xs ${targetWords > 50 ? 'text-red-400' : 'text-slate-600'}`}>{targetWords}/50 words</span>
+              <label className="block text-sm font-medium text-slate-700">Target Members <span className="text-slate-500 font-normal">(optional)</span></label>
+              <span className={`text-xs ${targetWords > 50 ? 'text-red-600' : 'text-slate-400'}`}>{targetWords}/50 words</span>
             </div>
             <textarea value={targetMembers} onChange={e => setTargetMembers(e.target.value)} rows={2}
-              className={`w-full bg-white/5 border rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none ${targetWords > 50 ? 'border-red-500/50' : 'border-white/10'}`}
+              className={`w-full bg-slate-100 border rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none ${targetWords > 50 ? 'border-red-500/50' : 'border-slate-200'}`}
               placeholder="Who are you hoping will join? e.g. college students who love poetry" />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Cover Image <span className="text-slate-500 font-normal">(optional)</span></label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Cover Image <span className="text-slate-500 font-normal">(optional)</span></label>
             <CoverInput
               preview={coverPreview}
               onFileChange={handleFileChange}
@@ -350,9 +350,9 @@ export default function CreateClubPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Location</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Location</label>
             <input type="text" value={areaName} onChange={e => setAreaName(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
+              className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
               placeholder="e.g., Anantnag" />
             <p className="text-xs text-slate-500 mt-1">
               {latitude ? 'GPS location will be used from your profile for nearby discovery.' : 'Set your location in Profile to enable nearby discovery.'}
