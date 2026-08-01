@@ -26,6 +26,8 @@ These aren't style preferences — each one exists because breaking it caused a 
 
 5. **No `any` types.** The codebase is currently 100% free of them — keep it that way. If you're fighting a type, that's usually a sign the shape needs narrowing, not silencing.
 
+6. **If you change `src/instrumentation.ts` or anything else feeding Sentry, verify against the live Sentry API — not just a local log.** A local check can say a fix worked (a `beforeSend` hook setting `in_app: true`) while Sentry's backend silently discards it on ingest and shows something different in the dashboard. Trigger a real event, then confirm with `curl` against the Sentry API (`Guide/Document/main.pdf`, Chapter 21's Sentry-triage entry) before calling it fixed.
+
 ## Branch names and commits
 
 - Branch names: `type/short-description` — `feature/club-events`, `fix/browse-pagination`, `docs/security-policy`, `chore/upgrade-next`.

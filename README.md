@@ -33,6 +33,7 @@
 | **Vercel**       | Seamless deployment and hosting              |
 | **Vitest**       | Unit tests, run automatically in CI          |
 | **GitHub Actions** | Lint + test on every push and pull request |
+| **Sentry**       | Production error monitoring — server, edge, browser, and both error-boundary conventions |
 
 ---
 
