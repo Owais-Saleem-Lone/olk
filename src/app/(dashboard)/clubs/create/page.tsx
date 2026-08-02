@@ -26,6 +26,12 @@ type MyRequest = {
   created_at: string
 }
 
+type ClubEligibility = {
+  eligible: boolean
+  completed_exchanges: number
+  report_count: number
+}
+
 export default function CreateClubPage() {
   const supabase = createClient()
 
@@ -66,41 +72,12 @@ export default function CreateClubPage() {
       setLongitude(profile.longitude ?? null)
     }
 
-    const { data: myBooks } = await supabase
-      .from('books')
-      .select('id')
-      .eq('owner_id', user.id)
+    const { data: eligibilityRows } = await supabase.rpc('my_club_eligibility')
+    const eligibility = (eligibilityRows as ClubEligibility[] | null)?.[0]
 
-    const myBookIds = myBooks?.map(b => b.id) || []
-
-    let completedCount = 0
-    if (myBookIds.length > 0) {
-      const { count: ownerExchanges } = await supabase
-        .from('book_requests')
-        .select('*', { count: 'exact', head: true })
-        .in('book_id', myBookIds)
-        .in('status', ['handed_over', 'returned'])
-
-      completedCount += ownerExchanges || 0
-    }
-
-    const { count: requesterExchanges } = await supabase
-      .from('book_requests')
-      .select('*', { count: 'exact', head: true })
-      .eq('requester_id', user.id)
-      .in('status', ['handed_over', 'returned'])
-
-    completedCount += requesterExchanges || 0
-    setExchangeCount(completedCount)
-
-    const { count: reportCount } = await supabase
-      .from('reports')
-      .select('*', { count: 'exact', head: true })
-      .eq('reported_user_id', user.id)
-
-    const userHasReports = (reportCount || 0) > 0
-    setHasReports(userHasReports)
-    setEligible(completedCount >= 5 && !userHasReports)
+    setExchangeCount(eligibility?.completed_exchanges ?? 0)
+    setHasReports((eligibility?.report_count ?? 0) > 0)
+    setEligible(eligibility?.eligible ?? false)
 
     const { data: myRequests } = await supabase
       .from('club_requests')

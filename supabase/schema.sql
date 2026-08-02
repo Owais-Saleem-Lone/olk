@@ -310,26 +310,10 @@ CREATE OR REPLACE FUNCTION "public"."check_club_creation_eligibility"() RETURNS 
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
-DECLARE
-  completed_count INT;
-  report_count INT;
 BEGIN
-  SELECT
-    (SELECT count(*) FROM public.book_requests br
-       JOIN public.books b ON b.id = br.book_id
-       WHERE b.owner_id = NEW.creator_id AND br.status IN ('handed_over', 'returned'))
-    +
-    (SELECT count(*) FROM public.book_requests br
-       WHERE br.requester_id = NEW.creator_id AND br.status IN ('handed_over', 'returned'))
-  INTO completed_count;
-
-  SELECT count(*) INTO report_count
-  FROM public.reports WHERE reported_user_id = NEW.creator_id;
-
-  IF completed_count < 5 OR report_count > 0 THEN
+  IF NOT (SELECT eligible FROM public.get_club_eligibility(NEW.creator_id)) THEN
     RAISE EXCEPTION 'Not eligible to create a club: requires 5+ completed exchanges and a clean report record';
   END IF;
-
   RETURN NEW;
 END;
 $$;
@@ -342,26 +326,10 @@ CREATE OR REPLACE FUNCTION "public"."check_club_request_eligibility"() RETURNS "
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
-DECLARE
-  completed_count INT;
-  report_count INT;
 BEGIN
-  SELECT
-    (SELECT count(*) FROM public.book_requests br
-       JOIN public.books b ON b.id = br.book_id
-       WHERE b.owner_id = NEW.requester_id AND br.status IN ('handed_over', 'returned'))
-    +
-    (SELECT count(*) FROM public.book_requests br
-       WHERE br.requester_id = NEW.requester_id AND br.status IN ('handed_over', 'returned'))
-  INTO completed_count;
-
-  SELECT count(*) INTO report_count
-  FROM public.reports WHERE reported_user_id = NEW.requester_id;
-
-  IF completed_count < 5 OR report_count > 0 THEN
+  IF NOT (SELECT eligible FROM public.get_club_eligibility(NEW.requester_id)) THEN
     RAISE EXCEPTION 'Not eligible to request a club: requires 5+ completed exchanges and a clean report record';
   END IF;
-
   RETURN NEW;
 END;
 $$;
@@ -551,6 +519,37 @@ $$;
 
 
 ALTER FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision, "p_limit" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_club_eligibility"("p_user_id" "uuid") RETURNS TABLE("eligible" boolean, "completed_exchanges" integer, "report_count" integer)
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+DECLARE
+  v_completed_exchanges int;
+  v_report_count int;
+BEGIN
+  SELECT
+    (SELECT count(*) FROM public.book_requests br
+       JOIN public.books b ON b.id = br.book_id
+       WHERE b.owner_id = p_user_id AND br.status IN ('handed_over', 'returned'))
+    +
+    (SELECT count(*) FROM public.book_requests br
+       WHERE br.requester_id = p_user_id AND br.status IN ('handed_over', 'returned'))
+  INTO v_completed_exchanges;
+
+  SELECT count(*) INTO v_report_count
+  FROM public.reports WHERE reported_user_id = p_user_id;
+
+  RETURN QUERY SELECT
+    v_completed_exchanges >= 5 AND v_report_count = 0,
+    v_completed_exchanges,
+    v_report_count;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."get_club_eligibility"("p_user_id" "uuid") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "user_lng" double precision) RETURNS TABLE("id" "uuid", "name" character varying, "description" "text", "interests" "text"[], "area_name" character varying, "cover_url" "text", "creator_id" "uuid", "member_count" integer, "created_at" timestamp with time zone, "distance_km" double precision, "creator_name" character varying)
@@ -757,6 +756,17 @@ $$;
 
 
 ALTER FUNCTION "public"."match_wishlists_for_book"("p_title" "text", "p_owner_id" "uuid", "p_threshold" real) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."my_club_eligibility"() RETURNS TABLE("eligible" boolean, "completed_exchanges" integer, "report_count" integer)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT * FROM public.get_club_eligibility(auth.uid());
+$$;
+
+
+ALTER FUNCTION "public"."my_club_eligibility"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."reject_club_request"("p_request_id" "uuid", "p_note" "text") RETURNS "void"
@@ -2412,6 +2422,13 @@ GRANT ALL ON FUNCTION "public"."get_books_nearby"("user_lat" double precision, "
 
 
 
+REVOKE ALL ON FUNCTION "public"."get_club_eligibility"("p_user_id" "uuid") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."get_club_eligibility"("p_user_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_club_eligibility"("p_user_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_club_eligibility"("p_user_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "user_lng" double precision) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "user_lng" double precision) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_clubs_nearby"("user_lat" double precision, "user_lng" double precision) TO "service_role";
@@ -2476,6 +2493,13 @@ REVOKE ALL ON FUNCTION "public"."match_wishlists_for_book"("p_title" "text", "p_
 GRANT ALL ON FUNCTION "public"."match_wishlists_for_book"("p_title" "text", "p_owner_id" "uuid", "p_threshold" real) TO "anon";
 GRANT ALL ON FUNCTION "public"."match_wishlists_for_book"("p_title" "text", "p_owner_id" "uuid", "p_threshold" real) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."match_wishlists_for_book"("p_title" "text", "p_owner_id" "uuid", "p_threshold" real) TO "service_role";
+
+
+
+REVOKE ALL ON FUNCTION "public"."my_club_eligibility"() FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."my_club_eligibility"() TO "anon";
+GRANT ALL ON FUNCTION "public"."my_club_eligibility"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."my_club_eligibility"() TO "service_role";
 
 
 
