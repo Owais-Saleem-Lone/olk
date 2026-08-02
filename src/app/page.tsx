@@ -201,7 +201,7 @@ export default async function Home() {
                   </Link>
                 </div>
                 <div className="space-y-3">
-                  {activeClubs.slice(0, 4).map((club) => (
+                  {activeClubs.slice(0, 1).map((club) => (
                     <Link
                       key={club.id}
                       href={user ? `/clubs/${club.id}` : "/login"}
@@ -229,7 +229,7 @@ export default async function Home() {
                   </Link>
                 </div>
                 <div className="space-y-4">
-                  {upcomingEvents.slice(0, 4).map((ev) => {
+                  {upcomingEvents.slice(0, 1).map((ev) => {
                     const club = ev.clubs as unknown as { name: string } | null
                     return (
                       <Link

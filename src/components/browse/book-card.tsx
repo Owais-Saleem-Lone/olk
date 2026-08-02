@@ -1,5 +1,3 @@
-"use client"
-
 import Link from 'next/link'
 import Image from 'next/image'
 import { formatDistance } from '@/lib/geo'
@@ -8,30 +6,17 @@ import type { Book, Profile } from './types'
 export default function BookCard({
   book,
   owner,
-  currentUserId,
-  isRequested,
-  isBookmarked,
   progress,
-  onRequest,
-  onToggleBookmark,
-  onOpenNotes,
-  onReport,
 }: {
   book: Book
   owner: Profile | undefined
-  currentUserId: string | null
-  isRequested: boolean
-  isBookmarked: boolean
   progress: number | undefined
-  onRequest: () => void
-  onToggleBookmark: () => void
-  onOpenNotes: () => void
-  onReport: () => void
 }) {
-  const isOwnBook = book.owner_id === currentUserId
-
   return (
-    <div className="bg-white border border-black/5 rounded-2xl overflow-hidden hover:border-brand-teal/30 transition-colors flex flex-col">
+    <Link
+      href={`/books/${book.id}`}
+      className="bg-white border border-black/5 rounded-2xl overflow-hidden hover:border-brand-teal/30 transition-colors flex flex-col"
+    >
       {/* Cover image */}
       <div className="relative w-full aspect-[2/3] bg-gradient-to-br from-teal-50 to-slate-100 overflow-hidden">
         {book.cover_url ? (
@@ -122,104 +107,17 @@ export default function BookCard({
             <span className="text-xs text-slate-500">{book.publication_year}</span>
           )}
         </div>
-        {book.description && (
-          <p className="text-xs text-slate-500 mb-2 line-clamp-2">{book.description}</p>
-        )}
-        {(book.read_count ?? 0) > 0 && (
-          <p className="text-xs text-slate-500 mb-3">📖 Read {book.read_count}×</p>
-        )}
 
-        {/* Owner info — only shown to logged-in users */}
-        {currentUserId && owner && (
-          <div className="mt-auto pt-4 border-t border-black/5 mb-4">
-            <Link href={`/user/${book.owner_id}`} className="text-sm text-slate-700 hover:text-brand-teal-dark transition-colors">
-              👤 {owner.display_name || 'Anonymous'}
-            </Link>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {book.distance_km != null && (
-                <span className="text-brand-teal-dark font-medium">{formatDistance(book.distance_km)}</span>
-              )}
-              {book.distance_km != null && owner.area_name && ' · '}
-              {owner.area_name && <span>📍 {owner.area_name}</span>}
-            </p>
-          </div>
-        )}
-
-        {/* Request Button */}
-        {book.status === 'given' ? (
-          <button
-            disabled
-            className="w-full bg-amber-500/10 text-amber-600 border border-amber-500/20 font-medium py-2 rounded-lg text-sm cursor-not-allowed"
-          >
-            Donated
-          </button>
-        ) : book.status === 'unavailable' ? (
-          <button
-            disabled
-            className="w-full bg-blue-500/10 text-blue-600 border border-blue-500/20 font-medium py-2 rounded-lg text-sm cursor-not-allowed"
-          >
-            Currently Being Read
-          </button>
-        ) : !currentUserId ? (
-          <Link
-            href="/login"
-            className="w-full block text-center bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-900 font-medium py-2 rounded-lg text-sm transition-colors"
-          >
-            Login to Request
-          </Link>
-        ) : isOwnBook ? (
-          <button
-            disabled
-            className="w-full bg-slate-100 text-slate-500 font-medium py-2 rounded-lg text-sm cursor-not-allowed"
-          >
-            This is your book
-          </button>
-        ) : isRequested ? (
-          <button
-            disabled
-            className="w-full bg-brand-teal/10 text-brand-teal-dark border border-brand-teal/20 font-medium py-2 rounded-lg text-sm cursor-not-allowed"
-          >
-            Requested ✓
-          </button>
-        ) : (
-          <button
-            onClick={onRequest}
-            className="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-900 font-medium py-2 rounded-lg text-sm transition-colors"
-          >
-            Request Book
-          </button>
-        )}
-        {currentUserId && (
-          <div className="flex gap-2 mt-2">
-            {!isOwnBook && book.status === 'available' && (
-              <button
-                onClick={onToggleBookmark}
-                className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${
-                  isBookmarked
-                    ? 'text-brand-teal-dark bg-brand-teal/10 border border-brand-teal/20'
-                    : 'text-slate-500 hover:text-brand-teal-dark hover:bg-slate-100'
-                }`}
-              >
-                {isBookmarked ? '🔖 Saved' : '🔖 Save'}
-              </button>
+        {(book.distance_km != null || owner?.area_name) && (
+          <p className="text-xs text-slate-500 mt-auto pt-3">
+            {book.distance_km != null && (
+              <span className="text-brand-teal-dark font-medium">{formatDistance(book.distance_km)}</span>
             )}
-            <button
-              onClick={onOpenNotes}
-              className="flex-1 text-xs py-1.5 rounded-lg text-slate-500 hover:text-brand-teal-dark hover:bg-slate-100 transition-colors"
-            >
-              💬 Notes
-            </button>
-            {!isOwnBook && (
-              <button
-                onClick={onReport}
-                className="text-xs text-slate-400 hover:text-red-600 transition-colors px-2 py-1.5"
-              >
-                Report
-              </button>
-            )}
-          </div>
+            {book.distance_km != null && owner?.area_name && ' · '}
+            {owner?.area_name && <span>📍 {owner.area_name}</span>}
+          </p>
         )}
       </div>
-    </div>
+    </Link>
   )
 }

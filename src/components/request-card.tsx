@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import RequestStepper from '@/components/request-stepper'
 
-const STATUS_PILL: Record<string, string> = {
+export const STATUS_PILL: Record<string, string> = {
   pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
   accepted: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
   handed_over: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
@@ -9,7 +9,7 @@ const STATUS_PILL: Record<string, string> = {
   declined: 'bg-red-500/10 text-red-600 border-red-500/20',
 }
 
-const STATUS_LABEL: Record<string, string> = {
+export const STATUS_LABEL: Record<string, string> = {
   pending: 'Pending',
   accepted: 'Accepted',
   handed_over: 'Handed Over',

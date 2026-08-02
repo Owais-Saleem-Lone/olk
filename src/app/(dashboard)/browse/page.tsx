@@ -3,10 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAsyncEffect } from '@/hooks/use-async-effect'
-import { toast } from '@/hooks/use-toast'
-import { createNotification } from '@/lib/notifications'
-import ReportModal from '@/components/report-modal'
-import BookNotesModal from '@/components/book-notes-modal'
 import SearchFilters from '@/components/browse/search-filters'
 import BookCard from '@/components/browse/book-card'
 import type { Book, Profile } from '@/components/browse/types'
@@ -29,12 +25,7 @@ export default function BrowsePage() {
   const [filterArea, setFilterArea] = useState('')
   const [radiusKm, setRadiusKm] = useState<number | null>(null)
   const [hasLocation, setHasLocation] = useState(false)
-  const [requestedBooks, setRequestedBooks] = useState<Set<string>>(new Set())
-  const [bookmarkedBooks, setBookmarkedBooks] = useState<Set<string>>(new Set())
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [reportTarget, setReportTarget] = useState<{ bookId: string; ownerId: string; title: string } | null>(null)
   const [bookProgress, setBookProgress] = useState<Record<string, number>>({})
-  const [notesBook, setNotesBook] = useState<{ id: string; title: string } | null>(null)
 
   const mounted = useRef(false)
 
@@ -46,24 +37,6 @@ export default function BrowsePage() {
     let userLng: number | null = null
 
     if (user) {
-      setCurrentUserId(user.id)
-      const { data: existingReqs } = await supabase
-        .from('book_requests')
-        .select('book_id')
-        .eq('requester_id', user.id)
-        .in('status', ['pending', 'accepted', 'handed_over'])
-      if (existingReqs) {
-        setRequestedBooks(new Set(existingReqs.map((r: { book_id: string }) => r.book_id)))
-      }
-
-      const { data: existingBookmarks } = await supabase
-        .from('bookmarks')
-        .select('book_id')
-        .eq('user_id', user.id)
-      if (existingBookmarks) {
-        setBookmarkedBooks(new Set(existingBookmarks.map((b: { book_id: string }) => b.book_id)))
-      }
-
       const { data: myProfile } = await supabase
         .from('profiles')
         .select('latitude, longitude')
@@ -204,63 +177,9 @@ export default function BrowsePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterGenre, filterType, filterCondition])
 
-  const toggleBookmark = async (bookId: string) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    if (bookmarkedBooks.has(bookId)) {
-      await supabase.from('bookmarks').delete().eq('user_id', user.id).eq('book_id', bookId)
-      setBookmarkedBooks(prev => { const s = new Set(prev); s.delete(bookId); return s })
-    } else {
-      await supabase.from('bookmarks').insert({ user_id: user.id, book_id: bookId })
-      setBookmarkedBooks(prev => new Set(prev).add(bookId))
-    }
-  }
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     fetchBooks(searchQuery)
-  }
-
-  const handleRequestBook = async (bookId: string) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { data: newRequest, error } = await supabase.from('book_requests').insert({
-      book_id: bookId,
-      requester_id: user.id,
-      status: 'pending',
-    }).select('id').single()
-
-    if (error) {
-      if (error.code === '23505') {
-        toast.error('You already have an active request for this book.')
-      } else if (error.message.startsWith('RATE_LIMIT_EXCEEDED:')) {
-        toast.error("You've reached your daily request limit. Try again tomorrow.")
-      } else {
-        console.error('Error requesting book:', error)
-        toast.error('Could not request book: ' + error.message)
-      }
-    } else {
-      setRequestedBooks((prev) => new Set(prev).add(bookId))
-
-      const book = books.find(b => b.id === bookId)
-      if (book && newRequest) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('display_name')
-          .eq('id', user.id)
-          .single()
-
-        await createNotification({
-          userId: book.owner_id,
-          type: 'book_requested',
-          title: `${profile?.display_name || 'Someone'} requested your book "${book.title}"`,
-          link: '/requests',
-          context: { kind: 'request', id: newRequest.id },
-        })
-      }
-    }
   }
 
   let displayBooks = filterArea
@@ -323,35 +242,10 @@ export default function BrowsePage() {
               key={book.id}
               book={book}
               owner={profiles[book.owner_id]}
-              currentUserId={currentUserId}
-              isRequested={requestedBooks.has(book.id)}
-              isBookmarked={bookmarkedBooks.has(book.id)}
               progress={bookProgress[book.id]}
-              onRequest={() => handleRequestBook(book.id)}
-              onToggleBookmark={() => toggleBookmark(book.id)}
-              onOpenNotes={() => setNotesBook({ id: book.id, title: book.title })}
-              onReport={() => setReportTarget({ bookId: book.id, ownerId: book.owner_id, title: book.title })}
             />
           ))}
         </div>
-      )}
-
-      {reportTarget && (
-        <ReportModal
-          reportedBookId={reportTarget.bookId}
-          reportedUserId={reportTarget.ownerId}
-          bookTitle={reportTarget.title}
-          onClose={() => setReportTarget(null)}
-        />
-      )}
-
-      {notesBook && currentUserId && (
-        <BookNotesModal
-          bookId={notesBook.id}
-          bookTitle={notesBook.title}
-          currentUserId={currentUserId}
-          onClose={() => setNotesBook(null)}
-        />
       )}
     </div>
   )
