@@ -92,7 +92,7 @@ export default function AboutModal() {
                 </p>
               </div>
 
-              <div className="space-y-6 text-slate-400 leading-relaxed text-[15px]">
+              <div className="space-y-6 text-slate-700 leading-relaxed text-base">
                 <p>For millennia, education was the pursuit of light—to understand the self, to wrestle with contradictions, and to shape a better world. Somewhere along the way, we traded that light for a paycheck.</p>
                 <p><span className="text-slate-900 font-semibold">Open Library Kashmir (OLK)</span> is a quiet rebellion against the mechanical.</p>
                 <p>We believe a physicist should know poetry. We believe a philosopher should marvel at quantum mechanics. And we believe a sincere artist—the one told their craft is &quot;worthless&quot;—is, at least, as valuable as any other white-collar job acquired after degrees.</p>
@@ -116,7 +116,7 @@ export default function AboutModal() {
                 </p>
               </div>
 
-              <div className="space-y-6 text-slate-400 leading-relaxed text-[15px] mb-10">
+              <div className="space-y-6 text-slate-700 leading-relaxed text-base mb-10">
                 <p>OLK begins not with a building, but with a belief. Our platform is a baby step—small, tender, but alive with possibility.</p>
                 <p>Imagine a place where books do not collect dust on forgotten shelves. They travel. A donated novel from the city reaches a seeker in a remote valley. A textbook on philosophy finds a home where it is truly needed. No middlemen. No gatekeepers.</p>
                 <p>Just people. And the passion that connects them.</p>
@@ -124,7 +124,7 @@ export default function AboutModal() {
 
               <div className="bg-teal-50 border border-teal-100 rounded-2xl p-7">
                 <h3 className="text-sm font-bold text-teal-700 uppercase tracking-widest mb-4">Join the Community</h3>
-                <div className="space-y-4 text-[15px] text-slate-400 leading-relaxed">
+                <div className="space-y-4 text-base text-slate-700 leading-relaxed">
                   <p>This is a space where we actively support the dreamer who wants to write, the traveler who wants to document, and the student who wants to understand <em>why</em> before they learn <em>how</em>.</p>
                   <p className="text-slate-800 font-medium">OLK is not just a library. It is a living ecosystem of enlightenment.</p>
                 </div>
@@ -154,7 +154,7 @@ export default function AboutModal() {
                         <p className="font-semibold text-slate-900 leading-snug">{member.name}</p>
                         <p className="text-xs text-slate-500 mt-0.5 mb-4">{member.role}</p>
                         {member.bio
-                          ? <p className="text-sm text-slate-400 leading-relaxed">{member.bio}</p>
+                          ? <p className="text-base text-slate-700 leading-relaxed">{member.bio}</p>
                           : <p className="text-xs text-slate-600 italic">Biography coming soon.</p>
                         }
                         {member.website && (
