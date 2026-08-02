@@ -24,18 +24,37 @@ The unique index on \code{(user\_id, lower(btrim(title)))} (Chapter~\ref{ch:sche
 
 Clubs are the only feature in the schema besides books themselves that carries its own latitude/longitude (Chapter~\ref{ch:schema}) and its own nearby-search RPC, \code{get\_clubs\_nearby} (Chapter~\ref{ch:functions}) — the same haversine pattern, applied to a different table, ordered by distance then by \code{member\_count}.
 
-\subsection*{Creating a club is gated on trust, in the UI and now the database}
+\subsection*{Creating a club is submit-then-review, not instant self-service}
 
-\pathname{clubs/create/page.tsx} (Chapter~\ref{ch:pages}) requires 5+ completed exchanges and zero reports against the creator, computed with two client-side count queries before the form will even submit. The \code{clubs} table's INSERT policy still allows any authenticated user (Chapter~\ref{ch:rls}), but a \code{BEFORE INSERT} trigger, \code{check\_club\_creation\_eligibility} (Chapter~\ref{ch:functions}), now re-derives the same eligibility rule at the database layer, so the gate holds even for a request that bypasses the UI.
+\pathname{clubs/create/page.tsx} (Chapter~\ref{ch:pages}) does not insert into \code{clubs} directly. It inserts into \code{club\_requests} — the name, description, interests, and the rest of a club's future shape, plus a \code{status} that starts at \code{pending} — and a real \code{clubs} row only ever comes into existence once a moderator approves that request.
+
+\begin{olknote}
+This wasn't the original design. Clubs used to be a plain self-service \code{INSERT} into \code{clubs}, gated only by an eligibility trigger on that table. \pathname{20260718150000\_club\_requests\_and\_review\_workflow.sql} replaced that with the submit-then-review flow described here, and — deliberately — \code{DROP}ped the \code{clubs} table's INSERT policy for regular users entirely (Chapter~\ref{ch:rls}). \code{approve\_club\_request} below is now the \emph{only} path that ever inserts a \code{clubs} row for a normal user; it runs \code{SECURITY DEFINER}, so it doesn't need a policy of its own to do it.
+\end{olknote}
+
+\subsection*{The eligibility bar, and one function that owns it}
+
+Submitting a request requires 5+ completed exchanges (as either the book's owner or the requester — Chapter~\ref{ch:schema}) and zero reports against the requester. That rule used to be implemented three separate times: once in a \code{BEFORE INSERT} trigger on \code{clubs}, again nearly verbatim in a second trigger added on \code{club\_requests} when the review workflow shipped, and a third time as two client-side count queries in \pathname{clubs/create/page.tsx} just to paint the eligibility checklist. All three could drift out of sync — the two trigger copies even used different column names (\code{creator\_id} vs. \code{requester\_id}) for the same underlying check — which meant a threshold change had to be applied by hand in three unrelated files, and it was easy to update one copy and forget the others.
+
+\pathname{20260802055510\_refactor\_club\_eligibility\_shared\_function.sql} consolidated all three into a single function, \code{get\_club\_eligibility(user\_id)} (Chapter~\ref{ch:functions}), returning \code{(eligible, completed\_exchanges, report\_count)} for whichever user ID it's given. Both triggers now call it instead of re-deriving the counts themselves: \code{check\_club\_request\_eligibility} on \code{club\_requests} is the one that actually gates a normal user today, while \code{check\_club\_creation\_eligibility} on \code{clubs} is only reached via \code{approve\_club\_request}'s own insert — a redundant second check at approval time, kept as defence in depth rather than deleted. The client reads the same numbers through a second, narrower RPC, \code{my\_club\_eligibility()}, which wraps \code{get\_club\_eligibility(auth.uid())}.
+
+\begin{olknote}
+\code{get\_club\_eligibility} itself is \emph{not} granted to \code{authenticated} (\code{REVOKE ALL ... FROM public}) — it takes an arbitrary \code{user\_id}, and its \code{report\_count} would let any logged-in caller check whether some \emph{other} user has been reported, simply by guessing their UUID. Only \code{my\_club\_eligibility()} — which hard-codes the caller to \code{auth.uid()} — is exposed to PostgREST. The two triggers call \code{get\_club\_eligibility} directly, which is fine: they already run \code{SECURITY DEFINER}, so they aren't subject to the grant at all.
+\end{olknote}
 
 \begin{olkhowto}
-Raising the bar to, say, 10 exchanges means editing the number in \emph{two} places, both of which currently hard-code \code{5}:
-\begin{enumerate}
-  \item \pathname{src/app/(dashboard)/clubs/create/page.tsx}, line 81 — \code{setEligible(completedCount >= 5 \&\& !userHasReports)} — plus the \code{5} inside the "5+ completed exchanges" label around line 132, or the badge will contradict the actual gate.
-  \item \code{check\_club\_creation\_eligibility()} in \pathname{supabase/schema.sql} — the line \code{IF completed\_count < 5 OR report\_count > 0 THEN}. Never hand-edit \pathname{schema.sql} directly: run \code{npx supabase migration new raise\_club\_threshold}, put the \code{CREATE OR REPLACE FUNCTION} with \code{< 10} in the new migration file, then apply it (Chapter~\ref{ch:local-env}).
-\end{enumerate}
-Ship only \#1 and the UI merely \emph{feels} stricter — a direct API call still gets through at the old threshold, since the trigger is what actually enforces the rule.
+Raising the bar to, say, 10 exchanges is now a one-function edit. Run \code{npx supabase migration new raise\_club\_threshold}, and in the new migration file put a \code{CREATE OR REPLACE FUNCTION public.get\_club\_eligibility(...)} whose final \code{RETURN QUERY SELECT} checks \code{v\_completed\_exchanges >= 10} instead of \code{>= 5}. Never hand-edit \pathname{supabase/schema.sql} directly — it's a dump, not a source (Chapter~\ref{ch:local-env}). Nothing else needs to change: both triggers and the client-facing checklist all read the new threshold the moment the migration lands, since none of them hard-code the number anymore.
 \end{olkhowto}
+
+\subsection*{Review: a moderator's call, always logged}
+
+\pathname{admin/club-requests/page.tsx} (Chapter~\ref{ch:pages}) lists pending requests for any \code{moderator} or above. Approving calls \code{approve\_club\_request(request\_id, note)} (Chapter~\ref{ch:functions}), which — inside one \code{SECURITY DEFINER} function, so it can't partially apply — inserts the real \code{clubs} row, adds the requester as its first \code{club\_members} row, and marks the request \code{approved} with the reviewer and their note. Rejecting just flips \code{status} to \code{rejected}; no \code{clubs} row is ever created. Both actions run through the same \code{withAdminAction('moderator', ...)} wrapper as every other admin action (Chapter~\ref{ch:admin}) — guarded, written to \code{admin\_audit\_log}, and followed by a notification to the requester either way.
+
+A requester can withdraw their own request while it's still \code{pending} — a \code{DELETE} policy scoped to \code{auth.uid() = requester\_id AND status = 'pending'} — the only regular-user write \code{club\_requests} allows directly. There is deliberately no \code{UPDATE} policy on the table at all: even a moderator's own session cannot flip \code{status} by hand, only \code{approve\_club\_request} and \code{reject\_club\_request} can, so every approval or rejection is guaranteed to go through the audited path.
+
+\begin{olktask}
+Submit a club request from a test account with fewer than 5 completed exchanges, confirming the UI's checklist correctly disables the form — then try inserting into \code{club\_requests} directly via \code{POST /rest/v1/club\_requests} with that account's own access token, and confirm it still comes back rejected by \code{check\_club\_request\_eligibility}. Then, from an eligible account, submit a request and approve it from a \code{moderator} test account; confirm a real \code{clubs} row and a \code{club\_members} row both exist afterward, and that the requester received a notification. Same "is it a real gate or just a hidden button" habit this chapter asks for club creation generally, now applied end to end across the request-and-review flow.
+\end{olktask}
 
 \subsection*{Membership and posts}
 
