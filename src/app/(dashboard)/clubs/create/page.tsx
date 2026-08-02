@@ -30,6 +30,7 @@ type ClubEligibility = {
   eligible: boolean
   completed_exchanges: number
   report_count: number
+  min_exchanges: number
 }
 
 export default function CreateClubPage() {
@@ -38,6 +39,7 @@ export default function CreateClubPage() {
   const [loading, setLoading] = useState(true)
   const [eligible, setEligible] = useState<boolean | null>(null)
   const [exchangeCount, setExchangeCount] = useState(0)
+  const [minExchanges, setMinExchanges] = useState(5)
   const [hasReports, setHasReports] = useState(false)
   const [latestRequest, setLatestRequest] = useState<MyRequest | null>(null)
 
@@ -76,6 +78,7 @@ export default function CreateClubPage() {
     const eligibility = (eligibilityRows as ClubEligibility[] | null)?.[0]
 
     setExchangeCount(eligibility?.completed_exchanges ?? 0)
+    setMinExchanges(eligibility?.min_exchanges ?? 5)
     setHasReports((eligibility?.report_count ?? 0) > 0)
     setEligible(eligibility?.eligible ?? false)
 
@@ -182,11 +185,11 @@ export default function CreateClubPage() {
         <h1 className="text-2xl font-bold mb-3">Not eligible to request a club yet</h1>
         <div className="bg-white border border-black/5 rounded-2xl p-6 text-left space-y-4 mb-6">
           <div className="flex items-center gap-3">
-            <span className={`text-lg ${exchangeCount >= 5 ? 'text-brand-teal-dark' : 'text-slate-400'}`}>
-              {exchangeCount >= 5 ? '✓' : '✗'}
+            <span className={`text-lg ${exchangeCount >= minExchanges ? 'text-brand-teal-dark' : 'text-slate-400'}`}>
+              {exchangeCount >= minExchanges ? '✓' : '✗'}
             </span>
             <div>
-              <p className="text-sm text-slate-900">5+ completed exchanges</p>
+              <p className="text-sm text-slate-900">{minExchanges}+ completed exchanges</p>
               <p className="text-xs text-slate-500">You have {exchangeCount} so far</p>
             </div>
           </div>

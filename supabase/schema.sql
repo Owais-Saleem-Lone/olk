@@ -521,13 +521,14 @@ $$;
 ALTER FUNCTION "public"."get_books_nearby"("user_lat" double precision, "user_lng" double precision, "p_limit" integer) OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_club_eligibility"("p_user_id" "uuid") RETURNS TABLE("eligible" boolean, "completed_exchanges" integer, "report_count" integer)
+CREATE OR REPLACE FUNCTION "public"."get_club_eligibility"("p_user_id" "uuid") RETURNS TABLE("eligible" boolean, "completed_exchanges" integer, "report_count" integer, "min_exchanges" integer)
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
 DECLARE
   v_completed_exchanges int;
   v_report_count int;
+  v_min_exchanges int;
 BEGIN
   SELECT
     (SELECT count(*) FROM public.book_requests br
@@ -541,10 +542,13 @@ BEGIN
   SELECT count(*) INTO v_report_count
   FROM public.reports WHERE reported_user_id = p_user_id;
 
+  v_min_exchanges := public.get_platform_setting_int('club_min_exchanges', 5);
+
   RETURN QUERY SELECT
-    v_completed_exchanges >= 5 AND v_report_count = 0,
+    v_completed_exchanges >= v_min_exchanges AND v_report_count = 0,
     v_completed_exchanges,
-    v_report_count;
+    v_report_count,
+    v_min_exchanges;
 END;
 $$;
 
@@ -758,7 +762,7 @@ $$;
 ALTER FUNCTION "public"."match_wishlists_for_book"("p_title" "text", "p_owner_id" "uuid", "p_threshold" real) OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."my_club_eligibility"() RETURNS TABLE("eligible" boolean, "completed_exchanges" integer, "report_count" integer)
+CREATE OR REPLACE FUNCTION "public"."my_club_eligibility"() RETURNS TABLE("eligible" boolean, "completed_exchanges" integer, "report_count" integer, "min_exchanges" integer)
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
