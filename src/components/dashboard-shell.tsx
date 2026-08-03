@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import DashboardSidebar from './dashboard-sidebar'
 import NotificationBell from './notification-bell'
 import AnnouncementBanner from './announcement-banner'
@@ -45,7 +46,7 @@ export default function DashboardShell({
       {/* ── Mobile top bar (hidden on desktop) ── */}
       <header className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-cream/85 backdrop-blur-sm border-b border-black/5">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-brand-teal flex items-center justify-center font-bold text-xs">OLK</div>
+          <Image src="/olk-logo.svg" alt="OLK logo" width={32} height={32} unoptimized className="rounded-full" />
           <span className="font-semibold tracking-tight text-sm">Open Library Kashmir</span>
         </Link>
         <div className="flex items-center gap-1">

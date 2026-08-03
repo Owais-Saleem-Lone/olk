@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { headers } from 'next/headers'
 import DashboardShell from '@/components/dashboard-shell'
 import AnnouncementBanner from '@/components/announcement-banner'
@@ -33,7 +34,7 @@ export default async function DashboardLayout({
         <header className="sticky top-0 z-50 border-b border-black/5 backdrop-blur-md bg-cream/85">
           <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 max-w-7xl mx-auto">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-brand-teal flex items-center justify-center font-bold text-sm">OLK</div>
+              <Image src="/olk-logo.svg" alt="OLK logo" width={32} height={32} unoptimized className="rounded-full" />
               <span className="font-semibold tracking-tight text-sm md:text-base">Open Library Kashmir</span>
             </Link>
             <div className="flex items-center gap-2">

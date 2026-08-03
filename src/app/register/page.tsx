@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function RegisterPage() {
   const supabase = createClient()
@@ -37,7 +38,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-9 h-9 rounded-lg bg-brand-teal flex items-center justify-center font-bold text-sm">OLK</div>
+            <Image src="/olk-logo.svg" alt="OLK logo" width={36} height={36} unoptimized className="rounded-full" />
             <span className="text-lg font-semibold tracking-tight">Open Library Kashmir</span>
           </Link>
           <h1 className="text-3xl font-bold">Create your account</h1>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import Image from 'next/image'
 
 const TEAM = [
   {
@@ -70,9 +71,7 @@ export default function AboutModal() {
 
             {/* ── Header ── */}
             <div className="text-center mb-20">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center font-bold text-sm text-slate-900 shadow-xl shadow-teal-600/20 mx-auto mb-5">
-                OLK
-              </div>
+              <Image src="/olk-logo.svg" alt="OLK logo" width={200} height={200} unoptimized className="rounded-full shadow-xl shadow-teal-600/20 mx-auto mb-5" />
               <h1 className="text-4xl md:text-5xl font-bold mb-3 tracking-tight text-slate-900">About Us</h1>
               <p className="text-slate-500 text-sm tracking-widest uppercase">Open Library Kashmir</p>
             </div>

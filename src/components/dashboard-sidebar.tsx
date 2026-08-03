@@ -1,6 +1,7 @@
 "use client"
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { FeatureFlags } from '@/lib/platform-settings'
@@ -41,7 +42,7 @@ export default function DashboardSidebar({
   return (
     <aside className="w-64 h-full border-r border-black/5 p-6 flex flex-col">
       <Link href="/" className="flex items-center gap-2 mb-10">
-        <div className="w-9 h-9 rounded-lg bg-brand-teal flex items-center justify-center font-bold text-sm">OLK</div>
+        <Image src="/olk-logo.svg" alt="OLK logo" width={36} height={36} unoptimized className="rounded-full" />
         <span className="text-lg font-semibold tracking-tight">OLK</span>
       </Link>
 
