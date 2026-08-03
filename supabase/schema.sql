@@ -35,8 +35,15 @@ ALTER TYPE "public"."admin_role" OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."admin_get_area_stats"() RETURNS TABLE("area_name" character varying, "user_count" bigint, "book_count" bigint)
-    LANGUAGE "sql" STABLE SECURITY DEFINER
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  RETURN QUERY
   SELECT
     p.area_name,
     count(DISTINCT p.id) AS user_count,
@@ -46,6 +53,7 @@ CREATE OR REPLACE FUNCTION "public"."admin_get_area_stats"() RETURNS TABLE("area
   WHERE p.area_name IS NOT NULL AND p.area_name != ''
   GROUP BY p.area_name
   ORDER BY user_count DESC;
+END;
 $$;
 
 
@@ -53,8 +61,15 @@ ALTER FUNCTION "public"."admin_get_area_stats"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."admin_get_daily_stats"("days_back" integer DEFAULT 30) RETURNS TABLE("day" "date", "new_users" bigint, "new_books" bigint, "new_requests" bigint, "completed_exchanges" bigint)
-    LANGUAGE "sql" STABLE SECURITY DEFINER
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  RETURN QUERY
   WITH date_series AS (
     SELECT generate_series(
       (current_date - (days_back || ' days')::interval)::date,
@@ -70,6 +85,7 @@ CREATE OR REPLACE FUNCTION "public"."admin_get_daily_stats"("days_back" integer 
     COALESCE((SELECT count(*) FROM book_requests WHERE completed_at::date = ds.day), 0) AS completed_exchanges
   FROM date_series ds
   ORDER BY ds.day;
+END;
 $$;
 
 
@@ -77,8 +93,15 @@ ALTER FUNCTION "public"."admin_get_daily_stats"("days_back" integer) OWNER TO "p
 
 
 CREATE OR REPLACE FUNCTION "public"."admin_get_exchange_stats"() RETURNS TABLE("total_requests" bigint, "pending_count" bigint, "accepted_count" bigint, "declined_count" bigint, "handed_over_count" bigint, "returned_count" bigint, "success_rate" numeric)
-    LANGUAGE "sql" STABLE SECURITY DEFINER
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  RETURN QUERY
   SELECT
     count(*) AS total_requests,
     count(*) FILTER (WHERE status = 'pending') AS pending_count,
@@ -96,6 +119,7 @@ CREATE OR REPLACE FUNCTION "public"."admin_get_exchange_stats"() RETURNS TABLE("
       ELSE 0
     END AS success_rate
   FROM book_requests;
+END;
 $$;
 
 
@@ -103,8 +127,15 @@ ALTER FUNCTION "public"."admin_get_exchange_stats"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."admin_get_overdue_books"("threshold_days" integer DEFAULT 30) RETURNS TABLE("request_id" "uuid", "book_title" character varying, "book_author" character varying, "owner_name" character varying, "borrower_name" character varying, "handed_over_at" timestamp with time zone, "days_overdue" integer)
-    LANGUAGE "sql" STABLE SECURITY DEFINER
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  RETURN QUERY
   SELECT
     br.id AS request_id,
     b.title AS book_title,
@@ -122,6 +153,7 @@ CREATE OR REPLACE FUNCTION "public"."admin_get_overdue_books"("threshold_days" i
     AND br.handed_over_at IS NOT NULL
     AND (current_date - br.handed_over_at::date) > threshold_days
   ORDER BY days_overdue DESC;
+END;
 $$;
 
 
@@ -129,14 +161,22 @@ ALTER FUNCTION "public"."admin_get_overdue_books"("threshold_days" integer) OWNE
 
 
 CREATE OR REPLACE FUNCTION "public"."admin_get_rating_distribution"() RETURNS TABLE("score" smallint, "count" bigint)
-    LANGUAGE "sql" STABLE SECURITY DEFINER
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  RETURN QUERY
   SELECT s.score, COALESCE(r.cnt, 0) AS count
   FROM generate_series(1, 5) AS s(score)
   LEFT JOIN (
     SELECT score, count(*) AS cnt FROM ratings GROUP BY score
   ) r ON r.score = s.score
   ORDER BY s.score;
+END;
 $$;
 
 
@@ -144,8 +184,15 @@ ALTER FUNCTION "public"."admin_get_rating_distribution"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."admin_get_top_contributors"("lim" integer DEFAULT 10) RETURNS TABLE("user_id" "uuid", "display_name" character varying, "area_name" character varying, "books_listed" bigint, "books_donated" bigint, "books_lent" bigint, "avg_rating" numeric)
-    LANGUAGE "sql" STABLE SECURITY DEFINER
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  RETURN QUERY
   SELECT
     p.id AS user_id,
     p.display_name,
@@ -161,6 +208,7 @@ CREATE OR REPLACE FUNCTION "public"."admin_get_top_contributors"("lim" integer D
   GROUP BY p.id, p.display_name, p.area_name
   ORDER BY books_listed DESC
   LIMIT lim;
+END;
 $$;
 
 
@@ -643,24 +691,30 @@ CREATE OR REPLACE FUNCTION "public"."guard_profile_privileged_columns"() RETURNS
     SET "search_path" TO 'public'
     AS $$
 BEGIN
-  -- NULL auth.uid() means there's no end-user JWT in play at all (service-role
-  -- key, or a superuser/backend script) — not a role an end user can spoof,
-  -- since a real authenticated-role JWT from Supabase Auth always carries a
-  -- sub claim. Trust it, same as RLS already implicitly does for service_role.
-  IF auth.uid() IS NULL THEN
+  IF auth.uid() IS NULL THEN RETURN NEW; END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    IF (NEW.is_admin IS DISTINCT FROM false OR NEW.admin_role IS NOT NULL)
+       AND NOT public.is_super_admin() THEN
+      RAISE EXCEPTION 'Only super admins can set is_admin/admin_role';
+    END IF;
+
+    IF (NEW.is_banned IS DISTINCT FROM false OR NEW.ban_reason IS NOT NULL OR
+        NEW.ban_expires_at IS NOT NULL OR NEW.warning_count IS DISTINCT FROM 0)
+       AND NOT public.is_admin_or_mod() THEN
+      RAISE EXCEPTION 'Only admins can set ban/warning fields';
+    END IF;
+
     RETURN NEW;
   END IF;
 
-  IF (NEW.is_admin IS DISTINCT FROM OLD.is_admin OR
-      NEW.admin_role IS DISTINCT FROM OLD.admin_role)
+  IF (NEW.is_admin IS DISTINCT FROM OLD.is_admin OR NEW.admin_role IS DISTINCT FROM OLD.admin_role)
      AND NOT public.is_super_admin() THEN
     RAISE EXCEPTION 'Only super admins can change is_admin/admin_role';
   END IF;
 
-  IF (NEW.is_banned IS DISTINCT FROM OLD.is_banned OR
-      NEW.ban_reason IS DISTINCT FROM OLD.ban_reason OR
-      NEW.ban_expires_at IS DISTINCT FROM OLD.ban_expires_at OR
-      NEW.warning_count IS DISTINCT FROM OLD.warning_count)
+  IF (NEW.is_banned IS DISTINCT FROM OLD.is_banned OR NEW.ban_reason IS DISTINCT FROM OLD.ban_reason OR
+      NEW.ban_expires_at IS DISTINCT FROM OLD.ban_expires_at OR NEW.warning_count IS DISTINCT FROM OLD.warning_count)
      AND NOT public.is_admin_or_mod() THEN
     RAISE EXCEPTION 'Only admins can change ban/warning fields';
   END IF;
@@ -703,13 +757,8 @@ ALTER FUNCTION "public"."increment_read_count_on_return"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."is_admin"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
-    AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid()
-      AND is_admin = true
-  );
-$$;
+    SET "search_path" TO 'public'
+    AS $$ SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true); $$;
 
 
 ALTER FUNCTION "public"."is_admin"() OWNER TO "postgres";
@@ -717,14 +766,8 @@ ALTER FUNCTION "public"."is_admin"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."is_admin_or_mod"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
-    AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid()
-      AND is_admin = true
-      AND admin_role IN ('super_admin', 'moderator')
-  );
-$$;
+    SET "search_path" TO 'public'
+    AS $$ SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true AND admin_role IN ('super_admin','moderator')); $$;
 
 
 ALTER FUNCTION "public"."is_admin_or_mod"() OWNER TO "postgres";
@@ -732,14 +775,8 @@ ALTER FUNCTION "public"."is_admin_or_mod"() OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."is_super_admin"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
-    AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid()
-      AND is_admin = true
-      AND admin_role = 'super_admin'
-  );
-$$;
+    SET "search_path" TO 'public'
+    AS $$ SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true AND admin_role = 'super_admin'); $$;
 
 
 ALTER FUNCTION "public"."is_super_admin"() OWNER TO "postgres";
@@ -1611,7 +1648,7 @@ CREATE OR REPLACE TRIGGER "trg_event_attendee_count" AFTER INSERT OR DELETE ON "
 
 
 
-CREATE OR REPLACE TRIGGER "trg_guard_profile_privileged_columns" BEFORE UPDATE ON "public"."profiles" FOR EACH ROW EXECUTE FUNCTION "public"."guard_profile_privileged_columns"();
+CREATE OR REPLACE TRIGGER "trg_guard_profile_privileged_columns" BEFORE INSERT OR UPDATE ON "public"."profiles" FOR EACH ROW EXECUTE FUNCTION "public"."guard_profile_privileged_columns"();
 
 
 
@@ -1905,6 +1942,10 @@ CREATE POLICY "Admins can update any club" ON "public"."clubs" FOR UPDATE TO "au
 
 
 
+CREATE POLICY "Admins can update any event" ON "public"."club_events" FOR UPDATE TO "authenticated" USING ("public"."is_admin_or_mod"());
+
+
+
 CREATE POLICY "Admins can update any profile" ON "public"."profiles" FOR UPDATE TO "authenticated" USING ("public"."is_admin_or_mod"());
 
 
@@ -1926,6 +1967,14 @@ CREATE POLICY "Admins can view all bans" ON "public"."user_bans" FOR SELECT TO "
 
 
 CREATE POLICY "Admins can view all books" ON "public"."books" FOR SELECT TO "authenticated" USING ("public"."is_admin"());
+
+
+
+CREATE POLICY "Admins can view all clubs" ON "public"."clubs" FOR SELECT TO "authenticated" USING ("public"."is_admin"());
+
+
+
+CREATE POLICY "Admins can view all events" ON "public"."club_events" FOR SELECT TO "authenticated" USING ("public"."is_admin"());
 
 
 
@@ -1965,9 +2014,7 @@ CREATE POLICY "Admins can view templates" ON "public"."notification_templates" F
 
 
 
-CREATE POLICY "Admins manage book_of_month" ON "public"."book_of_month" USING ((EXISTS ( SELECT 1
-   FROM "public"."profiles"
-  WHERE (("profiles"."id" = "auth"."uid"()) AND ("profiles"."is_admin" = true)))));
+CREATE POLICY "Admins manage book_of_month" ON "public"."book_of_month" USING ("public"."is_admin_or_mod"());
 
 
 
@@ -2328,37 +2375,31 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."admin_get_area_stats"() TO "anon";
 GRANT ALL ON FUNCTION "public"."admin_get_area_stats"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."admin_get_area_stats"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."admin_get_daily_stats"("days_back" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."admin_get_daily_stats"("days_back" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."admin_get_daily_stats"("days_back" integer) TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."admin_get_exchange_stats"() TO "anon";
 GRANT ALL ON FUNCTION "public"."admin_get_exchange_stats"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."admin_get_exchange_stats"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."admin_get_overdue_books"("threshold_days" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."admin_get_overdue_books"("threshold_days" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."admin_get_overdue_books"("threshold_days" integer) TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."admin_get_rating_distribution"() TO "anon";
 GRANT ALL ON FUNCTION "public"."admin_get_rating_distribution"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."admin_get_rating_distribution"() TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."admin_get_top_contributors"("lim" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."admin_get_top_contributors"("lim" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."admin_get_top_contributors"("lim" integer) TO "service_role";
 
@@ -2526,8 +2567,8 @@ GRANT ALL ON FUNCTION "public"."update_event_attendee_count"() TO "service_role"
 
 
 
-GRANT ALL ON TABLE "public"."admin_audit_log" TO "anon";
-GRANT ALL ON TABLE "public"."admin_audit_log" TO "authenticated";
+GRANT SELECT,INSERT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."admin_audit_log" TO "anon";
+GRANT SELECT,INSERT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."admin_audit_log" TO "authenticated";
 GRANT ALL ON TABLE "public"."admin_audit_log" TO "service_role";
 
 
