@@ -206,6 +206,52 @@ Vercel's production environment variables.
 
 ---
 
+## 7. Development tooling & frameworks
+
+These aren't hosted third-party services (nothing to sign up for or pay), but
+they're core to how the project is built, tested, and kept correct — worth
+documenting alongside the hosted services for a complete picture of what
+"the stack" means.
+
+**Next.js 16 (React 19)** — the application framework itself. Chosen for
+first-class Vercel deployment support, Server Components (lets pages fetch
+data server-side without hand-rolled API routes for most reads), and
+built-in image optimization used for Supabase Storage-hosted book covers.
+Runs on Turbopack (Next's Rust-based bundler) for both dev and build.
+
+**TypeScript** — static typing across the whole app. Catches a large class
+of bugs (wrong prop types, mismatched Supabase row shapes, etc.) at build
+time rather than at runtime in production; the CI `lint` step and local
+editor tooling both depend on it.
+
+**ESLint** (`eslint.config.ts`, flat config) — static code-quality/style
+checks, built on `eslint-config-next` (both the `core-web-vitals` and
+`typescript` rule sets) plus one project-specific override tightening
+`react-hooks/exhaustive-deps` to also cover the custom `useAsyncEffect`
+hook. Runs in CI (`npm run lint`) on every push/PR — a lint failure blocks
+merge via the GitHub Actions check.
+
+**Vitest** — the test runner, in two separate configs:
+- `vitest.config.ts` — fast unit tests (`npm test`), no external
+  dependencies, runs `src/**/*.test.ts`.
+- `vitest.integration.config.ts` — the RLS (Row-Level Security) integration
+  suite (`npm run test:rls`), deliberately kept separate because these tests
+  hit a real local Supabase/Postgres stack to verify database-level access
+  control policies actually behave as intended — something a mocked unit
+  test can't catch. This is the suite CI's `rls-tests` job runs after
+  spinning up Supabase in Docker and replaying all migrations.
+
+Chosen over Jest for faster startup/watch performance and native Vite/ESM
+config compatibility with the rest of the toolchain.
+
+**Tailwind CSS v4** (`postcss.config.mjs`, `@tailwindcss/postcss`) —
+utility-first CSS framework used for all styling across the app. v4's
+CSS-native config (no separate `tailwind.config.js` needed) is why there's
+no such file in the repo — configuration lives in CSS itself via
+`@theme`/`@import` directives.
+
+---
+
 ## Env var → service map
 
 Quick lookup of which service owns which environment variable (see
