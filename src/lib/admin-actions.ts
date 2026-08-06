@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { checkAdminAPI, type AdminRole, type AdminUser } from '@/lib/admin'
 import { revalidatePath } from 'next/cache'
 
@@ -520,6 +521,54 @@ export const rejectClubRequest = withAdminAction(
     return { targetType: 'club_request', targetId: requestId, details: { note } }
   }
 )
+
+// Identity check happens over email, outside the app (ID + CV aren't stored
+// here) -- this just marks that an admin actually did it, and
+// approve_club_request() (the DB function, not this action) refuses to
+// materialize the club until this flag is set. See migration
+// 20260806094100_club_membership_approval_and_identity_verification.sql.
+export const markClubRequestIdentityVerified = withAdminAction(
+  'moderator',
+  'mark_club_request_identity_verified',
+  async ({ supabase }, requestId: string) => {
+    const { error } = await supabase.rpc('mark_club_request_identity_verified', { p_request_id: requestId })
+    if (error) throw error
+
+    return { targetType: 'club_request', targetId: requestId, details: {} }
+  }
+)
+
+// Reads auth.users.email via the Admin API (service role) rather than any
+// RLS-visible table -- profiles deliberately has no email column, and this
+// is the one place an admin needs it: to reach out for ID/CV verification
+// before approving a club request. Not wrapped in withAdminAction since it's
+// a read, not a mutation, but still gated behind the same guardRole check and
+// audit-logged, since handing out a user's email is itself a sensitive read.
+export async function getClubRequesterEmail(requestId: string): Promise<{ email: string | null; error?: string }> {
+  try {
+    const admin = await guardRole('moderator')
+    const supabase = await createClient()
+
+    const { data: request } = await supabase
+      .from('club_requests')
+      .select('requester_id')
+      .eq('id', requestId)
+      .single()
+    if (!request) return { email: null, error: 'Request not found' }
+
+    const supabaseAdmin = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+    const { data } = await supabaseAdmin.auth.admin.getUserById(request.requester_id)
+
+    await auditLog(admin.id, 'view_club_requester_email', 'club_request', requestId, {})
+
+    return { email: data?.user?.email ?? null }
+  } catch (e) {
+    return { email: null, error: (e as Error).message }
+  }
+}
 
 // ═══════════════════════════════════════════
 // EVENT MANAGEMENT

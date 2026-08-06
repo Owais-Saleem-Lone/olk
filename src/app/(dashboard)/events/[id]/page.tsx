@@ -234,7 +234,9 @@ export default function EventDetailPage() {
         </button>
 
         {showAttendees && (
-          attendees.length === 0 ? (
+          !isClubMember && !isGoing && !isCreator ? (
+            <p className="text-sm text-slate-500">Join the club or RSVP to see who&apos;s attending.</p>
+          ) : attendees.length === 0 ? (
             <p className="text-sm text-slate-500">No one has RSVP&apos;d yet.</p>
           ) : (
             <div className="space-y-2">

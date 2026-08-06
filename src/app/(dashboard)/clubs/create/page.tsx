@@ -218,8 +218,11 @@ export default function CreateClubPage() {
         <h1 className="text-2xl font-bold mb-3">Your request is under review</h1>
         <div className="bg-white border border-black/5 rounded-2xl p-6 text-left mb-6">
           <p className="text-sm text-slate-900 font-semibold mb-1">{latestRequest.name}</p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 mb-2">
             Submitted {new Date(latestRequest.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })} — an admin will approve or reject it soon.
+          </p>
+          <p className="text-xs text-slate-500">
+            Keep an eye on your inbox — we&apos;ll email you asking for your ID and CV as part of verifying this request.
           </p>
         </div>
         <button
@@ -239,7 +242,12 @@ export default function CreateClubPage() {
   return (
     <div className="max-w-lg mx-auto">
       <h1 className="text-3xl font-bold mb-2">Request a Club</h1>
-      <p className="text-slate-600 mb-6">Start a local interest group for readers near you — an admin will review your request before it goes live.</p>
+      <p className="text-slate-600 mb-2">Start a local interest group for readers near you — an admin will review your request before it goes live.</p>
+      <p className="text-xs text-slate-500 mb-6 bg-white border border-black/5 rounded-xl px-4 py-3">
+        Part of that review is confirming who you are: after you submit, expect an email from our team asking for a copy of
+        your ID and CV so we can verify you&apos;re a credible fit to run this club. Approval won&apos;t happen until that&apos;s done, so
+        have those ready to send when they ask.
+      </p>
 
       {latestRequest?.status === 'rejected' && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">

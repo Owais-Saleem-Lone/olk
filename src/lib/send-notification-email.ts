@@ -13,7 +13,8 @@ const NOTIFICATION_SUBJECTS: Record<string, string> = {
   new_message: 'New message on OLK',
   handover_confirmed: 'Book handover confirmed',
   book_returned: 'Book has been returned',
-  club_joined: 'New member in your club',
+  club_joined: 'New membership request for your club',
+  club_membership_approved: "You're in! Membership approved",
   club_announcement: 'New announcement in your club',
   event_created: 'New event in your club',
 }
@@ -64,5 +65,26 @@ export async function sendNotificationEmail({
 
   if (error) {
     console.error('Resend error:', error)
+  }
+}
+
+// Sends a batch of notification emails in small concurrent chunks rather
+// than one-by-one -- bounds how many requests hit Resend at once (and how
+// much a slow/failed send can stall the batch) regardless of how large the
+// recipient list is. Each email is isolated via allSettled so one failure
+// (bad address, provider hiccup) can't take down the rest of the batch.
+const EMAIL_BATCH_SIZE = 10
+
+export async function sendBatchNotificationEmails(
+  items: { userId: string; type: string; title: string }[],
+) {
+  for (let i = 0; i < items.length; i += EMAIL_BATCH_SIZE) {
+    const batch = items.slice(i, i + EMAIL_BATCH_SIZE)
+    const results = await Promise.allSettled(batch.map(sendNotificationEmail))
+    results.forEach((result, idx) => {
+      if (result.status === 'rejected') {
+        console.error('Batch notification email failed for', batch[idx].userId, result.reason)
+      }
+    })
   }
 }

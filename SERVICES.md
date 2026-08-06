@@ -103,7 +103,7 @@ built-in Auth (GoTrue), file Storage, and auto-generated REST/Realtime APIs
 **Purpose for this project:** The entire backend. Specifically:
 - **Postgres database** — all app data: `profiles`, `books`, `book_requests`,
   `messages`, `bookmarks`, `ratings`, `reports`, `clubs`, `club_members`,
-  `club_posts`, `club_requests`, `book_progress`, `book_notes`,
+  `club_posts`, `club_ratings`, `club_requests`, `book_progress`, `book_notes`,
   `platform_settings`, plus the clubs-events tables. Schema managed entirely
   through versioned migrations in `supabase/migrations/` (30+ as of last
   count).

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAsyncEffect } from '@/hooks/use-async-effect'
-import { createNotification } from '@/lib/notifications'
+import { notifyEventCreated } from '@/lib/notifications'
 import { compressImage } from '@/lib/image-utils'
 import { toast } from '@/hooks/use-toast'
 import { useParams, useRouter } from 'next/navigation'
@@ -112,25 +112,21 @@ export default function CreateClubEventPage() {
     }).select().single()
 
     if (error) {
-      toast.error('Error creating event: ' + error.message)
+      toast.error(
+        error.message.startsWith('RATE_LIMIT_EXCEEDED:')
+          ? error.message.includes('per 30 days')
+            ? "This club has already used its event for this month. Try again next month, or upgrade to Pro for more."
+            : "That capacity is above the current plan's limit of 10 participants per event."
+          : 'Error creating event: ' + error.message
+      )
       setCreating(false)
       return
     }
 
-    const { data: members } = await supabase
-      .from('club_members')
-      .select('user_id')
-      .eq('club_id', clubId)
-
-    const memberIds = (members || []).map(m => m.user_id).filter(id => id !== currentUserId)
-    for (const id of memberIds) {
-      await createNotification({
-        userId: id,
-        type: 'event_created',
-        title: `New event in "${clubName}": ${event.title}`,
-        link: `/events/${event.id}`,
-        context: { kind: 'event_created', id: event.id },
-      })
+    try {
+      await notifyEventCreated(event.id)
+    } catch (err) {
+      console.error('Failed to notify club members:', err)
     }
 
     router.push(`/events/${event.id}`)
@@ -223,10 +219,13 @@ export default function CreateClubEventPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Capacity <span className="text-slate-500 font-normal">(optional)</span></label>
-            <input type="number" min="1" value={capacity} onChange={e => setCapacity(e.target.value)}
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Capacity</label>
+            <input type="number" min="1" max="10" value={capacity} onChange={e => setCapacity(e.target.value)}
               className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal"
-              placeholder="Max attendees" />
+              placeholder="Max 10 on the free plan" />
+            <p className="text-xs text-slate-500 mt-1">
+              Free clubs are capped at 10 participants per event and 1 event per month. Upgrade to Pro later for more.
+            </p>
           </div>
 
           <button type="submit" disabled={creating || !title.trim() || !startsAt}

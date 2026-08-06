@@ -3,7 +3,8 @@
 import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAsyncEffect } from '@/hooks/use-async-effect'
-import { createNotification } from '@/lib/notifications'
+import { createNotification, notifyClubChatMessage } from '@/lib/notifications'
+import { toast } from '@/hooks/use-toast'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -19,6 +20,8 @@ type Club = {
   creator_id: string
   member_count: number
   created_at: string
+  rating_avg: number | null
+  rating_count: number
 }
 
 type Post = {
@@ -56,12 +59,14 @@ export default function ClubDetailPage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [postCount, setPostCount] = useState(0)
   const [members, setMembers] = useState<Member[]>([])
+  const [pendingApplicants, setPendingApplicants] = useState<Member[]>([])
   const [events, setEvents] = useState<ClubEvent[]>([])
-  const [isMember, setIsMember] = useState(false)
+  const [membershipStatus, setMembershipStatus] = useState<'none' | 'pending' | 'approved'>('none')
   const [isCreator, setIsCreator] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [joining, setJoining] = useState(false)
 
   const [newPost, setNewPost] = useState('')
   const [posting, setPosting] = useState(false)
@@ -71,6 +76,10 @@ export default function ClubDetailPage() {
   const [editName, setEditName] = useState('')
   const [editDesc, setEditDesc] = useState('')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+
+  const [myRating, setMyRating] = useState(0)
+  const [ratingComment, setRatingComment] = useState('')
+  const [ratingSubmitting, setRatingSubmitting] = useState(false)
 
   const fetchClub = useCallback(async () => {
     setLoading(true)
@@ -100,11 +109,22 @@ export default function ClubDetailPage() {
 
       const { data: membership } = await supabase
         .from('club_members')
-        .select('id')
+        .select('status')
         .eq('club_id', clubId)
         .eq('user_id', user.id)
         .maybeSingle()
-      setIsMember(!!membership)
+      setMembershipStatus(membership ? (membership.status as 'pending' | 'approved') : 'none')
+
+      const { data: myRatingRow } = await supabase
+        .from('club_ratings')
+        .select('score, comment')
+        .eq('club_id', clubId)
+        .eq('rater_id', user.id)
+        .maybeSingle()
+      if (myRatingRow) {
+        setMyRating(myRatingRow.score)
+        setRatingComment(myRatingRow.comment || '')
+      }
     }
 
     const { data: postsData, count: postsCount } = await supabase
@@ -129,38 +149,82 @@ export default function ClubDetailPage() {
       .from('club_members')
       .select('user_id, joined_at, profiles(display_name, area_name)')
       .eq('club_id', clubId)
+      .eq('status', 'approved')
       .order('joined_at', { ascending: true })
     if (membersData) setMembers(membersData as unknown as Member[])
+
+    // Only ever non-empty for the creator -- RLS hides pending rows from
+    // everyone else, this just avoids running the applicant-review UI logic
+    // for members who'd get an empty list back anyway.
+    const { data: applicantsData } = await supabase
+      .from('club_members')
+      .select('user_id, joined_at, profiles(display_name, area_name)')
+      .eq('club_id', clubId)
+      .eq('status', 'pending')
+      .order('joined_at', { ascending: true })
+    if (applicantsData) setPendingApplicants(applicantsData as unknown as Member[])
 
     setLoading(false)
   }, [supabase, clubId])
 
   useAsyncEffect(() => fetchClub(), [fetchClub])
 
-  const handleJoin = async () => {
-    if (!currentUserId || !club) return
-    const { error } = await supabase.from('club_members').insert({ club_id: clubId, user_id: currentUserId })
-    if (error) return
+  const isMember = membershipStatus === 'approved'
 
-    setIsMember(true)
-    setClub(prev => prev ? { ...prev, member_count: prev.member_count + 1 } : prev)
+  const handleRequestToJoin = async () => {
+    if (!currentUserId || !club || joining) return
+    setJoining(true)
+
+    const { error } = await supabase.from('club_members').insert({ club_id: clubId, user_id: currentUserId })
+    if (error) {
+      toast.error('Could not send request: ' + error.message)
+      setJoining(false)
+      return
+    }
+
+    setMembershipStatus('pending')
 
     await createNotification({
       userId: club.creator_id,
       type: 'club_joined',
-      title: `Someone joined your club "${club.name}"`,
+      title: `Someone wants to join your club "${club.name}"`,
       link: `/clubs/${clubId}`,
       context: { kind: 'club_join', id: clubId },
     })
 
+    setJoining(false)
     fetchClub()
   }
 
   const handleLeave = async () => {
     if (!currentUserId || !club) return
+    const wasApproved = membershipStatus === 'approved'
     await supabase.from('club_members').delete().eq('club_id', clubId).eq('user_id', currentUserId)
-    setIsMember(false)
-    setClub(prev => prev ? { ...prev, member_count: Math.max(0, prev.member_count - 1) } : prev)
+    setMembershipStatus('none')
+    if (wasApproved) {
+      setClub(prev => prev ? { ...prev, member_count: Math.max(0, prev.member_count - 1) } : prev)
+    }
+    fetchClub()
+  }
+
+  const handleApproveMember = async (userId: string) => {
+    const { error } = await supabase.from('club_members').update({ status: 'approved' }).eq('club_id', clubId).eq('user_id', userId)
+    if (error) { toast.error('Could not approve: ' + error.message); return }
+
+    await createNotification({
+      userId,
+      type: 'club_membership_approved',
+      title: `You're in! Your request to join "${club?.name}" was approved`,
+      link: `/clubs/${clubId}`,
+      context: { kind: 'club_membership_approved', id: clubId },
+    })
+
+    fetchClub()
+  }
+
+  const handleRejectMember = async (userId: string) => {
+    const { error } = await supabase.from('club_members').delete().eq('club_id', clubId).eq('user_id', userId)
+    if (error) { toast.error('Could not reject: ' + error.message); return }
     fetchClub()
   }
 
@@ -168,29 +232,48 @@ export default function ClubDetailPage() {
     if (!newPost.trim() || !currentUserId || posting) return
     setPosting(true)
 
-    const { error } = await supabase.from('club_posts').insert({
+    const { data: post, error } = await supabase.from('club_posts').insert({
       club_id: clubId,
       author_id: currentUserId,
       content: newPost.trim(),
-    })
+    }).select().single()
 
-    if (!error) {
-      setNewPost('')
+    if (error) {
+      toast.error(
+        error.message.startsWith('RATE_LIMIT_EXCEEDED:')
+          ? "You've hit the hourly message limit for this club. Please wait before sending more."
+          : 'Could not send message: ' + error.message
+      )
+      setPosting(false)
+      return
+    }
 
-      const memberIds = members.map(m => m.user_id).filter(id => id !== currentUserId)
-      for (const id of memberIds) {
-        await createNotification({
-          userId: id,
-          type: 'club_announcement',
-          title: `New announcement in "${club?.name}"`,
-          link: `/clubs/${clubId}`,
-          context: { kind: 'club_announcement', id: clubId },
-        })
-      }
+    setNewPost('')
+    try {
+      await notifyClubChatMessage(post.id)
+    } catch (err) {
+      console.error('Failed to notify club members:', err)
+    }
+    fetchClub()
+    setPosting(false)
+  }
 
+  const handleRate = async (score: number) => {
+    if (!currentUserId || !isMember || ratingSubmitting) return
+    setRatingSubmitting(true)
+
+    const { error } = await supabase.from('club_ratings').upsert(
+      { club_id: clubId, rater_id: currentUserId, score, comment: ratingComment.trim() || null },
+      { onConflict: 'club_id,rater_id' }
+    )
+
+    if (error) {
+      toast.error('Could not save your rating: ' + error.message)
+    } else {
+      setMyRating(score)
       fetchClub()
     }
-    setPosting(false)
+    setRatingSubmitting(false)
   }
 
   const handleSaveEdit = async () => {
@@ -277,27 +360,39 @@ export default function ClubDetailPage() {
                   )}
                   <button onClick={() => setConfirmingDelete(true)} className="text-xs text-red-600/70 hover:text-red-600 transition-colors px-4 py-1.5">Delete Club</button>
                 </>
-              ) : isMember ? (
+              ) : membershipStatus === 'approved' ? (
                 <button onClick={handleLeave} className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 font-medium px-5 py-2 rounded-lg text-sm transition-colors">
                   Leave Club
                 </button>
+              ) : membershipStatus === 'pending' ? (
+                <button onClick={handleLeave} className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-700 font-medium px-5 py-2 rounded-lg text-sm transition-colors" title="Cancel your request">
+                  Request Pending
+                </button>
               ) : (
-                <button onClick={handleJoin} className="bg-brand-teal hover:bg-brand-teal-light text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors">
-                  Join Club
+                <button onClick={handleRequestToJoin} disabled={joining} className="bg-brand-teal hover:bg-brand-teal-light disabled:opacity-50 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors">
+                  {joining ? 'Requesting...' : 'Request to Join'}
                 </button>
               )}
             </div>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-black/5">
+          <div className="grid grid-cols-4 gap-4 mt-6 pt-6 border-t border-black/5">
             <div className="text-center">
               <p className="text-2xl font-bold text-slate-900">{club?.member_count || 0}</p>
               <p className="text-xs text-slate-500 mt-1">Members</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-brand-teal-dark">{postCount}</p>
-              <p className="text-xs text-slate-500 mt-1">Announcements</p>
+              <p className="text-xs text-slate-500 mt-1">Chat messages</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-amber-500">
+                {club?.rating_avg ? `${club.rating_avg.toFixed(1)}★` : '—'}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                {club?.rating_count ? `${club.rating_count} rating${club.rating_count === 1 ? '' : 's'}` : 'No ratings yet'}
+              </p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-cyan-400">{joinDate}</p>
@@ -351,16 +446,16 @@ export default function ClubDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Announcements (left/main) */}
+        {/* Club chat (left/main) */}
         <div className="lg:col-span-2">
-          <h2 className="text-xl font-semibold mb-4">Announcements</h2>
+          <h2 className="text-xl font-semibold mb-4">Club Chat</h2>
 
-          {isCreator && (
+          {isMember && (
             <div className="bg-white border border-black/5 rounded-xl p-4 mb-4">
               <textarea
                 value={newPost}
                 onChange={e => setNewPost(e.target.value)}
-                placeholder="Write an announcement for your club..."
+                placeholder="Send a message to the club..."
                 rows={3}
                 className="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-3"
               />
@@ -369,14 +464,14 @@ export default function ClubDetailPage() {
                 disabled={!newPost.trim() || posting}
                 className="bg-brand-teal hover:bg-brand-teal-light disabled:opacity-40 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors"
               >
-                {posting ? 'Posting...' : 'Post Announcement'}
+                {posting ? 'Sending...' : 'Send Message'}
               </button>
             </div>
           )}
 
           {posts.length === 0 ? (
             <div className="bg-white border border-black/5 rounded-xl p-8 text-center text-slate-500">
-              No announcements yet.
+              No messages yet. {isMember ? 'Be the first to say hello.' : ''}
             </div>
           ) : (
             <div className="space-y-3">
@@ -385,9 +480,11 @@ export default function ClubDetailPage() {
                   <p className="text-sm text-slate-900 leading-relaxed whitespace-pre-wrap">{post.content}</p>
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-black/5">
                     <p className="text-xs text-slate-500">
-                      {post.profiles?.display_name || 'Admin'} · {new Date(post.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {post.profiles?.display_name || 'Anonymous'}
+                      {post.author_id === club?.creator_id && ' · Owner'}
+                      {' · '}{new Date(post.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
-                    {isCreator && (
+                    {(isCreator || post.author_id === currentUserId) && (
                       <button onClick={() => handleDeletePost(post.id)} className="text-xs text-slate-400 hover:text-red-600 transition-colors">Delete</button>
                     )}
                   </div>
@@ -395,38 +492,105 @@ export default function ClubDetailPage() {
               ))}
             </div>
           )}
+
+          {/* Rating */}
+          <div className="bg-white border border-black/5 rounded-xl p-5 mt-6">
+            <h3 className="text-sm font-semibold text-slate-900 mb-1">Rate this club</h3>
+            {isMember ? (
+              <>
+                <p className="text-xs text-slate-500 mb-3">Only members can rate a club they belong to.</p>
+                <div className="flex items-center gap-1 mb-3">
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <button
+                      key={n}
+                      onClick={() => handleRate(n)}
+                      disabled={ratingSubmitting}
+                      className={`text-2xl leading-none transition-colors ${n <= myRating ? 'text-amber-500' : 'text-slate-300 hover:text-amber-300'}`}
+                      aria-label={`Rate ${n} star${n === 1 ? '' : 's'}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={ratingComment}
+                  onChange={e => setRatingComment(e.target.value)}
+                  onBlur={() => myRating > 0 && handleRate(myRating)}
+                  placeholder="Optional comment..."
+                  rows={2}
+                  className="w-full bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none"
+                />
+              </>
+            ) : (
+              <p className="text-xs text-slate-500">Become a member to rate it.</p>
+            )}
+          </div>
         </div>
 
         {/* Members (right sidebar) */}
         <div>
+          {isCreator && pendingApplicants.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-slate-900 mb-3">Membership Requests ({pendingApplicants.length})</h3>
+              <div className="space-y-2">
+                {pendingApplicants.map(a => (
+                  <div key={a.user_id} className="bg-white border border-black/5 rounded-lg p-3">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-brand-teal-dark font-bold text-sm flex-shrink-0">
+                        {(a.profiles?.display_name || '?')[0].toUpperCase()}
+                      </div>
+                      <Link href={`/user/${a.user_id}`} className="text-sm text-slate-900 font-medium hover:text-brand-teal-dark transition-colors">
+                        {a.profiles?.display_name || 'Anonymous'}
+                      </Link>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleApproveMember(a.user_id)} className="flex-1 bg-brand-teal hover:bg-brand-teal-light text-white text-xs font-semibold py-1.5 rounded-lg transition-colors">
+                        Approve
+                      </button>
+                      <button onClick={() => handleRejectMember(a.user_id)} className="flex-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 text-xs font-medium py-1.5 rounded-lg transition-colors">
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <button onClick={() => setShowMembers(!showMembers)} className="flex items-center justify-between w-full text-xl font-semibold mb-4">
             <span>Members ({club?.member_count || 0})</span>
             <span className="text-slate-500 text-sm">{showMembers ? '▲' : '▼'}</span>
           </button>
 
           {showMembers && (
-            <div className="space-y-2">
-              {members.map(m => (
-                <Link
-                  key={m.user_id}
-                  href={`/user/${m.user_id}`}
-                  className="flex items-center gap-3 bg-white border border-black/5 rounded-lg p-3 hover:border-brand-teal/20 transition-colors"
-                >
-                  <div className="w-8 h-8 rounded-full bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-brand-teal-dark font-bold text-sm flex-shrink-0">
-                    {(m.profiles?.display_name || '?')[0].toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-900 font-medium">{m.profiles?.display_name || 'Anonymous'}</p>
-                    {m.profiles?.area_name && (
-                      <p className="text-xs text-slate-500">{m.profiles.area_name}</p>
+            isMember ? (
+              <div className="space-y-2">
+                {members.map(m => (
+                  <Link
+                    key={m.user_id}
+                    href={`/user/${m.user_id}`}
+                    className="flex items-center gap-3 bg-white border border-black/5 rounded-lg p-3 hover:border-brand-teal/20 transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-brand-teal/10 border border-brand-teal/20 flex items-center justify-center text-brand-teal-dark font-bold text-sm flex-shrink-0">
+                      {(m.profiles?.display_name || '?')[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-900 font-medium">{m.profiles?.display_name || 'Anonymous'}</p>
+                      {m.profiles?.area_name && (
+                        <p className="text-xs text-slate-500">{m.profiles.area_name}</p>
+                      )}
+                    </div>
+                    {m.user_id === club?.creator_id && (
+                      <span className="ml-auto text-xs text-amber-600 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">Admin</span>
                     )}
-                  </div>
-                  {m.user_id === club?.creator_id && (
-                    <span className="ml-auto text-xs text-amber-600 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">Admin</span>
-                  )}
-                </Link>
-              ))}
-            </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white border border-black/5 rounded-xl p-5 text-sm text-slate-500">
+                Join this club to see its members.
+              </div>
+            )
           )}
         </div>
       </div>

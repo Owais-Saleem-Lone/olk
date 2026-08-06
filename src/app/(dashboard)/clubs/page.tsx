@@ -21,6 +21,8 @@ type Club = {
   created_at: string
   distance_km?: number | null
   creator_name?: string | null
+  rating_avg?: number | null
+  rating_count?: number
 }
 
 export default function ClubsPage() {
@@ -30,7 +32,8 @@ export default function ClubsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterInterest, setFilterInterest] = useState('')
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [joinedClubs, setJoinedClubs] = useState<Set<string>>(new Set())
+  const [approvedClubs, setApprovedClubs] = useState<Set<string>>(new Set())
+  const [pendingClubs, setPendingClubs] = useState<Set<string>>(new Set())
   const [joiningClub, setJoiningClub] = useState<string | null>(null)
   const mounted = useRef(false)
 
@@ -45,10 +48,11 @@ export default function ClubsPage() {
 
       const { data: memberships } = await supabase
         .from('club_members')
-        .select('club_id')
+        .select('club_id, status')
         .eq('user_id', user.id)
       if (memberships) {
-        setJoinedClubs(new Set(memberships.map(m => m.club_id)))
+        setApprovedClubs(new Set(memberships.filter(m => m.status === 'approved').map(m => m.club_id)))
+        setPendingClubs(new Set(memberships.filter(m => m.status === 'pending').map(m => m.club_id)))
       }
 
       const { data: myProfile } = await supabase
@@ -116,7 +120,7 @@ export default function ClubsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterInterest])
 
-  const handleJoin = async (clubId: string) => {
+  const handleRequestToJoin = async (clubId: string) => {
     if (joiningClub) return
     setJoiningClub(clubId)
 
@@ -127,17 +131,17 @@ export default function ClubsPage() {
     if (error && error.code === '23505') { setJoiningClub(null); return }
 
     if (!error) {
-      setJoinedClubs(prev => new Set(prev).add(clubId))
-      setClubs(prev => prev.map(c => c.id === clubId ? { ...c, member_count: c.member_count + 1 } : c))
+      setPendingClubs(prev => new Set(prev).add(clubId))
 
-      // Mirrors the notification sent when joining from the club detail page —
-      // joining from this list used to skip it, so the creator never found out.
+      // Mirrors the notification sent when requesting from the club detail
+      // page — requesting from this list used to skip it, so the owner never
+      // found out.
       const club = clubs.find(c => c.id === clubId)
       if (club) {
         await createNotification({
           userId: club.creator_id,
           type: 'club_joined',
-          title: `Someone joined your club "${club.name}"`,
+          title: `Someone wants to join your club "${club.name}"`,
           link: `/clubs/${clubId}`,
           context: { kind: 'club_join', id: clubId },
         })
@@ -237,6 +241,9 @@ export default function ClubsPage() {
                 <div className="mt-auto pt-3 border-t border-black/5 flex items-center justify-between">
                   <div className="text-xs text-slate-500">
                     <span className="text-slate-700 font-medium">{club.member_count}</span> {club.member_count === 1 ? 'member' : 'members'}
+                    {club.rating_avg != null && (
+                      <span className="ml-2 text-amber-600 font-medium">★ {club.rating_avg.toFixed(1)}</span>
+                    )}
                     {club.distance_km != null && (
                       <span className="ml-2 text-brand-teal-dark font-medium">{formatDistance(club.distance_km)}</span>
                     )}
@@ -249,14 +256,18 @@ export default function ClubsPage() {
                     <Link href="/login" className="w-full block text-center bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-900 font-medium py-2 rounded-lg text-sm transition-colors">
                       Login to Join
                     </Link>
-                  ) : joinedClubs.has(club.id) ? (
+                  ) : approvedClubs.has(club.id) ? (
                     <Link href={`/clubs/${club.id}`} className="w-full block text-center bg-brand-teal/10 text-brand-teal-dark border border-brand-teal/20 font-medium py-2 rounded-lg text-sm">
                       Member ✓
                     </Link>
+                  ) : pendingClubs.has(club.id) ? (
+                    <Link href={`/clubs/${club.id}`} className="w-full block text-center bg-amber-500/10 text-amber-700 border border-amber-500/20 font-medium py-2 rounded-lg text-sm">
+                      Request Pending
+                    </Link>
                   ) : (
-                    <button onClick={() => handleJoin(club.id)} disabled={joiningClub === club.id}
+                    <button onClick={() => handleRequestToJoin(club.id)} disabled={joiningClub === club.id}
                       className="w-full bg-slate-50 hover:bg-slate-100 disabled:opacity-40 border border-slate-200 text-slate-900 font-medium py-2 rounded-lg text-sm transition-colors">
-                      {joiningClub === club.id ? 'Joining...' : 'Join Club'}
+                      {joiningClub === club.id ? 'Requesting...' : 'Request to Join'}
                     </button>
                   )}
                 </div>

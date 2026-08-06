@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAsyncEffect } from '@/hooks/use-async-effect'
 import { wordCount } from '@/lib/text-limits'
-import { approveClubRequest, rejectClubRequest } from '@/lib/admin-actions'
+import { approveClubRequest, rejectClubRequest, markClubRequestIdentityVerified, getClubRequesterEmail } from '@/lib/admin-actions'
 import Image from 'next/image'
 
 type ClubRequest = {
@@ -21,6 +21,8 @@ type ClubRequest = {
   review_note: string | null
   created_club_id: string | null
   created_at: string
+  identity_verified: boolean
+  identity_verified_at: string | null
   requester: { display_name: string | null; created_at: string } | null
 }
 
@@ -40,11 +42,15 @@ export default function AdminClubRequestsPage() {
   const [acting, setActing] = useState(false)
   const [msg, setMsg] = useState('')
 
+  const [requesterEmail, setRequesterEmail] = useState<string | null>(null)
+  const [emailLoading, setEmailLoading] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+
   const loadRequests = useCallback(async () => {
     setLoading(true)
     let query = supabase
       .from('club_requests')
-      .select('id, requester_id, name, interests, description, goal, target_members, area_name, cover_url, status, review_note, created_club_id, created_at, requester:requester_id(display_name, created_at)')
+      .select('id, requester_id, name, interests, description, goal, target_members, area_name, cover_url, status, review_note, created_club_id, created_at, identity_verified, identity_verified_at, requester:requester_id(display_name, created_at)')
       .order('created_at', { ascending: false })
 
     if (filter !== 'all') query = query.eq('status', filter)
@@ -60,6 +66,13 @@ export default function AdminClubRequestsPage() {
     setSelected(request)
     setNote('')
     setTrackRecord(null)
+    setRequesterEmail(null)
+
+    setEmailLoading(true)
+    getClubRequesterEmail(request.id).then(res => {
+      setRequesterEmail(res.email)
+      setEmailLoading(false)
+    })
 
     const { data: myBooks } = await supabase.from('books').select('id').eq('owner_id', request.requester_id)
     const bookIds = (myBooks || []).map(b => b.id)
@@ -92,12 +105,25 @@ export default function AdminClubRequestsPage() {
   const noteOverLimit = noteWords > 100
 
   async function handleApprove() {
-    if (!selected || acting || noteOverLimit) return
+    if (!selected || acting || noteOverLimit || !selected.identity_verified) return
     setActing(true)
     const res = await approveClubRequest(selected.id, note.trim())
     setActing(false)
     if (res.success) { setMsg(`"${selected.name}" approved and created`); setSelected(null); loadRequests() }
     else setMsg(res.error || 'Failed')
+  }
+
+  async function handleVerifyIdentity() {
+    if (!selected || verifying) return
+    setVerifying(true)
+    const res = await markClubRequestIdentityVerified(selected.id)
+    setVerifying(false)
+    if (res.success) {
+      setSelected(prev => prev ? { ...prev, identity_verified: true, identity_verified_at: new Date().toISOString() } : prev)
+      loadRequests()
+    } else {
+      setMsg(res.error || 'Failed to mark identity verified')
+    }
   }
 
   async function handleReject() {
@@ -214,8 +240,9 @@ export default function AdminClubRequestsPage() {
                 )}
               </div>
 
-              {/* Requester track record -- the lightweight substitute for formal ID
-                  verification: real signal already in the system, no new infra. */}
+              {/* Requester track record -- a supplementary signal, not a substitute
+                  for the identity check below. Real exchange history already in
+                  the system, no new infra needed for this part. */}
               <div className="grid grid-cols-3 gap-3 mb-4">
                 <div className="text-center py-2 bg-white rounded-lg">
                   <p className="text-lg font-bold text-slate-900">{trackRecord ? trackRecord.completedExchanges : '…'}</p>
@@ -235,6 +262,28 @@ export default function AdminClubRequestsPage() {
                 </div>
               </div>
 
+              {selected.status === 'pending' && (
+                <div className={`rounded-lg p-3 mb-4 border ${selected.identity_verified ? 'bg-brand-teal/5 border-brand-teal/20' : 'bg-amber-500/5 border-amber-500/20'}`}>
+                  <p className="text-xs font-medium text-slate-700 mb-1">Identity verification</p>
+                  {selected.identity_verified ? (
+                    <p className="text-xs text-brand-teal-dark">
+                      ✓ Verified{selected.identity_verified_at ? ` on ${new Date(selected.identity_verified_at).toLocaleDateString()}` : ''}
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-xs text-slate-600 mb-2">
+                        Email {emailLoading ? '…' : (requesterEmail || 'unavailable')} to request a copy of their ID and CV before approving.
+                        Only mark this once you&apos;ve reviewed both and confirmed they&apos;re a credible fit to run this club.
+                      </p>
+                      <button onClick={handleVerifyIdentity} disabled={verifying}
+                        className="text-xs bg-slate-900 hover:bg-slate-700 disabled:opacity-50 text-white font-medium px-3 py-1.5 rounded-lg transition-colors">
+                        {verifying ? 'Marking...' : 'Mark Identity Verified'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
               {selected.status === 'pending' ? (
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
@@ -245,7 +294,8 @@ export default function AdminClubRequestsPage() {
                     className={`w-full bg-slate-100 border rounded-lg px-3 py-2 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal resize-none mb-3 ${noteOverLimit ? 'border-red-500/50' : 'border-slate-200'}`}
                     placeholder="Optional note — required if rejecting, so they know what to fix" />
                   <div className="flex gap-2">
-                    <button onClick={handleApprove} disabled={acting || noteOverLimit}
+                    <button onClick={handleApprove} disabled={acting || noteOverLimit || !selected.identity_verified}
+                      title={!selected.identity_verified ? 'Verify identity before approving' : undefined}
                       className="flex-1 bg-brand-teal hover:bg-brand-teal-light disabled:opacity-50 text-white font-semibold py-2 rounded-lg text-sm transition-colors">
                       {acting ? 'Working...' : 'Approve'}
                     </button>

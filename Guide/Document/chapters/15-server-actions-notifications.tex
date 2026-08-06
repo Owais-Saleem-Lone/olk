@@ -72,6 +72,7 @@ The old failure mode — an action that works but is invisible to \pathname{admi
 type NotificationContext =
   | { kind: 'request'; id: string }
   | { kind: 'club_join'; id: string }
+  | { kind: 'club_membership_approved'; id: string }
   | { kind: 'club_announcement'; id: string }
   | { kind: 'event_created'; id: string }
   | { kind: 'wishlist_match'; id: string }
@@ -117,6 +118,32 @@ This function used to insert with the calling user's own session client, which w
 \textbf{That gate used to check only "is the caller logged in," not "does the caller actually have a reason to notify this specific person."} Since every call here goes through the service-role client, an authenticated-only check meant any user could call this Server Action directly (it's a plain exported async function, reachable from any client) with an arbitrary \code{userId}, \code{title}, and \code{link} — spamming or phishing an unrelated user with a fake notification. The fix is the \code{context} parameter and the \code{can\_notify(p\_target\_user, p\_context\_type, p\_context\_id)} RPC shown above: a \code{SECURITY DEFINER} SQL function (Chapter~\ref{ch:functions}) that verifies the caller and \code{userId} are the two real parties on the referenced \code{book\_requests}/\code{clubs}/\code{club\_members}/\code{wishlists} row, before the insert is allowed to proceed. It needs to be \code{SECURITY DEFINER} for at least one case that RLS alone can't express: a book owner adding a new listing that matches someone else's wishlist has no RLS-visible relationship to that wishlist row (\code{"Users can view own wishlists"} would otherwise hide it from them entirely), so the verification has to run with elevated privilege and check the real underlying fact — that the wishlist's \code{matched\_book\_id} now points to a book the caller owns — rather than relying on what the caller's own session is allowed to \code{SELECT}. All six call sites (\pathname{browse}, \pathname{my-books}, \pathname{requests}, \pathname{messages/[id]}, \pathname{clubs/[id]} $\times$2) now pass a \code{context} identifying which real-world relationship justifies the notification.
 \end{olknote}
 
+\section{Fan-out notifications: one RPC, not one round trip per member}
+
+\code{club\_join} notifies a single person (the owner, when someone requests to join) and \code{club\_membership\_approved} notifies a single person back (the applicant, once approved) — both a single \code{createNotification} call, no different from notifying someone their book request was accepted. Broadcasting to an entire club — a new chat message, a newly created event — is a different shape: potentially dozens of recipients from one action, and it used to be exactly that many sequential \code{createNotification} calls, each one its own \code{can\_notify} round trip, its own \code{INSERT}, and its own \emph{blocking} \code{await sendNotificationEmail(...)} before the loop moved to the next member. Posting one message to a 200-member club meant the poster's browser sat waiting through 200 sequential server round trips, any one of which failing partway through silently stopped notifying the rest — and on a serverless function with a wall-clock timeout, a large enough club could fail the whole request outright.
+
+\code{notifyClubChatMessage(postId)} and \code{notifyEventCreated(eventId)} (Chapter~\ref{ch:pages} call sites: \pathname{clubs/[id]/page.tsx}'s \code{handlePost}, \pathname{clubs/[id]/events/create/page.tsx}'s \code{handleCreate}) replace that loop with a single call each to \code{notify\_club\_chat\_message}/\code{notify\_event\_created} (Chapter~\ref{ch:functions}) — one \code{INSERT ... SELECT ... RETURNING} that authorizes the caller and inserts every recipient's notification row in one statement, returning the \code{(user\_id, title)} pairs it just created. Round-trip count for the DB-visible half of the fan-out is now $O(1)$ regardless of club size.
+
+\begin{lstlisting}[caption={the shape of both, from src/lib/notifications.ts}]
+export async function notifyClubChatMessage(postId: string) {
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const { data: recipients, error } = await supabase.rpc('notify_club_chat_message', { p_post_id: postId })
+  if (error) throw error
+
+  const items = (recipients ?? []).map(r => ({ userId: r.user_id, type: 'club_announcement', title: r.title }))
+  after(() => sendBatchNotificationEmails(items))
+}
+\end{lstlisting}
+
+The email half still can't be a single round trip — Resend sends one email per recipient — so it's handled two ways instead: \code{after()}, imported from \code{next/server}, defers the whole email batch until \emph{after} the response has already gone back to the poster/organizer, so they're never blocked waiting on Resend at all — the same "verify against \pathname{node\_modules/next/dist/docs} rather than assumed" habit this fork's docs-first quirks already teach elsewhere (Chapter~\ref{ch:proxy}), since \code{after()}'s exact semantics (it extends the current invocation, it isn't a queue) are easy to get wrong from memory. \code{sendBatchNotificationEmails} (Chapter~\ref{ch:functions}) then sends that batch in chunks of 10 concurrent requests via \code{Promise.allSettled}, so one slow or failed send can't stall — or silently swallow — the rest of the batch, and a club with hundreds of members doesn't fire hundreds of simultaneous outbound requests at once.
+
+\begin{olkgotcha}
+\code{after()} only extends the life of the \emph{current} serverless invocation — it is not a durable queue. If the platform kills the function before the deferred callback finishes (a very large batch, or a platform outage), those emails are simply lost; the in-app notification row, already committed before \code{after()} was even scheduled, is not. This is the same "in-app row is the source of truth, email is best-effort" posture the rest of this chapter already takes for single-recipient notifications, just applied to a batch instead of one send. Revisit this if club sizes ever grow to the point where "batches of 10, best-effort" stops being enough — a real job queue would be the next step, not a bigger batch size.
+\end{olkgotcha}
+
 \section{Sending the actual email: a service-role client, on purpose}
 
 \begin{lstlisting}[caption={src/lib/send-notification-email.ts — the privileged lookup}]
@@ -146,7 +173,7 @@ A brand-new notification \code{type} (say \code{'club\_invite'}) touches more th
   \item There is no enum or TypeScript union constraining \code{type} — it's a plain string column (Chapter~\ref{ch:schema}). A typo here doesn't fail at write time; it fails silently at read time, as step 2 below.
   \item \pathname{src/components/notification-bell.tsx} and \pathname{src/app/(dashboard)/notifications/page.tsx} both index into an \code{ICONS} lookup object keyed by \code{n.type}, falling back to a generic bell emoji when the key is missing — add your new type as a key in \emph{each} file's \code{ICONS} object, or it silently falls back to that generic icon rather than erroring.
   \item If \code{title} ever includes user-typed text for this new type, route it through \code{escapeHtml} before it can reach \pathname{send-notification-email.ts} (the warning above) — easy to forget for a brand-new call site since nothing enforces it.
-  \item Decide which existing \code{context.kind} the new call site's relationship maps to (\code{'request'}, \code{'club\_join'}, \code{'club\_announcement'}, \code{'event\_created'}, or \code{'wishlist\_match'}) — or, if it's a genuinely new kind of relationship, add a new branch to \code{can\_notify()} (Chapter~\ref{ch:rls}) \emph{before} wiring up the call site. \code{'event\_created'} itself is the \code{'club\_announcement'} shape one table over: the caller must be the event's own \code{creator\_id}, and the target must be a real member of that event's club. \code{createNotification} throws \code{"Forbidden"} if \code{can\_notify} doesn't recognise the \code{context.kind} or can't verify the relationship, so a new notification type with no matching branch fails loudly for every caller rather than silently succeeding.
+  \item Decide which existing \code{context.kind} the new call site's relationship maps to (\code{'request'}, \code{'club\_join'}, \code{'club\_membership\_approved'}, \code{'club\_announcement'}, \code{'event\_created'}, or \code{'wishlist\_match'}) — or, if it's a genuinely new kind of relationship, add a new branch to \code{can\_notify()} (Chapter~\ref{ch:rls}) \emph{before} wiring up the call site. \code{'event\_created'} itself is the \code{'club\_announcement'} shape one table over: the caller must be the event's own \code{creator\_id}, and the target must be a real member of that event's club. \code{'club\_membership\_approved'} is \code{'club\_join'} reversed — the caller must be the club's \code{creator\_id}, and the target must now actually have an \code{approved} \code{club\_members} row. \code{createNotification} throws \code{"Forbidden"} if \code{can\_notify} doesn't recognise the \code{context.kind} or can't verify the relationship, so a new notification type with no matching branch fails loudly for every caller rather than silently succeeding.
 \end{enumerate}
 \end{olkhowto}
 

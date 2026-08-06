@@ -11,7 +11,7 @@
 - 📚 **Community Book Sharing** – List books you own and are willing to lend to others.
 - 🤝 **Seamless Requesting** – Browse available books and request to borrow them directly.
 - ✨ **Wishlist & Smart Matching** – Ask for a book you can't find, and get notified the moment someone nearby lists a match.
-- 🏘️ **Local Clubs** – Create or join interest-based reading clubs once you've built up trust in the community.
+- 🏘️ **Local Clubs** – Request to start or join interest-based reading clubs once you've built up trust in the community, with member chat, ratings, and club-scoped events.
 - 💬 **Messaging System** – Coordinate book pickups and drop‑offs via dedicated 1‑on‑1 chat.
 - 🔔 **Real‑time Notifications** – Get instantly notified when your books are requested or messages are received.
 - 🌟 **Book of the Month** – A curated selection to encourage community‑wide reading.
